@@ -495,6 +495,7 @@ const PlayIcon = () => <IconBase><path d="m8 6 10 6-10 6Z" /></IconBase>;
 const PauseIcon = () => <IconBase><path d="M8 5v14M16 5v14" /></IconBase>;
 const ArchiveIcon = () => <IconBase><path d="M3 7h18" /><path d="M5 7V5h14v2" /><path d="M6 7v11a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7" /><path d="M10 12h4" /></IconBase>;
 const InfoIcon = () => <IconBase><circle cx="12" cy="12" r="9" /><path d="M12 10v5" /><path d="M12 7h.01" /></IconBase>;
+const FieldInfoIcon = () => <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 14, height: 14, borderRadius: "50%", border: "1.5px solid #D1D5DB", color: "#9CA3AF", fontSize: 9, marginLeft: 5, lineHeight: 1, fontStyle: "normal", userSelect: "none", flexShrink: 0 }}>i</span>;
 const TrashIcon = () => <IconBase><path d="M3 6h18" /><path d="M8 6V4h8v2" /><path d="M19 6l-1 14H6L5 6" /></IconBase>;
 const CheckIcon = () => <IconBase><path d="M20 6 9 17l-5-5" /></IconBase>;
 const GripIcon = () => <IconBase><circle cx="9" cy="7" r="1" /><circle cx="15" cy="7" r="1" /><circle cx="9" cy="12" r="1" /><circle cx="15" cy="12" r="1" /><circle cx="9" cy="17" r="1" /><circle cx="15" cy="17" r="1" /></IconBase>;
@@ -1614,21 +1615,21 @@ function RemoteConfigurationForm({
         </div>
       )}
 
-      <div style={{ display: "flex", alignItems: "center", gap: 8, color: TEXT_MUTED, fontSize: 12, marginBottom: 18 }}>
-        <span>Platform</span>
-        <span>›</span>
-        <span style={{ color: PRIMARY, fontWeight: 600 }}>Remote Configuration</span>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 18 }}>
+        <span style={{ color: "#6B7280", fontSize: 13 }}>Platform</span>
+        <span style={{ color: "#D1D5DB", fontSize: 13 }}>›</span>
+        <span style={{ color: "#3B82F6", fontWeight: 500, fontSize: 13 }}>Remote Configuration</span>
       </div>
 
       <div style={{ ...cardStyle, padding: "18px 18px 12px", marginBottom: 12 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{ width: 4, alignSelf: "stretch", borderRadius: 999, background: PRIMARY }} />
+          <div style={{ width: 4, alignSelf: "stretch", borderRadius: 999, background: "#3B82F6" }} />
           <div style={{ flex: 1 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <h1 style={{ margin: 0, fontSize: 18, color: TEXT, fontWeight: 700 }}>
                 {mode === "edit" ? "Edit Remote Configuration" : "Create Remote Configuration"}
               </h1>
-              <span style={{ padding: "4px 10px", borderRadius: 999, background: "#ececf0", color: "#030213", fontSize: 12, fontWeight: 700 }}>
+              <span style={{ padding: "2px 10px", borderRadius: 6, background: "#EFF6FF", color: "#3B82F6", fontSize: 13, fontWeight: 500 }}>
                 {versionLabel}
               </span>
             </div>
@@ -1642,12 +1643,12 @@ function RemoteConfigurationForm({
           <div style={{ padding: "14px 18px", background: WHITE }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               {step === 2 && <span style={{ color: PRIMARY }}><CheckIcon /></span>}
-              <div style={{ fontSize: 13, fontWeight: 700, color: PRIMARY }}>Parameters & Keys</div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "#3B82F6" }}>Parameters & Keys</div>
             </div>
             <div style={{ marginTop: 2, fontSize: 12, color: TEXT_MUTED }}>Define the configuration your app will receive.</div>
           </div>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", borderLeft: `1px solid ${BORDER}`, borderRight: `1px solid ${BORDER}` }}>
-            <div style={{ width: 28, height: 28, borderRadius: "50%", border: `1px solid ${BORDER}`, display: "flex", alignItems: "center", justifyContent: "center", color: step === 2 ? PRIMARY : TEXT_MUTED, background: WHITE }}>
+            <div style={{ width: 28, height: 28, borderRadius: "50%", border: `1px solid ${BORDER}`, display: "flex", alignItems: "center", justifyContent: "center", color: TEXT_MUTED, background: WHITE }}>
               {step === 2 ? <CheckIcon /> : <ChevronRightIcon />}
             </div>
           </div>
@@ -1666,12 +1667,12 @@ function RemoteConfigurationForm({
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
               <div>
-                <label style={{ display: "block", marginBottom: 8, fontSize: 12, fontWeight: 700, color: TEXT_MUTED }}>CONFIGURATION NAME *</label>
+                <label style={{ display: "flex", alignItems: "center", marginBottom: 8, fontSize: 12, fontWeight: 700, color: TEXT_MUTED }}>CONFIGURATION NAME * <FieldInfoIcon /></label>
                 <input value={form.name} onChange={(event) => handleNameChange(event.target.value)} onBlur={validateStepOne} placeholder="e.g. Flight Details UI" style={fieldInputStyle("name")} />
                 {errors.name && <div style={{ marginTop: 6, fontSize: 12, color: "#EF4444" }}>{errors.name}</div>}
               </div>
               <div>
-                <label style={{ display: "block", marginBottom: 8, fontSize: 12, fontWeight: 700, color: TEXT_MUTED }}>CONFIGURATION KEY *</label>
+                <label style={{ display: "flex", alignItems: "center", marginBottom: 8, fontSize: 12, fontWeight: 700, color: TEXT_MUTED }}>CONFIGURATION KEY * <FieldInfoIcon /></label>
                 <input
                   value={form.key}
                   onChange={(event) => {
@@ -1693,12 +1694,12 @@ function RemoteConfigurationForm({
                 maxLength={500}
                 value={form.description}
                 onChange={(event) => setFieldValue("description", event.target.value)}
-                placeholder="Describe what this configuration controls."
+                placeholder=""
                 style={{ ...fieldInputStyle("description"), resize: "vertical" }}
               />
               <div style={{ marginTop: 6, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 {errors.description ? <div style={{ fontSize: 12, color: "#EF4444" }}>{errors.description}</div> : <span />}
-                <div style={{ fontSize: 12, color: descriptionCount >= 500 ? "#EF4444" : descriptionCount >= 400 ? "#F59E0B" : TEXT_MUTED }}>{descriptionCount}/500</div>
+                {descriptionCount > 0 && <div style={{ fontSize: 12, color: descriptionCount >= 500 ? "#EF4444" : descriptionCount >= 400 ? "#F59E0B" : TEXT_MUTED }}>{descriptionCount}/500</div>}
               </div>
             </div>
 
@@ -1712,7 +1713,7 @@ function RemoteConfigurationForm({
                     <div style={{ color: TEXT_MUTED, marginBottom: 18, fontSize: 26 }}>&lt;/&gt;</div>
                     <div style={{ fontSize: 22, fontWeight: 700, color: TEXT, marginBottom: 8 }}>No parameters added yet</div>
                     <div style={{ fontSize: 14, color: TEXT_MUTED, marginBottom: 18 }}>Add your first parameter to define your configuration structure.</div>
-                    <button onClick={() => setForm((current) => ({ ...current, parameters: [...current.parameters, createEmptyParameter()] }))} style={primaryButtonStyle}>
+                    <button onClick={() => setForm((current) => ({ ...current, parameters: [...current.parameters, createEmptyParameter()] }))} style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "10px 20px", border: "none", borderRadius: 8, background: "#3B82F6", color: WHITE, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
                       + Add Parameter
                     </button>
                   </div>
@@ -1779,7 +1780,7 @@ function RemoteConfigurationForm({
                       </div>
                     ))}
 
-                    <button onClick={() => setForm((current) => ({ ...current, parameters: [...current.parameters, createEmptyParameter()] }))} style={{ ...primaryButtonStyle, alignSelf: "flex-start" }}>
+                    <button onClick={() => setForm((current) => ({ ...current, parameters: [...current.parameters, createEmptyParameter()] }))} style={{ ...{ display: "inline-flex", alignItems: "center", gap: 8, padding: "10px 20px", border: "none", borderRadius: 8, background: "#3B82F6", color: WHITE, fontSize: 14, fontWeight: 600, cursor: "pointer" }, alignSelf: "flex-start" }}>
                       + Add Parameter
                     </button>
                   </div>
@@ -1792,19 +1793,22 @@ function RemoteConfigurationForm({
             <div style={{ ...cardStyle, padding: 0, alignSelf: "start", overflow: "hidden", background: "#111827", color: WHITE }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 16px 10px" }}>
                 <div>
-                  <div style={{ fontSize: 15, fontWeight: 700 }}>JSON Output <span style={{ marginLeft: 8, padding: "2px 8px", borderRadius: 999, background: "#1F2937", fontSize: 10, color: "#D1D5DB" }}>READ-ONLY</span></div>
-                  <div style={{ marginTop: 8, fontSize: 12, color: "#B6C2D8" }}>This is the payload your SDK will receive.</div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 0 }}>
+                  <span style={{ fontSize: 14, fontWeight: 600, color: WHITE }}>JSON Output</span>
+                  <span style={{ marginLeft: 8, padding: "2px 6px", borderRadius: 4, background: "rgba(255,255,255,0.12)", color: "#9CA3AF", fontSize: 11 }}>READ-ONLY</span>
+                  </div>
+                  <div style={{ marginTop: 6, fontSize: 12, color: "#9CA3AF" }}>This is the payload your SDK will receive.</div>
                 </div>
                 <div style={{ display: "flex", gap: 8 }}>
-                  <button onClick={() => setJsonHidden(true)} style={{ ...secondaryButtonStyle, padding: "7px 10px", background: "#182437", color: WHITE, borderColor: "#2B3951" }}>Hide</button>
+                  <button onClick={() => setJsonHidden(true)} style={{ padding: "4px 10px", borderRadius: 6, background: "rgba(255,255,255,0.08)", color: "#D1D5DB", border: "1px solid rgba(255,255,255,0.15)", fontSize: 12, cursor: "pointer" }}>Hide</button>
                   <button
                     onClick={async () => {
                       await navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
                       setCopyState("Copied!");
                     }}
-                    style={{ ...secondaryButtonStyle, padding: "7px 10px", background: "#182437", color: WHITE, borderColor: "#2B3951" }}
+                    style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 6, background: "rgba(255,255,255,0.08)", color: "#D1D5DB", border: "1px solid rgba(255,255,255,0.15)", fontSize: 12, cursor: "pointer" }}
                   >
-                    {copyState}
+                    <CopyIcon />{copyState}
                   </button>
                 </div>
               </div>
@@ -1878,20 +1882,17 @@ function RemoteConfigurationForm({
       )}
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 16 }}>
-        <button onClick={step === 1 ? showBackConfirmation : () => setStep(1)} style={secondaryButtonStyle}>Back</button>
+        <button onClick={step === 1 ? showBackConfirmation : () => setStep(1)} style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "11px 18px", borderRadius: 8, background: WHITE, border: "1px solid #E5E7EB", color: "#374151", fontSize: 13, fontWeight: 500, cursor: "pointer" }}>Back</button>
         <div style={{ display: "flex", gap: 10 }}>
-          <button onClick={() => setJsonHidden((current) => !current)} style={secondaryButtonStyle}>
-            {jsonHidden ? "Show" : "Hide"} JSON
-          </button>
-          <button onClick={handleSaveDraft} disabled={draftLoading} style={{ ...secondaryButtonStyle, minWidth: 118, justifyContent: "center" }}>
+          <button onClick={handleSaveDraft} disabled={draftLoading} style={{ ...{ display: "inline-flex", alignItems: "center", gap: 8, padding: "11px 18px", borderRadius: 8, background: WHITE, border: "1px solid #E5E7EB", color: "#374151", fontSize: 13, fontWeight: 500, cursor: "pointer" }, minWidth: 118, justifyContent: "center" }}>
             {draftLoading ? <Spinner /> : "Save Draft"}
           </button>
           {step === 1 ? (
-            <button onClick={handleNext} style={primaryButtonStyle}>
+            <button onClick={handleNext} style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "11px 18px", borderRadius: 8, background: "#3B82F6", border: "none", color: WHITE, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
               Next <ChevronRightIcon />
             </button>
           ) : (
-            <button onClick={openPublishFlow} disabled={publishLoading} style={{ ...primaryButtonStyle, minWidth: 148, justifyContent: "center" }}>
+            <button onClick={openPublishFlow} disabled={publishLoading} style={{ ...{ display: "inline-flex", alignItems: "center", gap: 8, padding: "11px 18px", borderRadius: 8, background: "#3B82F6", border: "none", color: WHITE, fontSize: 13, fontWeight: 600, cursor: "pointer" }, minWidth: 148, justifyContent: "center" }}>
               {publishLoading ? <Spinner color="#FFFFFF" /> : "Go Live"}
             </button>
           )}
