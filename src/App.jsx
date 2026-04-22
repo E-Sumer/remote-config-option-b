@@ -570,7 +570,7 @@ function ConfirmModal({ open, title, message, warning, confirmLabel, confirmTone
 
   const confirmStyle = confirmTone === "danger"
     ? { background: "#EF4444", color: WHITE, border: "none" }
-    : { background: PRIMARY, color: WHITE, border: "none" };
+    : { background: "#3B82F6", color: WHITE, border: "none" };
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(17, 24, 39, 0.35)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 110 }}>
@@ -1649,7 +1649,7 @@ function RemoteConfigurationForm({
           </div>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", borderLeft: `1px solid ${BORDER}`, borderRight: `1px solid ${BORDER}` }}>
             <div style={{ width: 28, height: 28, borderRadius: "50%", border: `1px solid ${BORDER}`, display: "flex", alignItems: "center", justifyContent: "center", color: TEXT_MUTED, background: WHITE }}>
-              {step === 2 ? <CheckIcon /> : <ChevronRightIcon />}
+              <ChevronRightIcon />
             </div>
           </div>
           <div style={{ padding: "14px 18px", background: WHITE, opacity: step === 2 ? 1 : 0.55 }}>
@@ -1848,22 +1848,35 @@ function RemoteConfigurationForm({
               <div style={{ fontSize: 13, fontWeight: 700, color: TEXT, marginBottom: 12 }}>Segment targeting</div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                 {mockSegments.map((segment) => {
+                  const isAllUsers = segment.name === "All Users";
+                  const allUsersSelected = form.selectedSegments.includes("All Users");
                   const selected = form.selectedSegments.includes(segment.name);
+                  const disabled = !isAllUsers && allUsersSelected;
                   return (
                     <button
                       key={segment.id}
-                      onClick={() => setForm((current) => ({
-                        ...current,
-                        selectedSegments: selected
-                          ? current.selectedSegments.filter((item) => item !== segment.name)
-                          : [...current.selectedSegments, segment.name],
-                      }))}
+                      disabled={disabled}
+                      onClick={() => setForm((current) => {
+                        if (isAllUsers) {
+                          const nowSelected = current.selectedSegments.includes("All Users");
+                          return { ...current, selectedSegments: nowSelected ? [] : ["All Users"] };
+                        }
+                        const withoutAll = current.selectedSegments.filter((item) => item !== "All Users");
+                        return {
+                          ...current,
+                          selectedSegments: selected
+                            ? withoutAll.filter((item) => item !== segment.name)
+                            : [...withoutAll, segment.name],
+                        };
+                      })}
                       style={{
                         ...secondaryButtonStyle,
                         padding: "8px 12px",
-                        background: selected ? PRIMARY : WHITE,
-                        color: selected ? WHITE : TEXT,
-                        borderColor: selected ? PRIMARY : BORDER_DARK,
+                        background: selected ? "#3B82F6" : WHITE,
+                        color: selected ? WHITE : disabled ? "#9CA3AF" : TEXT,
+                        borderColor: selected ? "#3B82F6" : "#E5E7EB",
+                        opacity: disabled ? 0.45 : 1,
+                        cursor: disabled ? "not-allowed" : "pointer",
                       }}
                     >
                       {segment.name}
