@@ -980,9 +980,9 @@ function RemoteConfigurationList({
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 22 }}>
         <div>
           <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
-            <div style={{ width: 5, height: 58, borderRadius: 999, background: PRIMARY, marginTop: 2 }} />
+            <div style={{ width: 5, height: 58, borderRadius: 999, background: "#3B82F6", marginTop: 2 }} />
             <div>
-              <h1 style={{ ...pageTitleStyle, color: PRIMARY, fontSize: 21 }}>Remote Configuration</h1>
+              <h1 style={{ ...pageTitleStyle, color: "#111827", fontSize: 21 }}>Remote Configuration</h1>
               <p style={pageDescriptionStyle}>Control app behavior and features without releasing a new version.</p>
             </div>
           </div>
@@ -999,14 +999,14 @@ function RemoteConfigurationList({
                 gap: 10,
                 padding: "7px 12px",
                 borderRadius: 10,
-                border: `1px solid ${activeDateFilter === "Custom" ? PRIMARY : "rgba(0,0,0,0.1)"}`,
+                border: `1px solid ${activeDateFilter === "Custom" ? "#3B82F6" : "#E5E7EB"}`,
                 background: WHITE,
                 color: TEXT,
                 fontSize: 12,
                 fontWeight: 500,
                 cursor: "pointer",
                 minWidth: 295,
-                boxShadow: activeDateFilter === "Custom" ? "0 8px 18px rgba(46, 124, 246, 0.14)" : "none",
+                boxShadow: "none",
               }}
             >
               <span style={{ fontWeight: 600 }}>Custom</span>
@@ -1029,13 +1029,13 @@ function RemoteConfigurationList({
                   style={{
                     padding: "7px 10px",
                     borderRadius: 8,
-                    border: `1px solid ${isPrimary ? PRIMARY : "rgba(0,0,0,0.1)"}`,
-                    background: isPrimary ? PRIMARY : WHITE,
+                    border: `1px solid ${isPrimary ? "#3B82F6" : "#E5E7EB"}`,
+                    background: isPrimary ? "#3B82F6" : WHITE,
                     color: isPrimary ? WHITE : TEXT_MUTED,
                     fontSize: 11,
                     fontWeight: 600,
                     cursor: "pointer",
-                    boxShadow: isPrimary ? "0 8px 18px rgba(46, 124, 246, 0.18)" : "none",
+                    boxShadow: "none",
                   }}
                 >
                   {filter}
@@ -1092,7 +1092,7 @@ function RemoteConfigurationList({
             )}
           </div>
         </div>
-        <button onClick={onCreate} style={primaryButtonStyle}>
+        <button onClick={onCreate} style={{ ...primaryButtonStyle, background: "#3B82F6" }}>
           New Remote Configuration
         </button>
       </div>
@@ -1642,8 +1642,8 @@ function RemoteConfigurationForm({
         <div style={{ display: "grid", gridTemplateColumns: "1fr 56px 1fr", alignItems: "stretch" }}>
           <div style={{ padding: "14px 18px", background: WHITE }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              {step === 2 && <span style={{ color: PRIMARY }}><CheckIcon /></span>}
-              <div style={{ fontSize: 13, fontWeight: 600, color: "#3B82F6" }}>Parameters & Keys</div>
+              {step === 2 && <span style={{ color: "#3B82F6" }}><CheckIcon /></span>}
+              <div style={{ fontSize: 13, fontWeight: 600, color: step === 1 ? "#3B82F6" : "#9CA3AF" }}>Parameters & Keys</div>
             </div>
             <div style={{ marginTop: 2, fontSize: 12, color: TEXT_MUTED }}>Define the configuration your app will receive.</div>
           </div>
@@ -1652,8 +1652,8 @@ function RemoteConfigurationForm({
               {step === 2 ? <CheckIcon /> : <ChevronRightIcon />}
             </div>
           </div>
-          <div style={{ padding: "14px 18px", background: step === 2 ? WHITE : "#FBFBFD", opacity: step === 2 ? 1 : 0.6 }}>
-            <div style={{ fontSize: 13, fontWeight: step === 2 ? 700 : 600, color: step === 2 ? PRIMARY : TEXT_MUTED }}>Targeting & Rollout</div>
+          <div style={{ padding: "14px 18px", background: WHITE, opacity: step === 2 ? 1 : 0.55 }}>
+            <div style={{ fontSize: 13, fontWeight: step === 2 ? 600 : 400, color: step === 2 ? "#3B82F6" : "#9CA3AF" }}>Targeting & Rollout</div>
             <div style={{ marginTop: 2, fontSize: 12, color: TEXT_MUTED }}>Choose who receives the configuration and how it rolls out.</div>
           </div>
         </div>
@@ -1917,16 +1917,14 @@ function RemoteConfigurationDetail({ config, experiments, onBack, onEdit, onOpen
 
   return (
     <div>
-      <button onClick={onBack} style={{ ...secondaryButtonStyle, marginBottom: 18 }}>← Back to remote configurations</button>
-
       <div style={{ ...cardStyle, padding: "18px 18px 12px", marginBottom: 14 }}>
         <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
           <div style={{ width: 4, alignSelf: "stretch", borderRadius: 999, background: PRIMARY }} />
           <div style={{ flex: 1 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-              <h1 style={{ margin: 0, fontSize: 20, color: PRIMARY, fontWeight: 700 }}>{config.name}</h1>
+              <h1 style={{ margin: 0, fontSize: 20, color: "#111827", fontWeight: 700 }}>{config.name}</h1>
               <ConfigStatusBadge status={config.status} />
-              <span style={{ padding: "4px 10px", borderRadius: 999, background: "#ececf0", color: "#030213", fontSize: 12, fontWeight: 700 }}>
+              <span style={{ padding: "2px 10px", borderRadius: 6, background: "#EFF6FF", color: "#3B82F6", fontSize: 13, fontWeight: 500 }}>
                 v{Number(config.version || 1).toFixed(1)}
               </span>
             </div>
@@ -1936,10 +1934,6 @@ function RemoteConfigurationDetail({ config, experiments, onBack, onEdit, onOpen
               <span style={{ fontSize: 12, color: TEXT, fontWeight: 600, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace" }}>{config.key}</span>
             </div>
           </div>
-          <button onClick={() => onEdit(config)} style={primaryButtonStyle}>
-            <EditIcon />
-            Edit Configuration
-          </button>
         </div>
       </div>
 
@@ -1971,9 +1965,9 @@ function RemoteConfigurationDetail({ config, experiments, onBack, onEdit, onOpen
             style={{
               ...secondaryButtonStyle,
               padding: "9px 14px",
-              background: tab === item.key ? PRIMARY : WHITE,
+              background: tab === item.key ? "#3B82F6" : WHITE,
               color: tab === item.key ? WHITE : TEXT,
-              borderColor: tab === item.key ? PRIMARY : BORDER_DARK,
+              borderColor: tab === item.key ? "#3B82F6" : "#E5E7EB",
             }}
           >
             {item.label}
@@ -2119,6 +2113,14 @@ function RemoteConfigurationDetail({ config, experiments, onBack, onEdit, onOpen
           )}
         </div>
       )}
+
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 28, paddingTop: 18, borderTop: "1px solid #E5E7EB" }}>
+        <button onClick={onBack} style={{ ...secondaryButtonStyle, background: WHITE, border: "1px solid #E5E7EB", color: "#374151" }}>← Back to remote configurations</button>
+        <button onClick={() => onEdit(config)} style={{ ...primaryButtonStyle, background: "#3B82F6" }}>
+          <EditIcon />
+          Edit Configuration
+        </button>
+      </div>
     </div>
   );
 }
