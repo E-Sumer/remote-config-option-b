@@ -1,13 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 
 const BLACK = "#111827";
+const PRIMARY = "#030213";
+const SECONDARY_BG = "#ececf0";
+const INPUT_BG = "#f3f3f5";
 const TEXT = "#111827";
 const TEXT_MUTED = "#6B7280";
 const PAGE_BG = "#F3F4F6";
 const WHITE = "#FFFFFF";
-const BORDER = "#E5E7EB";
-const BORDER_DARK = "#E5E7EB";
-const SOFT = "#F9FAFB";
+const BORDER = "rgba(0,0,0,0.1)";
+const BORDER_DARK = "rgba(0,0,0,0.1)";
+const SOFT = "#f9fafb";
 const CTA_GREEN = "#22C55E";
 const CTA_GREEN_DARK = "#16A34A";
 const CTA_GREEN_LIGHT = "#DCFCE7";
@@ -498,10 +501,10 @@ const GripIcon = () => <IconBase><circle cx="9" cy="7" r="1" /><circle cx="15" c
 
 const pageTitleStyle = { fontSize: 20, fontWeight: 700, color: TEXT, margin: 0 };
 const pageDescriptionStyle = { fontSize: 13, color: TEXT_MUTED, margin: "6px 0 0" };
-const cardStyle = { background: WHITE, border: `1px solid ${BORDER}`, borderRadius: 14, boxShadow: SHADOW };
-const inputStyle = { width: "100%", padding: "12px 14px", borderRadius: 10, border: `1px solid ${BORDER_DARK}`, background: WHITE, color: TEXT, fontSize: 13, outline: "none" };
-const primaryButtonStyle = { display: "inline-flex", alignItems: "center", gap: 8, padding: "11px 18px", border: "none", borderRadius: 10, background: CTA_GREEN, color: WHITE, fontSize: 13, fontWeight: 600, cursor: "pointer", boxShadow: "0 8px 18px rgba(41, 197, 139, 0.22)" };
-const secondaryButtonStyle = { display: "inline-flex", alignItems: "center", gap: 8, padding: "11px 16px", border: `1px solid ${BORDER_DARK}`, borderRadius: 10, background: WHITE, color: TEXT, fontSize: 13, fontWeight: 500, cursor: "pointer" };
+const cardStyle = { background: WHITE, border: "1px solid rgba(0,0,0,0.1)", borderRadius: 14, boxShadow: SHADOW };
+const inputStyle = { width: "100%", padding: "12px 14px", borderRadius: 8, border: "1px solid rgba(0,0,0,0.1)", background: INPUT_BG, color: TEXT, fontSize: 13, outline: "none" };
+const primaryButtonStyle = { display: "inline-flex", alignItems: "center", gap: 8, padding: "11px 18px", border: "none", borderRadius: 8, background: PRIMARY, color: WHITE, fontSize: 13, fontWeight: 500, cursor: "pointer" };
+const secondaryButtonStyle = { display: "inline-flex", alignItems: "center", gap: 8, padding: "11px 16px", border: "1px solid rgba(0,0,0,0.1)", borderRadius: 8, background: SECONDARY_BG, color: TEXT, fontSize: 13, fontWeight: 500, cursor: "pointer" };
 
 function Spinner({ size = 14, color = "currentColor" }) {
   return (
@@ -566,7 +569,7 @@ function ConfirmModal({ open, title, message, warning, confirmLabel, confirmTone
 
   const confirmStyle = confirmTone === "danger"
     ? { background: "#EF4444", color: WHITE, border: "none" }
-    : { background: "#3B82F6", color: WHITE, border: "none" };
+    : { background: PRIMARY, color: WHITE, border: "none" };
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(17, 24, 39, 0.35)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 110 }}>
@@ -932,7 +935,7 @@ function RemoteConfigurationList({
   const renderCalendarMonth = (monthDate) => (
     <div style={{ flex: 1, minWidth: 0 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-        <div style={{ fontSize: 16, fontWeight: 600, color: "#2F6CF6" }}>{getMonthLabel(monthDate)}</div>
+        <div style={{ fontSize: 16, fontWeight: 600, color: PRIMARY }}>{getMonthLabel(monthDate)}</div>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 6, fontSize: 11, color: TEXT_MUTED, marginBottom: 8 }}>
         {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((day) => (
@@ -976,9 +979,9 @@ function RemoteConfigurationList({
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 22 }}>
         <div>
           <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
-            <div style={{ width: 5, height: 58, borderRadius: 999, background: "#2F6CF6", marginTop: 2 }} />
+            <div style={{ width: 5, height: 58, borderRadius: 999, background: PRIMARY, marginTop: 2 }} />
             <div>
-              <h1 style={{ ...pageTitleStyle, color: "#2F6CF6", fontSize: 21 }}>Remote Configuration</h1>
+              <h1 style={{ ...pageTitleStyle, color: PRIMARY, fontSize: 21 }}>Remote Configuration</h1>
               <p style={pageDescriptionStyle}>Control app behavior and features without releasing a new version.</p>
             </div>
           </div>
@@ -995,7 +998,7 @@ function RemoteConfigurationList({
                 gap: 10,
                 padding: "7px 12px",
                 borderRadius: 10,
-                border: `1px solid ${activeDateFilter === "Custom" ? "#2E7CF6" : BORDER}`,
+                border: `1px solid ${activeDateFilter === "Custom" ? PRIMARY : "rgba(0,0,0,0.1)"}`,
                 background: WHITE,
                 color: TEXT,
                 fontSize: 12,
@@ -1025,8 +1028,8 @@ function RemoteConfigurationList({
                   style={{
                     padding: "7px 10px",
                     borderRadius: 8,
-                    border: `1px solid ${isPrimary ? "#2E7CF6" : BORDER}`,
-                    background: isPrimary ? "#2E7CF6" : WHITE,
+                    border: `1px solid ${isPrimary ? PRIMARY : "rgba(0,0,0,0.1)"}`,
+                    background: isPrimary ? PRIMARY : WHITE,
                     color: isPrimary ? WHITE : TEXT_MUTED,
                     fontSize: 11,
                     fontWeight: 600,
@@ -1178,9 +1181,9 @@ function RemoteConfigurationList({
                         style={{
                           ...secondaryButtonStyle,
                           padding: "8px 12px",
-                          background: pageNumber === page ? "#3B82F6" : WHITE,
+                          background: pageNumber === page ? PRIMARY : WHITE,
                           color: pageNumber === page ? WHITE : TEXT,
-                          borderColor: pageNumber === page ? "#3B82F6" : BORDER_DARK,
+                          borderColor: pageNumber === page ? PRIMARY : "rgba(0,0,0,0.1)",
                         }}
                       >
                         {pageNumber}
@@ -1598,7 +1601,7 @@ function RemoteConfigurationForm({
             <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 18 }}>
               <button style={secondaryButtonStyle} onClick={() => setConflictConfig(null)}>Continue Editing This Configuration</button>
               <button
-                style={{ ...primaryButtonStyle, background: "#3B82F6" }}
+                style={primaryButtonStyle}
                 onClick={() => {
                   onPauseConflictingConfig(conflictConfig.id);
                   proceedToStepTwo();
@@ -1614,18 +1617,18 @@ function RemoteConfigurationForm({
       <div style={{ display: "flex", alignItems: "center", gap: 8, color: TEXT_MUTED, fontSize: 12, marginBottom: 18 }}>
         <span>Platform</span>
         <span>›</span>
-        <span style={{ color: "#3B82F6", fontWeight: 600 }}>Remote Configuration</span>
+        <span style={{ color: PRIMARY, fontWeight: 600 }}>Remote Configuration</span>
       </div>
 
       <div style={{ ...cardStyle, padding: "18px 18px 12px", marginBottom: 12 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{ width: 4, alignSelf: "stretch", borderRadius: 999, background: "#3B82F6" }} />
+          <div style={{ width: 4, alignSelf: "stretch", borderRadius: 999, background: PRIMARY }} />
           <div style={{ flex: 1 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <h1 style={{ margin: 0, fontSize: 18, color: TEXT, fontWeight: 700 }}>
                 {mode === "edit" ? "Edit Remote Configuration" : "Create Remote Configuration"}
               </h1>
-              <span style={{ padding: "4px 10px", borderRadius: 999, background: "#DBEAFE", color: "#2563EB", fontSize: 12, fontWeight: 700 }}>
+              <span style={{ padding: "4px 10px", borderRadius: 999, background: "#ececf0", color: "#030213", fontSize: 12, fontWeight: 700 }}>
                 {versionLabel}
               </span>
             </div>
@@ -1638,18 +1641,18 @@ function RemoteConfigurationForm({
         <div style={{ display: "grid", gridTemplateColumns: "1fr 56px 1fr", alignItems: "stretch" }}>
           <div style={{ padding: "14px 18px", background: WHITE }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              {step === 2 && <span style={{ color: "#3B82F6" }}><CheckIcon /></span>}
-              <div style={{ fontSize: 13, fontWeight: 700, color: "#3B82F6" }}>Parameters & Keys</div>
+              {step === 2 && <span style={{ color: PRIMARY }}><CheckIcon /></span>}
+              <div style={{ fontSize: 13, fontWeight: 700, color: PRIMARY }}>Parameters & Keys</div>
             </div>
             <div style={{ marginTop: 2, fontSize: 12, color: TEXT_MUTED }}>Define the configuration your app will receive.</div>
           </div>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", borderLeft: `1px solid ${BORDER}`, borderRight: `1px solid ${BORDER}` }}>
-            <div style={{ width: 28, height: 28, borderRadius: "50%", border: `1px solid ${BORDER}`, display: "flex", alignItems: "center", justifyContent: "center", color: step === 2 ? "#3B82F6" : TEXT_MUTED, background: WHITE }}>
+            <div style={{ width: 28, height: 28, borderRadius: "50%", border: `1px solid ${BORDER}`, display: "flex", alignItems: "center", justifyContent: "center", color: step === 2 ? PRIMARY : TEXT_MUTED, background: WHITE }}>
               {step === 2 ? <CheckIcon /> : <ChevronRightIcon />}
             </div>
           </div>
           <div style={{ padding: "14px 18px", background: step === 2 ? WHITE : "#FBFBFD", opacity: step === 2 ? 1 : 0.6 }}>
-            <div style={{ fontSize: 13, fontWeight: step === 2 ? 700 : 600, color: step === 2 ? "#3B82F6" : TEXT_MUTED }}>Targeting & Rollout</div>
+            <div style={{ fontSize: 13, fontWeight: step === 2 ? 700 : 600, color: step === 2 ? PRIMARY : TEXT_MUTED }}>Targeting & Rollout</div>
             <div style={{ marginTop: 2, fontSize: 12, color: TEXT_MUTED }}>Choose who receives the configuration and how it rolls out.</div>
           </div>
         </div>
@@ -1703,13 +1706,13 @@ function RemoteConfigurationForm({
               <h3 style={{ margin: "0 0 4px", fontSize: 15, color: TEXT }}>Configuration Parameters</h3>
               <p style={{ margin: "0 0 14px", fontSize: 13, color: TEXT_MUTED }}>Define the parameters your application will receive.</p>
 
-              <div style={{ border: `1px dashed ${BORDER_DARK}`, borderRadius: 16, padding: 18, background: "#FCFCFF" }}>
+              <div style={{ border: `1px dashed ${BORDER_DARK}`, borderRadius: 16, padding: 18, background: SOFT }}>
                 {form.parameters.length === 0 ? (
                   <div style={{ textAlign: "center", padding: "20px 12px" }}>
                     <div style={{ color: TEXT_MUTED, marginBottom: 18, fontSize: 26 }}>&lt;/&gt;</div>
                     <div style={{ fontSize: 22, fontWeight: 700, color: TEXT, marginBottom: 8 }}>No parameters added yet</div>
                     <div style={{ fontSize: 14, color: TEXT_MUTED, marginBottom: 18 }}>Add your first parameter to define your configuration structure.</div>
-                    <button onClick={() => setForm((current) => ({ ...current, parameters: [...current.parameters, createEmptyParameter()] }))} style={{ ...primaryButtonStyle, background: "#3B82F6" }}>
+                    <button onClick={() => setForm((current) => ({ ...current, parameters: [...current.parameters, createEmptyParameter()] }))} style={primaryButtonStyle}>
                       + Add Parameter
                     </button>
                   </div>
@@ -1776,7 +1779,7 @@ function RemoteConfigurationForm({
                       </div>
                     ))}
 
-                    <button onClick={() => setForm((current) => ({ ...current, parameters: [...current.parameters, createEmptyParameter()] }))} style={{ ...primaryButtonStyle, alignSelf: "flex-start", background: "#3B82F6" }}>
+                    <button onClick={() => setForm((current) => ({ ...current, parameters: [...current.parameters, createEmptyParameter()] }))} style={{ ...primaryButtonStyle, alignSelf: "flex-start" }}>
                       + Add Parameter
                     </button>
                   </div>
@@ -1822,7 +1825,7 @@ function RemoteConfigurationForm({
           <p style={{ margin: "0 0 16px", fontSize: 13, color: TEXT_MUTED }}>Choose who receives the configuration and how it rolls out.</p>
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 18 }}>
-            <div style={{ padding: 16, borderRadius: 12, border: `1px solid ${BORDER}`, background: "#FBFCFF" }}>
+            <div style={{ padding: 16, borderRadius: 12, border: `1px solid ${BORDER}`, background: SOFT }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: TEXT, marginBottom: 12 }}>Rollout percentage</div>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <input type="range" min="0" max="100" value={form.rollout} onChange={(event) => setFieldValue("rollout", Number(event.target.value))} style={{ flex: 1 }} />
@@ -1837,7 +1840,7 @@ function RemoteConfigurationForm({
               )}
             </div>
 
-            <div style={{ padding: 16, borderRadius: 12, border: `1px solid ${BORDER}`, background: "#FBFCFF" }}>
+            <div style={{ padding: 16, borderRadius: 12, border: `1px solid ${BORDER}`, background: SOFT }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: TEXT, marginBottom: 12 }}>Segment targeting</div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                 {mockSegments.map((segment) => {
@@ -1854,9 +1857,9 @@ function RemoteConfigurationForm({
                       style={{
                         ...secondaryButtonStyle,
                         padding: "8px 12px",
-                        background: selected ? "#DBEAFE" : WHITE,
-                        color: selected ? "#1D4ED8" : TEXT,
-                        borderColor: selected ? "#93C5FD" : BORDER_DARK,
+                        background: selected ? PRIMARY : WHITE,
+                        color: selected ? WHITE : TEXT,
+                        borderColor: selected ? PRIMARY : BORDER_DARK,
                       }}
                     >
                       {segment.name}
@@ -1884,11 +1887,11 @@ function RemoteConfigurationForm({
             {draftLoading ? <Spinner /> : "Save Draft"}
           </button>
           {step === 1 ? (
-            <button onClick={handleNext} style={{ ...primaryButtonStyle, background: "#3B82F6" }}>
+            <button onClick={handleNext} style={primaryButtonStyle}>
               Next <ChevronRightIcon />
             </button>
           ) : (
-            <button onClick={openPublishFlow} disabled={publishLoading} style={{ ...primaryButtonStyle, background: "#3B82F6", minWidth: 148, justifyContent: "center" }}>
+            <button onClick={openPublishFlow} disabled={publishLoading} style={{ ...primaryButtonStyle, minWidth: 148, justifyContent: "center" }}>
               {publishLoading ? <Spinner color="#FFFFFF" /> : "Go Live"}
             </button>
           )}
@@ -1917,22 +1920,22 @@ function RemoteConfigurationDetail({ config, experiments, onBack, onEdit, onOpen
 
       <div style={{ ...cardStyle, padding: "18px 18px 12px", marginBottom: 14 }}>
         <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
-          <div style={{ width: 4, alignSelf: "stretch", borderRadius: 999, background: "#3B82F6" }} />
+          <div style={{ width: 4, alignSelf: "stretch", borderRadius: 999, background: PRIMARY }} />
           <div style={{ flex: 1 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-              <h1 style={{ margin: 0, fontSize: 20, color: "#2F6CF6", fontWeight: 700 }}>{config.name}</h1>
+              <h1 style={{ margin: 0, fontSize: 20, color: PRIMARY, fontWeight: 700 }}>{config.name}</h1>
               <ConfigStatusBadge status={config.status} />
-              <span style={{ padding: "4px 10px", borderRadius: 999, background: "#DBEAFE", color: "#2563EB", fontSize: 12, fontWeight: 700 }}>
+              <span style={{ padding: "4px 10px", borderRadius: 999, background: "#ececf0", color: "#030213", fontSize: 12, fontWeight: 700 }}>
                 v{Number(config.version || 1).toFixed(1)}
               </span>
             </div>
             <p style={{ margin: "6px 0 0", color: TEXT_MUTED, fontSize: 13 }}>{config.description}</p>
-            <div style={{ marginTop: 12, display: "inline-flex", alignItems: "center", gap: 8, padding: "8px 10px", borderRadius: 10, background: "#F8FAFC", border: `1px solid ${BORDER}` }}>
+            <div style={{ marginTop: 12, display: "inline-flex", alignItems: "center", gap: 8, padding: "8px 10px", borderRadius: 10, background: SOFT, border: `1px solid ${BORDER}` }}>
               <span style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 700 }}>CONFIG KEY</span>
               <span style={{ fontSize: 12, color: TEXT, fontWeight: 600, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace" }}>{config.key}</span>
             </div>
           </div>
-          <button onClick={() => onEdit(config)} style={{ ...primaryButtonStyle, background: "#3B82F6" }}>
+          <button onClick={() => onEdit(config)} style={primaryButtonStyle}>
             <EditIcon />
             Edit Configuration
           </button>
@@ -1949,7 +1952,7 @@ function RemoteConfigurationDetail({ config, experiments, onBack, onEdit, onOpen
           <div key={item.label} style={{ ...cardStyle, padding: "16px 18px" }}>
             <div style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 700, marginBottom: 4, textTransform: "uppercase", letterSpacing: 0.4 }}>{item.label}</div>
             <div style={{ fontSize: 24, fontWeight: 700, color: TEXT }}>{item.value}</div>
-            <div style={{ marginTop: 2, fontSize: 11, color: "#3B82F6", fontWeight: 600 }}>{item.sub}</div>
+            <div style={{ marginTop: 2, fontSize: 11, color: TEXT_MUTED, fontWeight: 600 }}>{item.sub}</div>
           </div>
         ))}
       </div>
@@ -1967,9 +1970,9 @@ function RemoteConfigurationDetail({ config, experiments, onBack, onEdit, onOpen
             style={{
               ...secondaryButtonStyle,
               padding: "9px 14px",
-              background: tab === item.key ? "#DBEAFE" : WHITE,
-              color: tab === item.key ? "#1D4ED8" : TEXT,
-              borderColor: tab === item.key ? "#93C5FD" : BORDER_DARK,
+              background: tab === item.key ? PRIMARY : WHITE,
+              color: tab === item.key ? WHITE : TEXT,
+              borderColor: tab === item.key ? PRIMARY : BORDER_DARK,
             }}
           >
             {item.label}
@@ -1988,7 +1991,7 @@ function RemoteConfigurationDetail({ config, experiments, onBack, onEdit, onOpen
                 { label: "Last Updated", value: config.updated },
                 { label: "Version", value: `v${Number(config.version || 1).toFixed(1)}` },
               ].map((item) => (
-                <div key={item.label} style={{ padding: 14, borderRadius: 12, border: `1px solid ${BORDER}`, background: "#FBFCFF" }}>
+                <div key={item.label} style={{ padding: 14, borderRadius: 12, border: `1px solid ${BORDER}`, background: SOFT }}>
                   <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase" }}>{item.label}</div>
                   <div style={{ marginTop: 6, fontSize: 14, fontWeight: 600, color: TEXT }}>{item.value}</div>
                 </div>
@@ -2003,16 +2006,16 @@ function RemoteConfigurationDetail({ config, experiments, onBack, onEdit, onOpen
 
           <div style={{ ...cardStyle, padding: 22 }}>
             <h3 style={{ margin: "0 0 14px", fontSize: 16, color: TEXT }}>Targeting & Rollout</h3>
-            <div style={{ padding: 16, borderRadius: 12, border: `1px solid ${BORDER}`, background: "#FBFCFF", marginBottom: 12 }}>
+            <div style={{ padding: 16, borderRadius: 12, border: `1px solid ${BORDER}`, background: SOFT, marginBottom: 12 }}>
               <div style={{ fontSize: 12, fontWeight: 700, color: TEXT_MUTED, marginBottom: 8, textTransform: "uppercase" }}>Rollout Percentage</div>
               <div style={{ fontSize: 22, fontWeight: 700, color: TEXT }}>{config.rollout ?? 100}%</div>
             </div>
-            <div style={{ padding: 16, borderRadius: 12, border: `1px solid ${BORDER}`, background: "#FBFCFF" }}>
+            <div style={{ padding: 16, borderRadius: 12, border: `1px solid ${BORDER}`, background: SOFT }}>
               <div style={{ fontSize: 12, fontWeight: 700, color: TEXT_MUTED, marginBottom: 8, textTransform: "uppercase" }}>Audience Segments</div>
               {activeSegments.length ? (
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                   {activeSegments.map((segment) => (
-                    <span key={segment} style={{ padding: "6px 10px", borderRadius: 999, background: "#DBEAFE", color: "#1D4ED8", fontSize: 12, fontWeight: 600 }}>
+                    <span key={segment} style={{ padding: "6px 10px", borderRadius: 999, background: "#ececf0", color: PRIMARY, fontSize: 12, fontWeight: 600 }}>
                       {segment}
                     </span>
                   ))}
@@ -2031,10 +2034,10 @@ function RemoteConfigurationDetail({ config, experiments, onBack, onEdit, onOpen
           {config.parameters?.length ? (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 14 }}>
               {config.parameters.map((parameter) => (
-                <div key={parameter.id} style={{ padding: 16, borderRadius: 14, border: `1px solid ${BORDER}`, background: "#FBFCFF" }}>
+                <div key={parameter.id} style={{ padding: 16, borderRadius: 14, border: `1px solid ${BORDER}`, background: SOFT }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
                     <div style={{ fontSize: 14, fontWeight: 700, color: TEXT }}>{parameter.key}</div>
-                    <span style={{ padding: "5px 10px", borderRadius: 999, background: "#EFF6FF", color: "#2563EB", fontSize: 11, fontWeight: 700 }}>
+                    <span style={{ padding: "5px 10px", borderRadius: 999, background: "#ececf0", color: "#030213", fontSize: 11, fontWeight: 700 }}>
                       {parameter.type}
                     </span>
                   </div>
@@ -2269,8 +2272,8 @@ function ExperimentList({
   const winningVariants = experiments.filter((experiment) => !experiment.archived && typeof experiment.confidence === "number" && experiment.confidence >= 95 && String(experiment.lift).startsWith("+")).length;
   const stats = [
     { label: "Active Experiments", value: activeExperiments.length, sub: "running or paused", color: CTA_GREEN_DARK },
-    { label: "Total Users in Tests", value: activeExperiments.reduce((sum, experiment) => sum + experiment.users, 0).toLocaleString(), sub: "across active experiments", color: "#3B82F6" },
-    { label: "Winning Variants", value: winningVariants, sub: "statistically significant", color: "#2563EB" },
+    { label: "Total Users in Tests", value: activeExperiments.reduce((sum, experiment) => sum + experiment.users, 0).toLocaleString(), sub: "across active experiments", color: PRIMARY },
+    { label: "Winning Variants", value: winningVariants, sub: "statistically significant", color: PRIMARY },
   ];
 
   const handleSort = (column) => {
@@ -2334,9 +2337,9 @@ function ExperimentList({
             style={{
               padding: "7px 12px",
               borderRadius: 999,
-              border: `1px solid ${filter === filterName ? "#3B82F6" : BORDER}`,
-              background: filter === filterName ? "#DBEAFE" : WHITE,
-              color: filter === filterName ? "#1D4ED8" : TEXT_MUTED,
+              border: `1px solid ${filter === filterName ? PRIMARY : "rgba(0,0,0,0.1)"}`,
+              background: filter === filterName ? PRIMARY : WHITE,
+              color: filter === filterName ? WHITE : TEXT_MUTED,
               fontSize: 12,
               fontWeight: 600,
               cursor: "pointer",
@@ -2346,7 +2349,7 @@ function ExperimentList({
             }}
           >
             <span>{filterName === "ALL" ? "All" : filterName.charAt(0) + filterName.slice(1).toLowerCase()}</span>
-            <span style={{ padding: "1px 7px", borderRadius: 999, background: filter === filterName ? WHITE : SOFT, color: filter === filterName ? "#1D4ED8" : TEXT_MUTED }}>
+            <span style={{ padding: "1px 7px", borderRadius: 999, background: filter === filterName ? WHITE : SOFT, color: filter === filterName ? TEXT : TEXT_MUTED }}>
               {counts[filterName]}
             </span>
           </button>
@@ -2496,9 +2499,9 @@ function ExperimentList({
                       style={{
                         ...secondaryButtonStyle,
                         padding: "8px 12px",
-                        background: pageNumber === page ? "#3B82F6" : WHITE,
+                        background: pageNumber === page ? PRIMARY : WHITE,
                         color: pageNumber === page ? WHITE : TEXT,
-                        borderColor: pageNumber === page ? "#3B82F6" : BORDER_DARK,
+                        borderColor: pageNumber === page ? PRIMARY : "rgba(0,0,0,0.1)",
                       }}
                     >
                       {pageNumber}
@@ -2591,7 +2594,7 @@ function SearchableSelect({
                   padding: "10px 12px",
                   border: "none",
                   borderRadius: 10,
-                  background: selectedValue === option.value ? "#EFF6FF" : "transparent",
+                  background: selectedValue === option.value ? "#ececf0" : "transparent",
                   display: "flex",
                   flexDirection: "column",
                   alignItems: "flex-start",
@@ -2899,7 +2902,7 @@ function CreateExperiment({
           )}
 
           {selectedConfig && (
-            <div style={{ padding: 16, borderRadius: 12, border: `1px solid ${BORDER}`, background: "#FBFCFF" }}>
+            <div style={{ padding: 16, borderRadius: 12, border: `1px solid ${BORDER}`, background: SOFT }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 12 }}>
                 <div>
                   <div style={{ fontSize: 14, fontWeight: 700, color: TEXT }}>{selectedConfig.name}</div>
@@ -2949,7 +2952,7 @@ function CreateExperiment({
           />
 
           {selectedMetric && (
-            <div style={{ padding: "12px 14px", borderRadius: 10, border: "1px solid #BFDBFE", background: "#EFF6FF", color: "#1D4ED8", fontSize: 13 }}>
+            <div style={{ padding: "12px 14px", borderRadius: 10, border: "1px solid rgba(0,0,0,0.1)", background: "#ececf0", color: PRIMARY, fontSize: 13 }}>
               Baseline reference: {selectedMetric.baseline}
             </div>
           )}
@@ -3004,7 +3007,7 @@ function CreateExperiment({
                           <TrashIcon />
                         </button>
                       ) : (
-                        <span style={{ padding: "6px 10px", borderRadius: 999, background: variant.locked ? "#E5E7EB" : "#DBEAFE", color: variant.locked ? "#4B5563" : "#1D4ED8", fontSize: 12, fontWeight: 700 }}>
+                        <span style={{ padding: "6px 10px", borderRadius: 999, background: variant.locked ? "#ececf0" : "#ececf0", color: variant.locked ? TEXT_MUTED : PRIMARY, fontSize: 12, fontWeight: 700 }}>
                           {variant.locked ? "Read-only" : "Required"}
                         </span>
                       )}
@@ -3012,7 +3015,7 @@ function CreateExperiment({
 
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 14 }}>
                       {variant.parameters.map((parameter) => (
-                        <div key={parameter.id} style={{ padding: 14, borderRadius: 12, border: `1px solid ${BORDER}`, background: "#FCFCFF" }}>
+                        <div key={parameter.id} style={{ padding: 14, borderRadius: 12, border: `1px solid ${BORDER}`, background: SOFT }}>
                           <div style={{ fontSize: 12, fontWeight: 700, color: TEXT_MUTED, marginBottom: 8 }}>{parameter.key}</div>
                           <div style={{ fontSize: 11, color: TEXT_MUTED, marginBottom: 8 }}>{parameter.type}</div>
                           {parameter.type === "Boolean" ? (
@@ -3164,7 +3167,7 @@ function ExperimentDetail({ experiment, onBack, onOpenRemoteConfig, linkedConfig
           {linkedConfig ? (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12 }}>
               {linkedConfig.parameters.map((parameter) => (
-                <div key={parameter.id} style={{ padding: 14, borderRadius: 12, border: `1px solid ${BORDER}`, background: "#FBFCFF" }}>
+                <div key={parameter.id} style={{ padding: 14, borderRadius: 12, border: `1px solid ${BORDER}`, background: SOFT }}>
                   <div style={{ fontSize: 12, fontWeight: 700, color: TEXT }}>{parameter.key}</div>
                   <div style={{ marginTop: 2, fontSize: 11, color: TEXT_MUTED }}>{parameter.type}</div>
                   <div style={{ marginTop: 8, fontSize: 12, color: TEXT_MUTED, whiteSpace: "pre-wrap", fontFamily: parameter.type === "JSON" ? "ui-monospace, SFMono-Regular, Menlo, monospace" : "inherit" }}>
@@ -3192,7 +3195,7 @@ function ExperimentDetail({ experiment, onBack, onOpenRemoteConfig, linkedConfig
               { label: "Linked Config Key", value: experiment.linkedConfigKey || "—" },
               { label: "Users", value: Number(experiment.users || 0).toLocaleString() },
             ].map((item) => (
-              <div key={item.label} style={{ padding: 14, borderRadius: 12, border: `1px solid ${BORDER}`, background: "#FBFCFF" }}>
+              <div key={item.label} style={{ padding: 14, borderRadius: 12, border: `1px solid ${BORDER}`, background: SOFT }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase" }}>{item.label}</div>
                 <div style={{ marginTop: 6, fontSize: 14, fontWeight: 600, color: TEXT, fontFamily: item.label.includes("Key") || item.label.includes("Metric") ? "ui-monospace, SFMono-Regular, Menlo, monospace" : "inherit" }}>
                   {item.value}
