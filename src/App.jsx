@@ -343,6 +343,24 @@ function rebalanceVariantTraffic(variants) {
   });
 }
 
+
+function createRcVariantId() {
+  return `rcv_${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function createDefaultRcVariant(parameters) {
+  return {
+    id: createRcVariantId(),
+    name: "Default",
+    priority: 999,
+    isDefault: true,
+    segments: [],
+    rolloutPercentage: 100,
+    parameterOverrides: Object.fromEntries((parameters || []).map((p) => [p.key, p.value])),
+    collapsed: false,
+  };
+}
+
 function stringifyParameterValue(parameter) {
   if (parameter.type === "JSON") return String(parameter.value || "{}");
   if (parameter.type === "Boolean") return String(parameter.value === true || parameter.value === "true");
@@ -1210,20 +1228,24 @@ function RemoteConfigurationForm({
   onSave,
   onPauseConflictingConfig,
 }) {
-  const buildInitialForm = () => ({
-    id: initialValue?.id || null,
-    name: initialValue?.name || "",
-    key: initialValue?.key || "",
-    description: initialValue?.description || "",
-    creator: initialValue?.creator || "Emre Sumer",
-    status: initialValue?.status || "Draft",
-    version: initialValue?.version || 1.0,
-    rollout: initialValue?.rollout ?? 100,
-    selectedSegments: initialValue?.selectedSegments || [],
-    parameters: initialValue?.parameters?.length
+  const buildInitialForm = () => {
+    const params = initialValue?.parameters?.length
       ? initialValue.parameters.map((parameter) => ({ ...parameter }))
-      : [],
-  });
+      : [];
+    return {
+      id: initialValue?.id || null,
+      name: initialValue?.name || "",
+      key: initialValue?.key || "",
+      description: initialValue?.description || "",
+      creator: initialValue?.creator || "Emre Sumer",
+      status: initialValue?.status || "Draft",
+      version: initialValue?.version || 1.0,
+      rollout: initialValue?.rollout ?? 100,
+      selectedSegments: initialValue?.selectedSegments || [],
+      parameters: params,
+      variants: initialValue?.variants || [createDefaultRcVariant(params)],
+    };
+  };
 
   const [form, setForm] = useState(buildInitialForm);
   const [step, setStep] = useState(1);
@@ -1240,6 +1262,10 @@ function RemoteConfigurationForm({
   const [liveWarningOpen, setLiveWarningOpen] = useState(false);
   const [zeroRolloutWarning, setZeroRolloutWarning] = useState(false);
   const [draggingId, setDraggingId] = useState(null);
+  const [varDragId, setVarDragId] = useState(null);
+  const [priorityBannerDismissed, setPriorityBannerDismissed] = useState(() => {
+    try { return localStorage.getItem("rc_priority_banner_dismissed") === "true"; } catch { return false; }
+  });
 
   useEffect(() => {
     setForm(buildInitialForm());
@@ -1396,10 +1422,24 @@ function RemoteConfigurationForm({
 
   const validateStepTwo = () => {
     const nextErrors = {};
+    const customVariants = form.variants ? form.variants.filter((v) => !v.isDefault) : [];
 
-    if (Number(form.rollout) < 0 || Number(form.rollout) > 100 || Number.isNaN(Number(form.rollout))) {
-      nextErrors.rollout = "Rollout percentage must be between 0 and 100.";
-    }
+    customVariants.forEach((variant, i) => {
+      if (!variant.segments.length) {
+        nextErrors[`variant_${variant.id}_segments`] = `Variant ${i + 1} must have at least one segment.`;
+      }
+    });
+
+    const segUsage = {};
+    customVariants.forEach((v, i) => {
+      v.segments.forEach((s) => {
+        if (segUsage[s] !== undefined) {
+          nextErrors[`segment_conflict_${s}`] = `Segment "${s}" is targeted by multiple variants.`;
+        } else {
+          segUsage[s] = i + 1;
+        }
+      });
+    });
 
     setErrors((current) => ({ ...current, ...nextErrors }));
     return Object.keys(nextErrors).length === 0;
@@ -1440,6 +1480,56 @@ function RemoteConfigurationForm({
       return { ...current, parameters: list };
     });
     setDraggingId(null);
+  };
+
+
+  const updateVariant = (variantId, updater) => {
+    setForm((current) => ({
+      ...current,
+      variants: current.variants.map((v) => v.id === variantId ? updater(v) : v),
+    }));
+  };
+
+  const addVariant = () => {
+    setForm((current) => {
+      const customs = current.variants.filter((v) => !v.isDefault);
+      if (customs.length >= 4) return current;
+      const deflt = current.variants.find((v) => v.isDefault);
+      const newVariant = {
+        id: createRcVariantId(),
+        name: `Variant ${customs.length + 1}`,
+        priority: customs.length + 1,
+        isDefault: false,
+        segments: [],
+        rolloutPercentage: 100,
+        parameterOverrides: deflt ? { ...deflt.parameterOverrides } : {},
+        collapsed: false,
+      };
+      return { ...current, variants: [...customs, newVariant, deflt] };
+    });
+  };
+
+  const removeVariant = (variantId) => {
+    setForm((current) => ({
+      ...current,
+      variants: current.variants.filter((v) => v.id !== variantId || v.isDefault),
+    }));
+  };
+
+  const handleVariantDrop = (targetId) => {
+    if (!varDragId || varDragId === targetId) return;
+    setForm((current) => {
+      const customs = current.variants.filter((v) => !v.isDefault);
+      const deflt = current.variants.find((v) => v.isDefault);
+      const si = customs.findIndex((v) => v.id === varDragId);
+      const ti = customs.findIndex((v) => v.id === targetId);
+      if (si === -1 || ti === -1) return current;
+      const reordered = [...customs];
+      const [moved] = reordered.splice(si, 1);
+      reordered.splice(ti, 0, moved);
+      return { ...current, variants: [...reordered, deflt] };
+    });
+    setVarDragId(null);
   };
 
   const handleSaveDraft = async () => {
@@ -1487,11 +1577,6 @@ function RemoteConfigurationForm({
     const isStepOneValid = validateStepOne();
     const isStepTwoValid = validateStepTwo();
     if (!isStepOneValid || !isStepTwoValid) return;
-
-    if (Number(form.rollout) === 0 && !zeroRolloutWarning) {
-      setZeroRolloutWarning(true);
-      return;
-    }
 
     if (mode === "edit" && initialValue?.status === "Live" && isDirty) {
       setLiveWarningOpen(true);
@@ -1584,7 +1669,19 @@ function RemoteConfigurationForm({
       <ConfirmModal
         open={publishModalOpen}
         title="Confirm and Go Live"
-        message={`Name: ${form.name}\nKey: ${form.key}\nParameters: ${form.parameters.length}\nRollout: ${form.rollout}%\nTarget Segment: ${form.selectedSegments.length ? form.selectedSegments.join(", ") : "All users"}`}
+        message={(() => {
+          const customs = form.variants ? form.variants.filter((v) => !v.isDefault) : [];
+          const deflt = form.variants ? form.variants.find((v) => v.isDefault) : null;
+          const lines = [
+            `Name: ${form.name}`,
+            `Key: ${form.key}`,
+            `Parameters: ${form.parameters.length}`,
+            `Variants: ${customs.length} custom + 1 default`,
+            ...customs.map((v, i) => `  Variant ${i + 1} (${v.name}): ${v.segments.join(", ") || "No segment"} — ${v.rolloutPercentage}%`),
+            `  Default: All unmatched — ${deflt ? deflt.rolloutPercentage : 100}%`,
+          ];
+          return lines.join("\n");
+        })()}
         confirmLabel="Confirm and Go Live"
         confirmTone="primary"
         loading={publishLoading}
@@ -1823,76 +1920,241 @@ function RemoteConfigurationForm({
         </div>
       )}
 
-      {step === 2 && (
-        <div style={{ ...cardStyle, padding: 22 }}>
-          <h3 style={{ margin: "0 0 8px", fontSize: 16, color: TEXT }}>Targeting & Rollout</h3>
-          <p style={{ margin: "0 0 16px", fontSize: 13, color: TEXT_MUTED }}>Choose who receives the configuration and how it rolls out.</p>
+      {step === 2 && (() => {
+        const customVariants = (form.variants || []).filter((v) => !v.isDefault);
+        const defaultVariant = (form.variants || []).find((v) => v.isDefault) || createDefaultRcVariant(form.parameters);
+        const atMax = customVariants.length >= 4;
+        const variantColors = ["#3B82F6", "#22C55E", "#F59E0B", "#8B5CF6"];
+        const segUsage = {};
+        customVariants.forEach((v, i) => { v.segments.forEach((s) => { segUsage[s] = segUsage[s] || []; segUsage[s].push(i + 1); }); });
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 18 }}>
-            <div style={{ padding: 16, borderRadius: 12, border: `1px solid ${BORDER}`, background: SOFT }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: TEXT, marginBottom: 12 }}>Rollout percentage</div>
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <input type="range" min="0" max="100" value={form.rollout} onChange={(event) => setFieldValue("rollout", Number(event.target.value))} style={{ flex: 1 }} />
-                <input type="number" min="0" max="100" value={form.rollout} onChange={(event) => setFieldValue("rollout", Number(event.target.value))} style={{ ...inputStyle, width: 90 }} />
-                <span style={{ color: TEXT_MUTED, fontSize: 13 }}>%</span>
+        const renderVariantParamInput = (param, overrideValue, setOverride) => {
+          if (param.type === "Boolean") return (
+            <select value={String(overrideValue)} onChange={(e) => setOverride(e.target.value === "true")} style={{ ...inputStyle, width: "100%" }}>
+              <option value="true">True</option><option value="false">False</option>
+            </select>
+          );
+          if (param.type === "JSON") return (
+            <textarea rows={2} value={String(overrideValue ?? "")} onChange={(e) => setOverride(e.target.value)} style={{ ...inputStyle, width: "100%", resize: "vertical", fontFamily: "ui-monospace, monospace", fontSize: 12 }} />
+          );
+          return (
+            <input type={param.type === "Number" || param.type === "Integer" ? "number" : "text"} value={String(overrideValue ?? "")} onChange={(e) => setOverride(e.target.value)} style={{ ...inputStyle, width: "100%" }} />
+          );
+        };
+
+        return (
+          <div>
+            {/* Section header */}
+            <div style={{ marginBottom: 14 }}>
+              <h3 style={{ margin: "0 0 4px", fontSize: 16, color: "#111827" }}>Targeting & Rollout</h3>
+              <p style={{ margin: 0, fontSize: 13, color: "#6B7280" }}>Define who receives this configuration and what values they see. Add variants to deliver different experiences to different segments.</p>
+            </div>
+
+            {/* Priority banner */}
+            {!priorityBannerDismissed && (
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "10px 14px", borderRadius: 8, background: "#EFF6FF", border: "1px solid #BFDBFE", marginBottom: 14 }}>
+                <span style={{ color: "#3B82F6", flexShrink: 0, marginTop: 1 }}><InfoIcon /></span>
+                <div style={{ flex: 1, fontSize: 12, color: "#1E40AF", lineHeight: 1.55 }}>
+                  Variants are evaluated top to bottom. The first variant whose segment matches the user wins. Users who don't match any variant receive the Default.
+                </div>
+                <button onClick={() => { setPriorityBannerDismissed(true); try { localStorage.setItem("rc_priority_banner_dismissed", "true"); } catch {} }} style={{ background: "none", border: "none", color: "#93C5FD", fontSize: 18, cursor: "pointer", padding: "0 0 0 8px", lineHeight: 1, flexShrink: 0 }}>×</button>
               </div>
-              {errors.rollout && <div style={{ marginTop: 8, fontSize: 12, color: "#EF4444" }}>{errors.rollout}</div>}
-              {zeroRolloutWarning && Number(form.rollout) === 0 && (
-                <div style={{ marginTop: 12, padding: "10px 12px", borderRadius: 10, border: "1px solid #FCD34D", background: "#FFFBEB", color: "#92400E", fontSize: 13 }}>
-                  Setting rollout to 0% means no users will receive this configuration. Are you sure?
+            )}
+
+            {/* Variant cards */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 10 }}>
+              {customVariants.map((variant, idx) => {
+                const varColor = variantColors[idx % variantColors.length];
+                const conflictSegs = variant.segments.filter((s) => segUsage[s]?.length > 1);
+                const hasConflict = conflictSegs.length > 0;
+                return (
+                  <div
+                    key={variant.id}
+                    draggable
+                    onDragStart={() => setVarDragId(variant.id)}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={() => handleVariantDrop(variant.id)}
+                    style={{ background: WHITE, borderRadius: 8, border: hasConflict ? "1px solid #FECACA" : "1px solid #E5E7EB", borderLeft: hasConflict ? "3px solid #EF4444" : `3px solid ${varColor}`, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}
+                  >
+                    {/* Card header */}
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "11px 16px" }}>
+                      <span style={{ color: "#D1D5DB", cursor: "grab", fontSize: 15, flexShrink: 0, userSelect: "none" }}>⠿</span>
+                      <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 24, height: 24, borderRadius: "50%", background: "#EFF6FF", color: "#3B82F6", fontSize: 11, fontWeight: 700, flexShrink: 0 }}>{idx + 1}</span>
+                      <input
+                        value={variant.name}
+                        onChange={(e) => updateVariant(variant.id, (v) => ({ ...v, name: e.target.value }))}
+                        onBlur={(e) => { if (!e.target.value.trim()) updateVariant(variant.id, (v) => ({ ...v, name: `Variant ${idx + 1}` })); }}
+                        placeholder={`Variant ${idx + 1}`}
+                        style={{ flex: 1, border: "none", borderBottom: "1.5px solid transparent", outline: "none", fontSize: 14, fontWeight: 600, color: "#111827", background: "transparent", padding: "2px 0", transition: "border-color 0.15s" }}
+                        onFocus={(e) => { e.target.style.borderBottomColor = "#3B82F6"; }}
+                        onBlur={(e) => { e.target.style.borderBottomColor = "transparent"; if (!e.target.value.trim()) updateVariant(variant.id, (v) => ({ ...v, name: `Variant ${idx + 1}` })); }}
+                      />
+                      <button onClick={() => updateVariant(variant.id, (v) => ({ ...v, collapsed: !v.collapsed }))} style={{ background: "none", border: "none", color: "#9CA3AF", cursor: "pointer", padding: "4px", display: "flex", alignItems: "center", borderRadius: 4 }}>
+                        <ChevronDownIcon />
+                      </button>
+                      <button onClick={() => removeVariant(variant.id)} style={{ background: "none", border: "none", color: "#9CA3AF", cursor: "pointer", padding: "4px", display: "flex", alignItems: "center", borderRadius: 4 }}>
+                        <TrashIcon />
+                      </button>
+                    </div>
+
+                    {/* Card body */}
+                    {!variant.collapsed && (
+                      <div style={{ padding: "0 16px 16px", borderTop: "1px solid #F3F4F6" }}>
+
+                        {/* Segment targeting */}
+                        <div style={{ marginTop: 14 }}>
+                          <div style={{ fontSize: 11, fontWeight: 600, color: "#9CA3AF", letterSpacing: "0.04em", marginBottom: 8, textTransform: "uppercase" }}>Target Segment</div>
+                          {variant.segments.length > 0 && (
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
+                              {variant.segments.map((segName) => (
+                                <span key={segName} style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 8px 3px 10px", borderRadius: 20, background: "#EFF6FF", color: "#3B82F6", border: "1px solid #BFDBFE", fontSize: 12, fontWeight: 500 }}>
+                                  {segName}
+                                  <button onClick={() => updateVariant(variant.id, (v) => ({ ...v, segments: v.segments.filter((s) => s !== segName) }))} style={{ background: "none", border: "none", color: "#93C5FD", cursor: "pointer", padding: 0, fontSize: 14, lineHeight: 1, display: "flex", alignItems: "center" }}>×</button>
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                            {mockSegments.filter((s) => s.name !== "All Users" && !variant.segments.includes(s.name)).map((seg) => {
+                              const usedInOther = customVariants.some((v, vi) => vi !== idx && v.segments.includes(seg.name));
+                              return (
+                                <button key={seg.id} disabled={usedInOther} onClick={() => !usedInOther && updateVariant(variant.id, (v) => ({ ...v, segments: [...v.segments, seg.name] }))} title={usedInOther ? "Already used in another variant" : undefined} style={{ padding: "5px 10px", borderRadius: 6, border: "1px solid #E5E7EB", background: usedInOther ? "#F9FAFB" : WHITE, color: usedInOther ? "#9CA3AF" : "#374151", fontSize: 12, cursor: usedInOther ? "not-allowed" : "pointer", opacity: usedInOther ? 0.55 : 1 }}>
+                                  + {seg.name}
+                                </button>
+                              );
+                            })}
+                          </div>
+                          {variant.segments.length === 0 && <div style={{ marginTop: 6, fontSize: 12, color: "#D97706" }}>Select at least one segment to activate this variant.</div>}
+                          {hasConflict && <div style={{ marginTop: 6, fontSize: 12, color: "#DC2626" }}>Segment conflict: {conflictSegs.join(", ")} is already targeted by another variant.</div>}
+                          <div style={{ marginTop: 6, fontSize: 11, color: "#9CA3AF" }}>Users matching this segment will receive the values defined below instead of the default.</div>
+                        </div>
+
+                        {/* Rollout within segment */}
+                        <div style={{ marginTop: 16 }}>
+                          <div style={{ fontSize: 11, fontWeight: 600, color: "#9CA3AF", letterSpacing: "0.04em", marginBottom: 8, textTransform: "uppercase" }}>Rollout Within Segment</div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                            <input type="range" min="0" max="100" value={variant.rolloutPercentage} onChange={(e) => updateVariant(variant.id, (v) => ({ ...v, rolloutPercentage: Number(e.target.value) }))} style={{ flex: 1, accentColor: "#3B82F6" }} />
+                            <input type="number" min="0" max="100" value={variant.rolloutPercentage} onChange={(e) => updateVariant(variant.id, (v) => ({ ...v, rolloutPercentage: Math.min(100, Math.max(0, Number(e.target.value))) }))} style={{ ...inputStyle, width: 80 }} />
+                            <span style={{ color: "#6B7280", fontSize: 13 }}>%</span>
+                          </div>
+                          <div style={{ marginTop: 4, fontSize: 11, color: "#9CA3AF" }}>Percentage of matched segment users who receive this variant. The remainder receive the default.</div>
+                        </div>
+
+                        {/* Parameter value overrides */}
+                        {form.parameters.length > 0 && (
+                          <div style={{ marginTop: 16 }}>
+                            <div style={{ fontSize: 11, fontWeight: 600, color: "#9CA3AF", letterSpacing: "0.04em", marginBottom: 8, textTransform: "uppercase" }}>Parameter Values for This Variant</div>
+                            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                              {form.parameters.map((param) => {
+                                const overrideValue = variant.parameterOverrides[param.key] ?? param.value;
+                                const isOverridden = String(overrideValue) !== String(param.value);
+                                const setOverride = (val) => updateVariant(variant.id, (v) => ({ ...v, parameterOverrides: { ...v.parameterOverrides, [param.key]: val } }));
+                                return (
+                                  <div key={param.id} style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "10px 12px", borderRadius: 6, background: "#F9FAFB", border: "1px solid #E5E7EB" }}>
+                                    <div style={{ flex: "0 0 150px", paddingTop: 6 }}>
+                                      <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                                        {isOverridden && <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#F59E0B", display: "inline-block", flexShrink: 0 }} />}
+                                        <span style={{ fontFamily: "ui-monospace, monospace", fontSize: 12, color: "#374151" }}>{param.key}</span>
+                                      </div>
+                                      <span style={{ display: "inline-block", marginTop: 3, padding: "1px 5px", borderRadius: 4, background: "#E5E7EB", color: "#6B7280", fontSize: 10, fontWeight: 600 }}>{param.type}</span>
+                                    </div>
+                                    <div style={{ flex: 1 }}>{renderVariantParamInput(param, overrideValue, setOverride)}</div>
+                                    {isOverridden && (
+                                      <button onClick={() => setOverride(param.value)} style={{ background: "none", border: "none", color: "#3B82F6", fontSize: 11, cursor: "pointer", padding: 0, whiteSpace: "nowrap", marginTop: 8, flexShrink: 0 }}>Reset to default</button>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Add Variant button */}
+            <div style={{ marginBottom: 10, display: "flex", alignItems: "center", gap: 10 }}>
+              <button disabled={atMax} onClick={() => addVariant()} title={atMax ? "Maximum of 4 custom variants allowed." : undefined} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 8, border: `1px solid ${atMax ? "#E5E7EB" : "#3B82F6"}`, background: WHITE, color: atMax ? "#9CA3AF" : "#3B82F6", fontSize: 13, fontWeight: 500, cursor: atMax ? "not-allowed" : "pointer" }}>
+                + Add Variant
+              </button>
+              {atMax && <span style={{ fontSize: 11, color: "#9CA3AF" }}>Maximum of 4 custom variants allowed.</span>}
+            </div>
+
+            {/* Default variant card */}
+            <div style={{ background: WHITE, borderRadius: 8, border: "1px solid #E5E7EB", borderLeft: "3px solid #E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "11px 16px" }}>
+                <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 24, height: 24, borderRadius: "50%", background: "#F3F4F6", color: "#6B7280", fontSize: 11, fontWeight: 700, flexShrink: 0 }}>D</span>
+                <div style={{ flex: 1 }}>
+                  <span style={{ fontSize: 14, fontWeight: 600, color: "#374151" }}>Default</span>
+                  <span style={{ marginLeft: 8, fontSize: 12, color: "#9CA3AF" }}>Delivered to all users not matched by any variant above</span>
+                </div>
+                <button onClick={() => updateVariant(defaultVariant.id, (v) => ({ ...v, collapsed: !v.collapsed }))} style={{ background: "none", border: "none", color: "#9CA3AF", cursor: "pointer", padding: "4px", display: "flex", alignItems: "center", borderRadius: 4 }}>
+                  <ChevronDownIcon />
+                </button>
+              </div>
+              {!defaultVariant.collapsed && (
+                <div style={{ padding: "0 16px 16px", borderTop: "1px solid #F3F4F6" }}>
+                  <div style={{ marginTop: 14 }}>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: "#9CA3AF", letterSpacing: "0.04em", marginBottom: 8, textTransform: "uppercase" }}>Rollout Percentage</div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                      <input type="range" min="0" max="100" value={defaultVariant.rolloutPercentage} onChange={(e) => updateVariant(defaultVariant.id, (v) => ({ ...v, rolloutPercentage: Number(e.target.value) }))} style={{ flex: 1, accentColor: "#3B82F6" }} />
+                      <input type="number" min="0" max="100" value={defaultVariant.rolloutPercentage} onChange={(e) => updateVariant(defaultVariant.id, (v) => ({ ...v, rolloutPercentage: Math.min(100, Math.max(0, Number(e.target.value))) }))} style={{ ...inputStyle, width: 80 }} />
+                      <span style={{ color: "#6B7280", fontSize: 13 }}>%</span>
+                    </div>
+                    <div style={{ marginTop: 4, fontSize: 11, color: "#9CA3AF" }}>Percentage of unmatched users who receive this configuration. Set to 0% to disable for unmatched users.</div>
+                  </div>
+                  {form.parameters.length > 0 && (
+                    <div style={{ marginTop: 16 }}>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                        <div style={{ fontSize: 11, fontWeight: 600, color: "#9CA3AF", letterSpacing: "0.04em", textTransform: "uppercase" }}>Parameter Values</div>
+                        <button onClick={() => setStep(1)} style={{ background: "none", border: "none", color: "#3B82F6", fontSize: 12, cursor: "pointer", padding: 0 }}>Edit in Parameters & Keys →</button>
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                        {form.parameters.map((param) => (
+                          <div key={param.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "8px 12px", borderRadius: 6, background: "#F9FAFB", border: "1px solid #E5E7EB" }}>
+                            <span style={{ fontFamily: "ui-monospace, monospace", fontSize: 12, color: "#374151", flex: "0 0 150px" }}>{param.key}</span>
+                            <span style={{ padding: "1px 5px", borderRadius: 4, background: "#E5E7EB", color: "#6B7280", fontSize: 10, fontWeight: 600 }}>{param.type}</span>
+                            <span style={{ flex: 1, fontSize: 12, color: "#6B7280" }}>{stringifyParameterValue(param)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
 
-            <div style={{ padding: 16, borderRadius: 12, border: `1px solid ${BORDER}`, background: SOFT }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: TEXT, marginBottom: 12 }}>Segment targeting</div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                {mockSegments.map((segment) => {
-                  const isAllUsers = segment.name === "All Users";
-                  const allUsersSelected = form.selectedSegments.includes("All Users");
-                  const selected = form.selectedSegments.includes(segment.name);
-                  const disabled = !isAllUsers && allUsersSelected;
-                  return (
-                    <button
-                      key={segment.id}
-                      disabled={disabled}
-                      onClick={() => setForm((current) => {
-                        if (isAllUsers) {
-                          const nowSelected = current.selectedSegments.includes("All Users");
-                          return { ...current, selectedSegments: nowSelected ? [] : ["All Users"] };
-                        }
-                        const withoutAll = current.selectedSegments.filter((item) => item !== "All Users");
-                        return {
-                          ...current,
-                          selectedSegments: selected
-                            ? withoutAll.filter((item) => item !== segment.name)
-                            : [...withoutAll, segment.name],
-                        };
-                      })}
-                      style={{
-                        ...secondaryButtonStyle,
-                        padding: "8px 12px",
-                        background: selected ? "#3B82F6" : WHITE,
-                        color: selected ? WHITE : disabled ? "#9CA3AF" : TEXT,
-                        borderColor: selected ? "#3B82F6" : "#E5E7EB",
-                        opacity: disabled ? 0.45 : 1,
-                        cursor: disabled ? "not-allowed" : "pointer",
-                      }}
-                    >
-                      {segment.name}
-                    </button>
-                  );
-                })}
+            {/* Traffic overview */}
+            {(form.variants || []).length > 1 && (
+              <div style={{ marginTop: 16, padding: "14px 16px", background: WHITE, borderRadius: 8, border: "1px solid #E5E7EB" }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 10 }}>Traffic Overview</div>
+                <div style={{ display: "flex", height: 10, borderRadius: 999, overflow: "hidden", gap: 2, marginBottom: 10, background: "#F3F4F6" }}>
+                  {customVariants.map((v, i) => (
+                    <div key={v.id} style={{ flex: v.rolloutPercentage || 0, background: variantColors[i % variantColors.length], minWidth: v.rolloutPercentage > 0 ? 4 : 0 }} />
+                  ))}
+                  <div style={{ flex: defaultVariant.rolloutPercentage || 0, background: "#E5E7EB", minWidth: defaultVariant.rolloutPercentage > 0 ? 4 : 0 }} />
+                </div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "5px 16px" }}>
+                  {customVariants.map((v, i) => (
+                    <span key={v.id} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11, color: "#6B7280" }}>
+                      <span style={{ width: 8, height: 8, borderRadius: "50%", background: variantColors[i % variantColors.length], flexShrink: 0 }} />
+                      {v.name || `Variant ${i + 1}`} — {v.rolloutPercentage}%
+                    </span>
+                  ))}
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11, color: "#6B7280" }}>
+                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#D1D5DB", flexShrink: 0 }} />
+                    Default — {defaultVariant.rolloutPercentage}%
+                  </span>
+                </div>
+                <div style={{ marginTop: 8, fontSize: 11, color: "#9CA3AF" }}>Actual distribution depends on segment sizes, which may overlap.</div>
               </div>
-              <div style={{ marginTop: 12, fontSize: 12, color: TEXT_MUTED }}>
-                {form.selectedSegments.length === 0
-                  ? "No segments selected — this configuration will be delivered to all eligible users."
-                  : `Selected segments: ${form.selectedSegments.join(", ")}`}
-              </div>
-            </div>
+            )}
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 16 }}>
         <button onClick={step === 1 ? showBackConfirmation : () => setStep(1)} style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "11px 18px", borderRadius: 8, background: WHITE, border: "1px solid #E5E7EB", color: "#374151", fontSize: 13, fontWeight: 500, cursor: "pointer" }}>Back</button>
@@ -2787,6 +3049,56 @@ function CreateExperiment({
 
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
+  };
+
+
+  const updateVariant = (variantId, updater) => {
+    setForm((current) => ({
+      ...current,
+      variants: current.variants.map((v) => v.id === variantId ? updater(v) : v),
+    }));
+  };
+
+  const addVariant = () => {
+    setForm((current) => {
+      const customs = current.variants.filter((v) => !v.isDefault);
+      if (customs.length >= 4) return current;
+      const deflt = current.variants.find((v) => v.isDefault);
+      const newVariant = {
+        id: createRcVariantId(),
+        name: `Variant ${customs.length + 1}`,
+        priority: customs.length + 1,
+        isDefault: false,
+        segments: [],
+        rolloutPercentage: 100,
+        parameterOverrides: deflt ? { ...deflt.parameterOverrides } : {},
+        collapsed: false,
+      };
+      return { ...current, variants: [...customs, newVariant, deflt] };
+    });
+  };
+
+  const removeVariant = (variantId) => {
+    setForm((current) => ({
+      ...current,
+      variants: current.variants.filter((v) => v.id !== variantId || v.isDefault),
+    }));
+  };
+
+  const handleVariantDrop = (targetId) => {
+    if (!varDragId || varDragId === targetId) return;
+    setForm((current) => {
+      const customs = current.variants.filter((v) => !v.isDefault);
+      const deflt = current.variants.find((v) => v.isDefault);
+      const si = customs.findIndex((v) => v.id === varDragId);
+      const ti = customs.findIndex((v) => v.id === targetId);
+      if (si === -1 || ti === -1) return current;
+      const reordered = [...customs];
+      const [moved] = reordered.splice(si, 1);
+      reordered.splice(ti, 0, moved);
+      return { ...current, variants: [...reordered, deflt] };
+    });
+    setVarDragId(null);
   };
 
   const handleSaveDraft = async () => {
