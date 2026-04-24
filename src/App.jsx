@@ -582,7 +582,7 @@ function Toast({ toast }) {
   );
 }
 
-function ConfirmModal({ open, title, message, warning, confirmLabel, confirmTone = "danger", loading, onCancel, onConfirm }) {
+function ConfirmModal({ open, title, message, summary, warning, confirmLabel, confirmTone = "danger", loading, onCancel, onConfirm }) {
   if (!open) return null;
 
   const confirmStyle = confirmTone === "danger"
@@ -591,9 +591,34 @@ function ConfirmModal({ open, title, message, warning, confirmLabel, confirmTone
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(17, 24, 39, 0.35)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 110 }}>
-      <div style={{ width: 460, background: WHITE, borderRadius: 12, border: `1px solid ${BORDER}`, boxShadow: SHADOW, padding: 22 }}>
-        <h3 style={{ margin: "0 0 8px", color: TEXT, fontSize: 18, fontWeight: 700 }}>{title}</h3>
-        <p style={{ margin: 0, color: TEXT_MUTED, fontSize: 13, lineHeight: 1.6 }}>{message}</p>
+      <div style={{ width: 480, background: WHITE, borderRadius: 12, border: `1px solid ${BORDER}`, boxShadow: SHADOW, padding: 24 }}>
+        <h3 style={{ margin: "0 0 4px", color: TEXT, fontSize: 18, fontWeight: 700 }}>{title}</h3>
+        {message && <p style={{ margin: "0 0 14px", color: TEXT_MUTED, fontSize: 13, lineHeight: 1.6 }}>{message}</p>}
+        {summary && (
+          <div style={{ marginTop: message ? 0 : 10, marginBottom: 4, borderRadius: 10, border: "1px solid #E5E7EB", background: "#F9FAFB", overflow: "hidden" }}>
+            {/* Header rows */}
+            {summary.meta && summary.meta.map((row, i) => (
+              <div key={i} style={{ display: "flex", alignItems: "baseline", gap: 8, padding: "9px 14px", borderBottom: "1px solid #F3F4F6" }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.05em", minWidth: 90, flexShrink: 0 }}>{row.label}</span>
+                <span style={{ fontSize: 13, color: TEXT, fontWeight: 500, wordBreak: "break-all" }}>{row.value}</span>
+              </div>
+            ))}
+            {/* Variants section */}
+            {summary.variants && summary.variants.length > 0 && (
+              <div>
+                <div style={{ padding: "8px 14px 4px", fontSize: 11, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.06em" }}>Variants</div>
+                {summary.variants.map((v, i) => (
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 14px", borderTop: "1px solid #F3F4F6" }}>
+                    <span style={{ width: 6, height: 6, borderRadius: "50%", background: v.isDefault ? "#D1D5DB" : "#3B82F6", flexShrink: 0 }} />
+                    <span style={{ fontSize: 13, color: v.isDefault ? TEXT_MUTED : TEXT, flex: 1 }}>{v.name}</span>
+                    <span style={{ fontSize: 12, color: TEXT_MUTED, flexShrink: 0 }}>{v.segment}</span>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: "#374151", background: "#E5E7EB", borderRadius: 4, padding: "2px 7px", flexShrink: 0 }}>{v.rollout}%</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
         {warning && (
           <div style={{ marginTop: 14, padding: "10px 12px", borderRadius: 10, border: "1px solid #FCD34D", background: "#FFFBEB", color: "#92400E", fontSize: 13 }}>
             {warning}
@@ -1677,18 +1702,31 @@ function RemoteConfigurationForm({
       <ConfirmModal
         open={publishModalOpen}
         title="Confirm and Go Live"
-        message={(() => {
+        summary={(() => {
           const customs = form.variants ? form.variants.filter((v) => !v.isDefault) : [];
           const deflt = form.variants ? form.variants.find((v) => v.isDefault) : null;
-          const lines = [
-            `Name: ${form.name}`,
-            `Key: ${form.key}`,
-            `Parameters: ${form.parameters.length}`,
-            `Variants: ${customs.length} custom + 1 default`,
-            ...customs.map((v, i) => `  Variant ${i + 1} (${v.name}): ${v.segments.join(", ") || "No segment"} — ${v.rolloutPercentage}%`),
-            `  Default: All unmatched — ${deflt ? deflt.rolloutPercentage : 100}%`,
-          ];
-          return lines.join("\n");
+          return {
+            meta: [
+              { label: "Name", value: form.name || "—" },
+              { label: "Key", value: form.key || "—" },
+              { label: "Parameters", value: String(form.parameters.length) },
+              { label: "Variants", value: `${customs.length} custom + 1 default` },
+            ],
+            variants: [
+              ...customs.map((v, i) => ({
+                name: `Variant ${i + 1} — ${v.name}`,
+                segment: v.segments.length > 0 ? v.segments.join(", ") : "No segment",
+                rollout: v.rolloutPercentage,
+                isDefault: false,
+              })),
+              {
+                name: "Default Fallback",
+                segment: "All unmatched",
+                rollout: deflt ? deflt.rolloutPercentage : 100,
+                isDefault: true,
+              },
+            ],
+          };
         })()}
         confirmLabel="Confirm and Go Live"
         confirmTone="primary"
@@ -2285,10 +2323,10 @@ function RemoteConfigurationForm({
                                             onMouseLeave={(e) => { if (!menuOpen) { e.currentTarget.style.background = "none"; e.currentTarget.style.color = "#9CA3AF"; } }}
                                           >…</button>
                                           {menuOpen && (
-                                            <div style={{ position: "absolute", right: 0, top: "calc(100% + 4px)", background: WHITE, border: "1px solid #E5E7EB", borderRadius: 8, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", zIndex: 9999, overflow: "hidden", display: "flex", alignItems: "stretch" }}>
+                                            <div style={{ position: "absolute", right: 0, top: "calc(100% + 4px)", background: WHITE, border: "1px solid #E5E7EB", borderRadius: 8, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", zIndex: 9999, overflow: "hidden", minWidth: 120, display: "flex", flexDirection: "column" }}>
                                               {/* Edit action */}
                                               <button
-                                                style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 14px", border: "none", background: "none", fontSize: 13, color: "#374151", cursor: "pointer", whiteSpace: "nowrap" }}
+                                                style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 14px", border: "none", background: "none", fontSize: 13, color: "#374151", cursor: "pointer", whiteSpace: "nowrap", textAlign: "left" }}
                                                 onMouseEnter={(e) => { e.currentTarget.style.background = "#F9FAFB"; }}
                                                 onMouseLeave={(e) => { e.currentTarget.style.background = "none"; }}
                                                 onClick={(e) => {
@@ -2304,15 +2342,15 @@ function RemoteConfigurationForm({
                                               {/* Divider + Reset — only shown when value is overridden */}
                                               {isOverridden && (
                                                 <>
-                                                  <div style={{ width: 1, background: "#F3F4F6", flexShrink: 0 }} />
+                                                  <div style={{ height: 1, background: "#F3F4F6", flexShrink: 0 }} />
                                                   <button
-                                                    style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 14px", border: "none", background: "none", fontSize: 13, color: "#DC2626", cursor: "pointer", whiteSpace: "nowrap" }}
+                                                    style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 14px", border: "none", background: "none", fontSize: 13, color: "#DC2626", cursor: "pointer", whiteSpace: "nowrap", textAlign: "left" }}
                                                     onMouseEnter={(e) => { e.currentTarget.style.background = "#FEF2F2"; }}
                                                     onMouseLeave={(e) => { e.currentTarget.style.background = "none"; }}
                                                     onClick={(e) => { e.stopPropagation(); setOverride(param.value); setOpenActionMenuKey(null); }}
                                                   >
                                                     <svg width="13" height="13" viewBox="0 0 14 14" fill="currentColor"><path d="M5 1h4a.5.5 0 0 1 .5.5V2h3a.5.5 0 0 1 0 1h-.5v8.5A1.5 1.5 0 0 1 10.5 13h-7A1.5 1.5 0 0 1 2 11.5V3h-.5a.5.5 0 0 1 0-1h3V1.5A.5.5 0 0 1 5 1Zm-2 2v8.5a.5.5 0 0 0 .5.5h7a.5.5 0 0 0 .5-.5V3H3Zm2 1.5a.5.5 0 0 1 .5.5v5a.5.5 0 0 1-1 0V5a.5.5 0 0 1 .5-.5Zm4 0a.5.5 0 0 1 .5.5v5a.5.5 0 0 1-1 0V5a.5.5 0 0 1 .5-.5Z"/></svg>
-                                                    Reset
+                                                    Reset to default
                                                   </button>
                                                 </>
                                               )}
