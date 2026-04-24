@@ -521,7 +521,7 @@ const pageTitleStyle = { fontSize: 20, fontWeight: 700, color: TEXT, margin: 0 }
 const pageDescriptionStyle = { fontSize: 13, color: TEXT_MUTED, margin: "6px 0 0" };
 const cardStyle = { background: WHITE, border: "1px solid rgba(0,0,0,0.1)", borderRadius: 14, boxShadow: SHADOW };
 const inputStyle = { width: "100%", padding: "12px 14px", borderRadius: 8, border: "1px solid rgba(0,0,0,0.1)", background: INPUT_BG, color: TEXT, fontSize: 13, outline: "none" };
-const primaryButtonStyle = { display: "inline-flex", alignItems: "center", gap: 8, padding: "11px 18px", border: "none", borderRadius: 8, background: PRIMARY, color: WHITE, fontSize: 13, fontWeight: 500, cursor: "pointer" };
+const primaryButtonStyle = { display: "inline-flex", alignItems: "center", gap: 8, padding: "11px 18px", border: "none", borderRadius: 8, background: "#3B82F6", color: WHITE, fontSize: 13, fontWeight: 500, cursor: "pointer" };
 const secondaryButtonStyle = { display: "inline-flex", alignItems: "center", gap: 8, padding: "11px 16px", border: "1px solid rgba(0,0,0,0.1)", borderRadius: 8, background: SECONDARY_BG, color: TEXT, fontSize: 13, fontWeight: 500, cursor: "pointer" };
 
 function Spinner({ size = 14, color = "currentColor" }) {
@@ -3703,8 +3703,8 @@ function ExperimentDetail({ experiment, onBack, onOpenRemoteConfig, linkedConfig
             style={{
               padding: "9px 14px",
               borderRadius: 10,
-              border: `1px solid ${tab === item ? BLACK : BORDER}`,
-              background: tab === item ? BLACK : WHITE,
+              border: `1px solid ${tab === item ? "#3B82F6" : BORDER}`,
+              background: tab === item ? "#3B82F6" : WHITE,
               color: tab === item ? WHITE : TEXT_MUTED,
               cursor: "pointer",
               fontSize: 13,
