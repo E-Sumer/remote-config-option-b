@@ -226,7 +226,7 @@ const initialExperiments = [
   {
     id: 3,
     name: "Promo banner placement",
-    status: "COMPLETED",
+    status: "winner_declared",
     linkedConfigKey: "promo_banner_enabled",
     hypothesis: "Top banner drives more clicks than bottom.",
     metric: "banner_click",
@@ -234,6 +234,25 @@ const initialExperiments = [
     confidence: 99,
     users: 63350,
     archived: false,
+    winnerVariant: "variant_b",
+    confidenceLevel: 95,
+    pValue: 0.032,
+    goalMetric: { key: "banner_click", label: "Banner Click", type: "conversion_rate" },
+    startDate: "2025-01-05",
+    endDate: "2025-01-19",
+    durationDays: 14,
+    createdBy: "Emre Sumer",
+    lastModifiedBy: "Emre Sumer",
+    lastModifiedAt: "2025-01-10",
+    totalUsers: 63350,
+    trafficSplit: { control: 50, variant_b: 50 },
+    targeting: "All Users",
+    randomizationUnit: "User ID",
+    linkedConfigMeta: { name: "Promo Banner Enabled", key: "promo_banner_enabled", controlValue: false, variantBValue: true },
+    variants: [
+      { id: "control", label: "Control", conversionRate: 0.032, users: 31675, conversions: 1014, isWinner: false },
+      { id: "variant_b", label: "Variant B", conversionRate: 0.039, users: 31675, conversions: 1235, uplift: 0.23, upliftAbsolute: 0.007, isWinner: true },
+    ],
   },
   {
     id: 4,
@@ -674,16 +693,20 @@ function ComingSoonPlaceholder({ title, onBack }) {
 
 function StatusBadge({ status }) {
   const palette = {
-    RUNNING: { bg: "#EAFBF4", color: CTA_GREEN_DARK, dot: CTA_GREEN },
-    COMPLETED: { bg: "#EEF3FF", color: "#4E5FE2", dot: "#6E7AF0" },
-    DRAFT: { bg: DRAFT_BG, color: DRAFT_TEXT, dot: "#C4CAD4" },
-    PAUSED: { bg: "#FFF5E7", color: "#B27612", dot: "#E0A43F" },
+    RUNNING: { bg: "#EAFBF4", color: CTA_GREEN_DARK, dot: CTA_GREEN, label: "Running" },
+    running: { bg: "#EAFBF4", color: CTA_GREEN_DARK, dot: CTA_GREEN, label: "Running" },
+    COMPLETED: { bg: "#EEF3FF", color: "#4E5FE2", dot: "#6E7AF0", label: "Completed" },
+    completed: { bg: "#EEF3FF", color: "#4E5FE2", dot: "#6E7AF0", label: "Completed" },
+    winner_declared: { bg: "#EEF3FF", color: "#4E5FE2", dot: "#6E7AF0", label: "Winner Declared" },
+    inconclusive: { bg: "#FFF5E7", color: "#B27612", dot: "#E0A43F", label: "Inconclusive" },
+    DRAFT: { bg: DRAFT_BG, color: DRAFT_TEXT, dot: "#C4CAD4", label: "Draft" },
+    PAUSED: { bg: "#FFF5E7", color: "#B27612", dot: "#E0A43F", label: "Paused" },
   };
   const current = palette[status] || palette.DRAFT;
   return (
     <span style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 10px", borderRadius: 999, background: current.bg, color: current.color, fontSize: 11, fontWeight: 600 }}>
       <span style={{ width: 6, height: 6, borderRadius: "50%", background: current.dot }} />
-      {status}
+      {current.label}
     </span>
   );
 }
@@ -3675,34 +3698,200 @@ function CreateExperiment({
   );
 }
 
+// ─── Code pill helper ────────────────────────────────────────────────────────
+function CodePill({ children }) {
+  return (
+    <span style={{ fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", fontSize: 11, color: "#6B7280", background: "#F3F4F6", borderRadius: 4, padding: "2px 6px", display: "inline-block" }}>
+      {children}
+    </span>
+  );
+}
+
+// ─── Apply Winner Modal ───────────────────────────────────────────────────────
+function ApplyWinnerModal({ open, experiment, onCancel, onConfirm }) {
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e) => { if (e.key === "Escape") onCancel(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onCancel]);
+  if (!open) return null;
+  const configKey = experiment.linkedConfigMeta?.key || experiment.linkedConfigKey || "—";
+  const winnerValue = experiment.linkedConfigMeta?.variantBValue;
+  return (
+    <div role="dialog" aria-modal="true" aria-labelledby="apply-winner-title" style={{ position: "fixed", inset: 0, background: "rgba(17,24,39,0.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200 }}>
+      <div style={{ width: 480, background: WHITE, borderRadius: 14, border: `1px solid ${BORDER}`, boxShadow: "0 8px 32px rgba(0,0,0,0.15)", padding: 28 }}>
+        <h3 id="apply-winner-title" style={{ margin: "0 0 10px", fontSize: 18, fontWeight: 700, color: TEXT }}>Apply Variant B as the winner?</h3>
+        <p style={{ margin: "0 0 14px", fontSize: 13, color: "#4B5563", lineHeight: 1.65 }}>
+          This will update the Remote Config key <CodePill>{configKey}</CodePill> to the winning variant's value (<CodePill>{String(winnerValue)}</CodePill>) for 100% of users. This action can be reversed from the Remote Config settings.
+        </p>
+        <div style={{ padding: "10px 14px", borderRadius: 10, border: "1px solid #FCD34D", background: "#FEF3C7", color: "#92400E", fontSize: 13, marginBottom: 20 }}>
+          ⚠ This will override your current Remote Config live value.
+        </div>
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+          <button onClick={onCancel} style={secondaryButtonStyle}>Cancel</button>
+          <button
+            onClick={onConfirm}
+            style={{ ...primaryButtonStyle, gap: 8 }}
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M2 7.5L5.5 11L12 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            Apply &amp; Roll Out
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ExperimentDetail({ experiment, onBack, onOpenRemoteConfig, linkedConfig }) {
   const [tab, setTab] = useState("results");
-  const baselineRate = 3.2;
+  const [applyWinnerOpen, setApplyWinnerOpen] = useState(false);
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const [barTooltip, setBarTooltip] = useState(null); // { variantId, x, y }
+
+  const isWinnerDeclared = experiment.status === "winner_declared";
+  const isRunning = experiment.status === "RUNNING" || experiment.status === "running";
+
+  // Derive variant data — use rich data if available, fall back to computed
+  const expVariants = experiment.variants || [];
+  const controlVariant = expVariants.find((v) => v.id === "control") || { id: "control", label: "Control", conversionRate: 0.032, users: Math.round((experiment.users || 0) / 2), conversions: Math.round((experiment.users || 0) / 2 * 0.032), isWinner: false };
+  const variantB = expVariants.find((v) => v.id === "variant_b") || null;
+  const baselineRate = controlVariant.conversionRate * 100;
   const liftValue = experiment.lift === "—" ? 0 : Number(String(experiment.lift).replace("%", ""));
-  const variantBRate = Number((baselineRate * (1 + (liftValue / 100))).toFixed(1));
-  const usersPerVariant = Math.max(0, Math.round((experiment.users || 0) / 2));
+  const variantBRateRaw = variantB ? variantB.conversionRate * 100 : Number((baselineRate * (1 + liftValue / 100)).toFixed(1));
+  const variantBRate = Number(variantBRateRaw.toFixed(1));
+  const variantBUsers = variantB ? variantB.users : Math.max(0, Math.round((experiment.users || 0) / 2));
+  const variantBConversions = variantB ? variantB.conversions : Math.round(variantBUsers * variantBRate / 100);
+  const controlConversions = controlVariant.conversions;
+  const chartMax = 5; // % axis max
+
+  // Goal metric humanization
+  const goalMetric = experiment.goalMetric || { key: experiment.metric || "—", label: experiment.metric ? experiment.metric.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) : "—" };
+
+  // Meta dates
+  const fmtDate = (iso) => {
+    if (!iso) return "—";
+    const d = new Date(iso);
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  };
+  const startLabel = fmtDate(experiment.startDate);
+  const endLabel = fmtDate(experiment.endDate);
+  const durationLabel = experiment.durationDays ? `${experiment.durationDays} days` : "—";
+
+  const tabIds = ["results", "config", "settings"];
+  const tabLabels = { results: "Results", config: "Config", settings: "Settings" };
+
+  // Close export menu on outside click
+  useEffect(() => {
+    if (!exportMenuOpen) return;
+    const close = () => setExportMenuOpen(false);
+    window.addEventListener("click", close);
+    return () => window.removeEventListener("click", close);
+  }, [exportMenuOpen]);
 
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
+      {/* ── Apply Winner Modal ── */}
+      <ApplyWinnerModal
+        open={applyWinnerOpen}
+        experiment={experiment}
+        onCancel={() => setApplyWinnerOpen(false)}
+        onConfirm={() => {
+          console.log(`Winner applied: ${experiment.linkedConfigMeta?.key || experiment.linkedConfigKey} = ${experiment.linkedConfigMeta?.variantBValue}`);
+          setApplyWinnerOpen(false);
+        }}
+      />
+
+      {/* ── Page Header ── */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
         <div>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
             <h1 style={pageTitleStyle}>{experiment.name}</h1>
             <StatusBadge status={experiment.status} />
           </div>
-          <p style={pageDescriptionStyle}>{experiment.hypothesis}</p>
+          {/* 1.2 Result subtitle */}
+          {isWinnerDeclared ? (
+            <p style={{ margin: "5px 0 0", fontSize: 13, color: "#16A34A", display: "flex", alignItems: "center", gap: 5 }}>
+              <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M2 7.5L5.5 11L12 4" stroke="#16A34A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              Hypothesis confirmed — Variant B outperformed Control by {Math.round((experiment.confidenceLevel || 95) > 0 ? liftValue : 0)}% ({experiment.confidenceLevel || 95}% confidence)
+            </p>
+          ) : (
+            <p style={pageDescriptionStyle}>{experiment.hypothesis}</p>
+          )}
+          {/* 1.3 Meta row */}
+          <div style={{ marginTop: 6, fontSize: 12, color: "#6B7280", display: "flex", flexWrap: "wrap", gap: 4, alignItems: "center" }}>
+            {startLabel !== "—" && <span>Started: {startLabel}</span>}
+            {startLabel !== "—" && endLabel !== "—" && <span style={{ color: "#D1D5DB" }}>·</span>}
+            {endLabel !== "—" && <span>Completed: {endLabel}</span>}
+            {durationLabel !== "—" && <><span style={{ color: "#D1D5DB" }}>·</span><span>Duration: {durationLabel}</span></>}
+            {experiment.createdBy && <><span style={{ color: "#D1D5DB" }}>·</span><span>Created by: {experiment.createdBy}</span></>}
+          </div>
         </div>
-        <div style={{ display: "flex", gap: 8 }}>
-          {experiment.status === "RUNNING" && <button style={{ ...secondaryButtonStyle, background: "#FFF7EA", borderColor: "#F5DFB5", color: "#A36C17" }}>Pause</button>}
-          {experiment.status === "RUNNING" && <button style={{ ...secondaryButtonStyle, background: "#FFF0F3", borderColor: "#F2CDD6", color: "#C43E57" }}>Stop</button>}
+
+        {/* 1.4 Header action buttons */}
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0, marginTop: 2 }}>
+          {isRunning && <button style={{ ...secondaryButtonStyle, background: "#FFF7EA", borderColor: "#F5DFB5", color: "#A36C17" }}>Pause</button>}
+          {isRunning && <button style={{ ...secondaryButtonStyle, background: "#FFF0F3", borderColor: "#F2CDD6", color: "#C43E57" }}>Stop</button>}
+          {isWinnerDeclared && (
+            <button onClick={() => setApplyWinnerOpen(true)} style={{ ...primaryButtonStyle }}>
+              Apply Winner
+            </button>
+          )}
+          {/* Export dropdown */}
+          <div style={{ position: "relative" }}>
+            <button
+              onClick={(e) => { e.stopPropagation(); setExportMenuOpen((o) => !o); }}
+              style={{ ...secondaryButtonStyle, gap: 7 }}
+              title="Export"
+            >
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M7 1v8M4 6l3 3 3-3M2 11h10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              Export
+            </button>
+            {exportMenuOpen && (
+              <div style={{ position: "absolute", right: 0, top: "calc(100% + 6px)", background: WHITE, border: "1px solid #E5E7EB", borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", zIndex: 100, minWidth: 180, overflow: "hidden" }}>
+                {[
+                  { label: "Export as PDF", icon: "📄" },
+                  { label: "Copy shareable link", icon: "🔗" },
+                  { label: "Download CSV", icon: "⬇" },
+                ].map((opt) => (
+                  <button key={opt.label} onClick={() => { console.log(opt.label); setExportMenuOpen(false); }} style={{ display: "flex", alignItems: "center", gap: 9, width: "100%", padding: "10px 14px", border: "none", background: "none", fontSize: 13, color: TEXT, cursor: "pointer", textAlign: "left" }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = "#F9FAFB"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = "none"; }}
+                  >
+                    <span>{opt.icon}</span>{opt.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          {/* Share icon button */}
+          <button
+            title="Copy link"
+            onClick={() => { console.log("Copy link"); }}
+            style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 38, height: 38, border: `1px solid ${BORDER}`, borderRadius: 8, background: SECONDARY_BG, color: TEXT_MUTED, cursor: "pointer" }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = "#E5E7EB"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = SECONDARY_BG; }}
+          >
+            <svg width="15" height="15" viewBox="0 0 14 14" fill="none" aria-hidden="true"><circle cx="11" cy="3" r="1.5" stroke="currentColor" strokeWidth="1.5"/><circle cx="3" cy="7" r="1.5" stroke="currentColor" strokeWidth="1.5"/><circle cx="11" cy="11" r="1.5" stroke="currentColor" strokeWidth="1.5"/><path d="M4.4 7.8L9.7 10.4M9.7 3.6L4.4 6.2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>
+          </button>
         </div>
       </div>
 
-      <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
-        {["results", "config", "settings"].map((item) => (
+      {/* ── Tabs (WAI-ARIA tablist) ── */}
+      <div role="tablist" aria-label="Experiment sections" style={{ display: "flex", gap: 8, marginBottom: 20, marginTop: 18 }}>
+        {tabIds.map((item) => (
           <button
             key={item}
+            role="tab"
+            aria-selected={tab === item}
+            aria-controls={`tabpanel-${item}`}
+            id={`tab-${item}`}
             onClick={() => setTab(item)}
+            onKeyDown={(e) => {
+              const idx = tabIds.indexOf(item);
+              if (e.key === "ArrowRight") { e.preventDefault(); setTab(tabIds[(idx + 1) % tabIds.length]); }
+              if (e.key === "ArrowLeft") { e.preventDefault(); setTab(tabIds[(idx + tabIds.length - 1) % tabIds.length]); }
+            }}
             style={{
               padding: "9px 14px",
               borderRadius: 10,
@@ -3713,99 +3902,219 @@ function ExperimentDetail({ experiment, onBack, onOpenRemoteConfig, linkedConfig
               fontSize: 13,
               fontWeight: 600,
               textTransform: "capitalize",
+              outline: "none",
             }}
           >
-            {item}
+            {tabLabels[item]}
           </button>
         ))}
       </div>
 
+      {/* ══════════════ RESULTS TAB ══════════════ */}
       {tab === "results" && (
-        <div>
+        <div id="tabpanel-results" role="tabpanel" aria-labelledby="tab-results">
+          {/* 2.x Stat cards */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 20 }}>
-            {[
-              { label: "Users exposed", value: experiment.users.toLocaleString(), sub: "across all variants" },
-              { label: "Goal metric", value: experiment.metric || "—", sub: "primary success event" },
-              { label: "Control rate", value: `${baselineRate}%`, sub: "baseline reference" },
-              { label: "Uplift", value: experiment.lift, sub: "vs control", color: CTA_GREEN_DARK },
-            ].map((item) => (
-              <div key={item.label} style={{ ...cardStyle, padding: "16px 18px" }}>
-                <div style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 600, textTransform: "uppercase" }}>{item.label}</div>
-                <div style={{ marginTop: 4, fontSize: 24, fontWeight: 700, color: item.color || TEXT }}>{item.value}</div>
-                <div style={{ marginTop: 2, fontSize: 11, color: item.color || TEXT_MUTED }}>{item.sub}</div>
-              </div>
-            ))}
-          </div>
-
-          <div style={{ ...cardStyle, padding: 24, marginBottom: 20 }}>
-            <h3 style={{ margin: "0 0 16px", color: TEXT, fontSize: 15 }}>Variant Performance</h3>
-            {[
-              { name: "Control", rate: baselineRate, users: usersPerVariant, color: "#B1B8C6" },
-              { name: "Variant B", rate: variantBRate, users: usersPerVariant, color: CTA_GREEN },
-            ].map((variant, index) => (
-              <div key={variant.name} style={{ display: "flex", alignItems: "center", gap: 16, padding: "12px 0", borderBottom: index === 0 ? `1px solid ${BORDER}` : "none" }}>
-                <div style={{ width: 8, height: 8, borderRadius: "50%", background: variant.color }} />
-                <div style={{ width: 100, fontSize: 13, fontWeight: 600, color: TEXT }}>{variant.name}</div>
-                <div style={{ flex: 1, height: 12, borderRadius: 999, background: SOFT, overflow: "hidden" }}>
-                  <div style={{ width: `${(variant.rate / 5) * 100}%`, height: "100%", borderRadius: 999, background: variant.color }} />
-                </div>
-                <div style={{ minWidth: 52, fontSize: 15, fontWeight: 700, color: variant.color }}>{variant.rate}%</div>
-                <div style={{ minWidth: 84, fontSize: 12, color: TEXT_MUTED, textAlign: "right" }}>{variant.users.toLocaleString()} users</div>
-              </div>
-            ))}
-          </div>
-
-          <div style={{ ...cardStyle, padding: 16, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <div>
-              <div style={{ fontSize: 12, color: TEXT_MUTED, marginBottom: 4 }}>Linked config</div>
-              <div style={{ fontSize: 14, fontWeight: 600, color: TEXT }}>{linkedConfig?.name || experiment.linkedConfigKey || "Config removed"}</div>
-              <div style={{ marginTop: 2, fontSize: 12, color: TEXT_MUTED, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace" }}>{experiment.linkedConfigKey || "—"}</div>
+            {/* Users Exposed */}
+            <div style={{ ...cardStyle, padding: "16px 18px" }}>
+              <div style={{ fontSize: 11, color: "#4B5563", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Users Exposed</div>
+              <div style={{ marginTop: 4, fontSize: 24, fontWeight: 700, color: TEXT }}>{(experiment.totalUsers || experiment.users || 0).toLocaleString()}</div>
+              <div style={{ marginTop: 2, fontSize: 11, color: "#4B5563" }}>across all variants</div>
             </div>
-            <button onClick={() => onOpenRemoteConfig(experiment.linkedConfigKey)} style={secondaryButtonStyle}>View Config →</button>
+            {/* Goal Metric — 2.1 */}
+            <div style={{ ...cardStyle, padding: "16px 18px" }}>
+              <div style={{ fontSize: 11, color: "#4B5563", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Goal Metric</div>
+              <div style={{ marginTop: 4, fontSize: 22, fontWeight: 700, color: TEXT }}>{goalMetric.label}</div>
+              <div style={{ marginTop: 4 }}><CodePill>{goalMetric.key}</CodePill></div>
+            </div>
+            {/* Control Rate — 2.4 */}
+            <div style={{ ...cardStyle, padding: "16px 18px" }}>
+              <div style={{ fontSize: 11, color: "#4B5563", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Control Rate</div>
+              <div style={{ marginTop: 4, fontSize: 24, fontWeight: 700, color: TEXT }}>{baselineRate.toFixed(1)}%</div>
+              <div style={{ marginTop: 2, fontSize: 11, color: "#4B5563" }}>Control group conversion rate</div>
+            </div>
+            {/* Uplift — 2.2 */}
+            <div style={{ ...cardStyle, padding: "16px 18px", background: "#F0FDF4", borderLeft: "3px solid #16A34A" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                <div style={{ fontSize: 11, color: "#4B5563", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Uplift</div>
+                {/* ⓘ tooltip */}
+                {(() => {
+                  const [show, setShow] = useState(false);
+                  return (
+                    <span style={{ position: "relative", display: "inline-flex" }}
+                      onMouseEnter={() => setShow(true)}
+                      onMouseLeave={() => setShow(false)}
+                    >
+                      <span style={{ fontSize: 11, color: "#9CA3AF", cursor: "default", userSelect: "none" }}>ⓘ</span>
+                      {show && (
+                        <span style={{ position: "absolute", bottom: "calc(100% + 6px)", left: "50%", transform: "translateX(-50%)", background: "#111827", color: WHITE, fontSize: 11, padding: "6px 10px", borderRadius: 7, whiteSpace: "normal", width: 200, lineHeight: 1.5, zIndex: 50, boxShadow: "0 4px 12px rgba(0,0,0,0.2)", pointerEvents: "none" }}>
+                          Relative improvement of the winning variant's conversion rate over the control group.
+                        </span>
+                      )}
+                    </span>
+                  );
+                })()}
+              </div>
+              <div style={{ marginTop: 4, fontSize: 24, fontWeight: 700, color: "#16A34A" }}>{experiment.lift}</div>
+              <div style={{ marginTop: 2, fontSize: 11, color: "#4B5563" }}>vs control</div>
+              <div style={{ marginTop: 3, fontSize: 11, color: "#6B7280" }}>
+                {experiment.confidenceLevel || 95}% confidence · p &lt; {(experiment.pValue || 0.05).toFixed(2)}
+              </div>
+            </div>
+          </div>
+
+          {/* 3.x Variant Performance */}
+          <div style={{ ...cardStyle, padding: 24, marginBottom: 20 }}>
+            <div style={{ marginBottom: 16 }}>
+              <h3 style={{ margin: "0 0 4px", color: TEXT, fontSize: 15, fontWeight: 700 }}>Variant Performance</h3>
+              <div style={{ fontSize: 12, color: "#6B7280" }}>Conversion rate by variant ({goalMetric.label})</div>
+            </div>
+            <div
+              role="img"
+              aria-label={`Bar chart comparing conversion rates: Control ${baselineRate.toFixed(1)}%, Variant B ${variantBRate}%`}
+            >
+              {[
+                { id: "control", name: "Control", rate: baselineRate, users: controlVariant.users, conversions: controlConversions, color: "#6B7280", isWinner: false },
+                { id: "variant_b", name: "Variant B", rate: variantBRate, users: variantBUsers, conversions: variantBConversions, color: "#16A34A", isWinner: isWinnerDeclared },
+              ].map((variant, index) => {
+                const pct = Math.min((variant.rate / chartMax) * 100, 100);
+                const isHovered = barTooltip?.variantId === variant.id;
+                const deltaAbs = variant.id === "variant_b" ? (variantBRate - baselineRate).toFixed(1) : null;
+                return (
+                  <div key={variant.name} style={{ padding: "12px 0", borderBottom: index === 0 ? `1px solid ${BORDER}` : "none", position: "relative" }}>
+                    <div
+                      style={{ display: "flex", alignItems: "center", gap: 14 }}
+                      aria-label={`${variant.name}: ${variant.rate}% conversion rate, ${variant.users.toLocaleString()} users`}
+                      onMouseEnter={(e) => setBarTooltip({ variantId: variant.id, x: e.clientX, y: e.clientY })}
+                      onMouseMove={(e) => setBarTooltip({ variantId: variant.id, x: e.clientX, y: e.clientY })}
+                      onMouseLeave={() => setBarTooltip(null)}
+                    >
+                      <span aria-hidden="true" style={{ width: 8, height: 8, borderRadius: "50%", background: variant.color, flexShrink: 0 }} />
+                      <div style={{ width: 90, fontSize: 13, fontWeight: 600, color: TEXT, display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                        {variant.name}
+                        {variant.isWinner && (
+                          <span style={{ background: "#DCFCE7", color: "#15803D", borderRadius: 999, fontSize: 11, fontWeight: 600, padding: "2px 8px" }}>Winner</span>
+                        )}
+                      </div>
+                      <div style={{ flex: 1, height: 12, borderRadius: 999, background: SOFT, overflow: "hidden" }}>
+                        <div style={{ width: `${pct}%`, height: "100%", borderRadius: 999, background: variant.color, transition: "width 0.4s ease" }} />
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 7, minWidth: 100, justifyContent: "flex-end" }}>
+                        <span style={{ fontSize: 15, fontWeight: 700, color: variant.id === "control" ? "#6B7280" : "#16A34A" }}>{variant.rate.toFixed(1)}%</span>
+                        {deltaAbs && (
+                          <span style={{ background: "#DCFCE7", color: "#15803D", borderRadius: 999, fontSize: 11, fontWeight: 600, padding: "1px 6px" }}>+{deltaAbs}pp</span>
+                        )}
+                      </div>
+                      <div style={{ minWidth: 84, fontSize: 12, color: "#4B5563", textAlign: "right", flexShrink: 0 }}>{variant.users.toLocaleString()} users</div>
+                    </div>
+                    {/* Bar tooltip */}
+                    {isHovered && (
+                      <div style={{ position: "fixed", left: barTooltip.x + 12, top: barTooltip.y - 10, background: "#1F2937", color: WHITE, borderRadius: 10, padding: "10px 14px", fontSize: 12, zIndex: 999, pointerEvents: "none", minWidth: 180, boxShadow: "0 6px 20px rgba(0,0,0,0.25)", lineHeight: 1.7 }}>
+                        <div style={{ fontWeight: 700, marginBottom: 4 }}>{variant.name}</div>
+                        <div>Conversion rate: <b>{variant.rate.toFixed(1)}%</b></div>
+                        <div>Users: <b>{variant.users.toLocaleString()}</b></div>
+                        <div>Conversions: <b>~{variant.conversions.toLocaleString()}</b></div>
+                        {variant.id === "variant_b" && deltaAbs && (
+                          <div style={{ marginTop: 4, color: "#86EFAC" }}>vs Control: +{deltaAbs}pp (+{liftValue}% relative)</div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+              {/* 3.3 Scale labels */}
+              <div style={{ display: "flex", marginTop: 8, paddingLeft: 118 }}>
+                {[0, 1, 2, 3, 4, 5].map((tick) => (
+                  <div key={tick} style={{ flex: 1, fontSize: 10, color: "#4B5563", textAlign: tick === 0 ? "left" : tick === 5 ? "right" : "center" }}>{tick}%</div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* 4.x Linked Config card */}
+          <div style={{ ...cardStyle, padding: 18, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div>
+              <div style={{ fontSize: 11, color: "#4B5563", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 5 }}>Linked Config</div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: TEXT }}>{linkedConfig?.name || experiment.linkedConfigMeta?.name || experiment.linkedConfigKey || "Config removed"}</div>
+              <div style={{ marginTop: 5 }}><CodePill>{experiment.linkedConfigKey || "—"}</CodePill></div>
+            </div>
+            <button
+              onClick={() => onOpenRemoteConfig(experiment.linkedConfigKey)}
+              title="Opens Remote Config detail view"
+              style={{ ...secondaryButtonStyle, display: "inline-flex", alignItems: "center", gap: 8 }}
+            >
+              View Config
+              <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M5.5 2.5H2A1.5 1.5 0 0 0 .5 4v8A1.5 1.5 0 0 0 2 13.5h8A1.5 1.5 0 0 0 11.5 12V8.5M8.5.5h5v5M13.5.5 6.5 7.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            </button>
           </div>
         </div>
       )}
 
+      {/* ══════════════ CONFIG TAB ══════════════ */}
       {tab === "config" && (
-        <div style={{ ...cardStyle, padding: 22 }}>
-          <h3 style={{ margin: "0 0 6px", fontSize: 16, color: TEXT }}>Tested Configuration</h3>
-          <p style={{ margin: "0 0 16px", fontSize: 13, color: TEXT_MUTED }}>This is the remote configuration linked to the experiment.</p>
-          {linkedConfig ? (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12 }}>
-              {linkedConfig.parameters.map((parameter) => (
-                <div key={parameter.id} style={{ padding: 14, borderRadius: 12, border: `1px solid ${BORDER}`, background: SOFT }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: TEXT }}>{parameter.key}</div>
-                  <div style={{ marginTop: 2, fontSize: 11, color: TEXT_MUTED }}>{parameter.type}</div>
-                  <div style={{ marginTop: 8, fontSize: 12, color: TEXT_MUTED, whiteSpace: "pre-wrap", fontFamily: parameter.type === "JSON" ? "ui-monospace, SFMono-Regular, Menlo, monospace" : "inherit" }}>
-                    {stringifyParameterValue(parameter)}
-                  </div>
-                </div>
-              ))}
+        <div id="tabpanel-config" role="tabpanel" aria-labelledby="tab-config" style={{ ...cardStyle, padding: 24 }}>
+          <h3 style={{ margin: "0 0 6px", fontSize: 16, color: TEXT, fontWeight: 700 }}>Tested Configuration</h3>
+          <p style={{ margin: "0 0 18px", fontSize: 13, color: "#4B5563" }}>Shows the remote config key and the values assigned to each variant during the experiment run.</p>
+          {/* 5.1 Column header row */}
+          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", gap: 0, borderBottom: `1px solid ${BORDER}`, paddingBottom: 8, marginBottom: 4 }}>
+            {["Parameter Key", "Type", "Control Value", "Variant B Value"].map((h) => (
+              <div key={h} style={{ fontSize: 11, fontWeight: 700, color: "#4B5563", textTransform: "uppercase", letterSpacing: "0.05em" }}>{h}</div>
+            ))}
+          </div>
+          {/* If we have linkedConfigMeta, show the experiment-specific param values */}
+          {experiment.linkedConfigMeta ? (
+            <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", gap: 0, padding: "14px 0", borderBottom: `1px solid ${BORDER}` }}>
+              <div style={{ display: "flex", alignItems: "center" }}><CodePill>enabled</CodePill></div>
+              <div style={{ fontSize: 13, color: TEXT, alignSelf: "center" }}>Boolean</div>
+              <div style={{ fontSize: 13, color: TEXT, alignSelf: "center" }}>{String(experiment.linkedConfigMeta.controlValue)}</div>
+              <div style={{ fontSize: 13, color: "#16A34A", fontWeight: 600, alignSelf: "center" }}>{String(experiment.linkedConfigMeta.variantBValue)}</div>
             </div>
+          ) : linkedConfig ? (
+            linkedConfig.parameters.map((parameter) => (
+              <div key={parameter.id} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", gap: 0, padding: "14px 0", borderBottom: `1px solid ${BORDER}` }}>
+                <div><CodePill>{parameter.key}</CodePill></div>
+                <div style={{ fontSize: 13, color: TEXT, alignSelf: "center" }}>{parameter.type}</div>
+                <div style={{ fontSize: 13, color: TEXT, alignSelf: "center" }}>{stringifyParameterValue(parameter)}</div>
+                <div style={{ fontSize: 13, color: TEXT_MUTED, alignSelf: "center" }}>—</div>
+              </div>
+            ))
           ) : (
-            <div style={{ padding: "12px 14px", borderRadius: 10, border: "1px solid #FCA5A5", background: "#FEF2F2", color: "#B91C1C", fontSize: 13 }}>
-              The linked configuration has been removed.
-            </div>
+            <div style={{ padding: "14px 0", fontSize: 13, color: "#B91C1C" }}>The linked configuration has been removed.</div>
           )}
         </div>
       )}
 
+      {/* ══════════════ SETTINGS TAB ══════════════ */}
       {tab === "settings" && (
-        <div style={{ ...cardStyle, padding: 22 }}>
-          <h3 style={{ margin: "0 0 6px", fontSize: 16, color: TEXT }}>Experiment Settings</h3>
-          <p style={{ margin: "0 0 16px", fontSize: 13, color: TEXT_MUTED }}>Summary of the campaign setup and tracking configuration.</p>
+        <div id="tabpanel-settings" role="tabpanel" aria-labelledby="tab-settings" style={{ ...cardStyle, padding: 24, background: WHITE, border: "1px solid #E5E7EB" }}>
+          <h3 style={{ margin: "0 0 6px", fontSize: 16, color: TEXT, fontWeight: 700 }}>Experiment Settings</h3>
+          <p style={{ margin: "0 0 18px", fontSize: 13, color: "#4B5563" }}>Summary of the campaign setup and tracking configuration.</p>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12 }}>
+            {/* Goal Metric — 6.3 humanized */}
+            <div style={{ padding: 16, borderRadius: 12, border: "1px solid #E5E7EB", background: WHITE }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "#4B5563", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>Goal Metric</div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: TEXT, marginBottom: 4 }}>{goalMetric.label}</div>
+              <CodePill>{goalMetric.key}</CodePill>
+            </div>
+            {/* Linked Config Key */}
+            <div style={{ padding: 16, borderRadius: 12, border: "1px solid #E5E7EB", background: WHITE }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "#4B5563", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>Linked Config Key</div>
+              <CodePill>{experiment.linkedConfigKey || "—"}</CodePill>
+            </div>
+            {/* New fields — 6.2 */}
             {[
-              { label: "Status", value: experiment.status },
-              { label: "Goal Metric", value: experiment.metric || "—" },
-              { label: "Linked Config Key", value: experiment.linkedConfigKey || "—" },
-              { label: "Users", value: Number(experiment.users || 0).toLocaleString() },
+              { label: "Traffic Split", value: `${experiment.trafficSplit?.control ?? 50}% / ${experiment.trafficSplit?.variant_b ?? 50}% (Control vs. Variant B)` },
+              { label: "Targeting", value: experiment.targeting || "All Users" },
+              { label: "Start Date", value: startLabel },
+              { label: "End Date", value: endLabel },
+              { label: "Duration", value: durationLabel },
+              { label: "Randomization", value: experiment.randomizationUnit || "User ID" },
+              { label: "Created By", value: experiment.createdBy || "—" },
+              { label: "Last Modified By", value: experiment.lastModifiedBy ? `${experiment.lastModifiedBy} · ${fmtDate(experiment.lastModifiedAt)}` : "—" },
             ].map((item) => (
-              <div key={item.label} style={{ padding: 14, borderRadius: 12, border: `1px solid ${BORDER}`, background: SOFT }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase" }}>{item.label}</div>
-                <div style={{ marginTop: 6, fontSize: 14, fontWeight: 600, color: TEXT, fontFamily: item.label.includes("Key") || item.label.includes("Metric") ? "ui-monospace, SFMono-Regular, Menlo, monospace" : "inherit" }}>
-                  {item.value}
-                </div>
+              <div key={item.label} style={{ padding: 16, borderRadius: 12, border: "1px solid #E5E7EB", background: WHITE }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "#4B5563", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>{item.label}</div>
+                <div style={{ fontSize: 14, fontWeight: 500, color: TEXT }}>{item.value}</div>
               </div>
             ))}
           </div>
@@ -3814,7 +4123,13 @@ function ExperimentDetail({ experiment, onBack, onOpenRemoteConfig, linkedConfig
 
       {/* Sticky footer */}
       <div style={{ position: "sticky", bottom: 0, marginTop: 24, padding: "14px 0", background: PAGE_BG, borderTop: `1px solid ${BORDER}`, display: "flex", alignItems: "center", zIndex: 40 }}>
-        <button onClick={onBack} style={{ ...secondaryButtonStyle }}>← Back to experiments</button>
+        <button
+          onClick={onBack}
+          style={{ ...secondaryButtonStyle, display: "inline-flex", alignItems: "center", gap: 7 }}
+        >
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M9 12L4 7L9 2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          Back to experiments
+        </button>
       </div>
     </div>
   );
@@ -4309,7 +4624,6 @@ export default function App() {
         </div>
 
         <div style={{ padding: "4px 8px 0", flex: 1 }}>
-          <div style={{ padding: "0 10px 8px", fontSize: 11, fontWeight: 700, color: TEXT_MUTED, letterSpacing: 0.6 }}>MAIN MENU</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
             <SidebarItem icon={<HeartIcon />} label="Favorites" />
             <SidebarItem icon={<DashboardIcon />} label="Dashboard" />
