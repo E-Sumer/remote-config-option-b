@@ -1265,6 +1265,9 @@ function RemoteConfigurationForm({
   const [priorityBannerDismissed, setPriorityBannerDismissed] = useState(false);
   const [openSegmentMenuId, setOpenSegmentMenuId] = useState(null);
   const [openActionMenuKey, setOpenActionMenuKey] = useState(null);
+  const [openInlineEditKey, setOpenInlineEditKey] = useState(null);
+  const [inlineEditValue, setInlineEditValue] = useState("");
+  const [dragHandleVariantId, setDragHandleVariantId] = useState(null);
 
   useEffect(() => {
     setForm(buildInitialForm());
@@ -2001,9 +2004,11 @@ function RemoteConfigurationForm({
         const variantColors = ["#3B82F6", "#22C55E", "#F59E0B", "#8B5CF6", "#EC4899", "#14B8A6", "#F97316", "#6366F1", "#84CC16", "#06B6D4"];
         const segUsage = {};
         customVariants.forEach((v, i) => { v.segments.forEach((s) => { segUsage[s] = segUsage[s] || []; segUsage[s].push(i + 1); }); });
+        // All-Users exclusivity: if any variant has "All Users", block all other segment choices everywhere
+        const allUsersSelectedAnywhere = customVariants.some((v) => v.segments.includes("All Users"));
 
         return (
-          <div onClick={() => { setOpenSegmentMenuId(null); setOpenActionMenuKey(null); }}>
+          <div onClick={() => { setOpenSegmentMenuId(null); setOpenActionMenuKey(null); setOpenInlineEditKey(null); }}>
 
             {/* Variant cards */}
             <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 12 }}>
@@ -2014,13 +2019,17 @@ function RemoteConfigurationForm({
                 const segError = errors[`variant_${variant.id}_segments`];
                 const availableSegs = mockSegments.filter((s) => !variant.segments.includes(s.name));
                 const segMenuOpen = openSegmentMenuId === variant.id;
+                const thisVariantHasAllUsers = variant.segments.includes("All Users");
+                // Whether this card is draggable (only when handle mousedown)
+                const isDraggable = dragHandleVariantId === variant.id;
                 return (
                   <div
                     key={variant.id}
-                    draggable
-                    onDragStart={() => setVarDragId(variant.id)}
+                    draggable={isDraggable}
+                    onDragStart={(e) => { if (!isDraggable) { e.preventDefault(); return; } setVarDragId(variant.id); }}
                     onDragOver={(e) => e.preventDefault()}
                     onDrop={() => handleVariantDrop(variant.id)}
+                    onDragEnd={() => setDragHandleVariantId(null)}
                     style={{
                       background: WHITE,
                       borderRadius: 8,
@@ -2031,7 +2040,13 @@ function RemoteConfigurationForm({
                   >
                     {/* Card header */}
                     <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", borderBottom: "1px solid #F3F4F6" }}>
-                      <svg style={{ color: "#D1D5DB", cursor: "grab", flexShrink: 0 }} width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                      {/* Grip handle — ONLY this triggers drag */}
+                      <svg
+                        width="16" height="16" viewBox="0 0 16 16" fill="currentColor"
+                        style={{ color: "#D1D5DB", cursor: "grab", flexShrink: 0, userSelect: "none" }}
+                        onMouseDown={() => setDragHandleVariantId(variant.id)}
+                        onMouseUp={() => setDragHandleVariantId(null)}
+                      >
                         <circle cx="5" cy="4" r="1.5"/><circle cx="11" cy="4" r="1.5"/>
                         <circle cx="5" cy="8" r="1.5"/><circle cx="11" cy="8" r="1.5"/>
                         <circle cx="5" cy="12" r="1.5"/><circle cx="11" cy="12" r="1.5"/>
@@ -2101,20 +2116,26 @@ function RemoteConfigurationForm({
                                 </svg>
                               </button>
 
-                              {/* Dropdown menu */}
                               {segMenuOpen && (
                                 <div style={{ position: "absolute", left: 0, top: "calc(100% + 4px)", background: WHITE, border: "1px solid #E5E7EB", borderRadius: 8, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", minWidth: 220, zIndex: 9999, overflow: "hidden" }}>
                                   {availableSegs.length === 0 ? (
                                     <div style={{ padding: "12px 16px", fontSize: 13, color: "#9CA3AF", textAlign: "center" }}>All segments selected</div>
                                   ) : (
                                     availableSegs.map((seg) => {
+                                      // "All Users" used in another variant → disabled
                                       const usedInOther = customVariants.some((v, vi) => vi !== idx && v.segments.includes(seg.name));
+                                      // If any variant has "All Users" and this segment isn't "All Users" → block it
+                                      const blockedByAllUsers = allUsersSelectedAnywhere && !thisVariantHasAllUsers && seg.name !== "All Users";
+                                      // "All Users" is globally exclusive: if it's selected anywhere it's "in use"
+                                      const allUsersInUse = seg.name === "All Users" && allUsersSelectedAnywhere && !thisVariantHasAllUsers;
+                                      const isDisabled = usedInOther || blockedByAllUsers || allUsersInUse;
+                                      const disabledLabel = allUsersInUse ? "In use" : (blockedByAllUsers ? "Blocked by All Users" : (usedInOther ? "In use" : null));
                                       return (
                                         <button
                                           key={seg.id}
-                                          disabled={usedInOther}
+                                          disabled={isDisabled}
                                           onClick={() => {
-                                            if (usedInOther) return;
+                                            if (isDisabled) return;
                                             updateVariant(variant.id, (v) => ({ ...v, segments: [...v.segments, seg.name] }));
                                             setErrors((curr) => ({ ...curr, [`variant_${variant.id}_segments`]: undefined }));
                                             setOpenSegmentMenuId(null);
@@ -2123,15 +2144,17 @@ function RemoteConfigurationForm({
                                             display: "flex", alignItems: "center", justifyContent: "space-between",
                                             width: "100%", padding: "10px 14px", border: "none",
                                             background: "none", fontSize: 13,
-                                            color: usedInOther ? "#9CA3AF" : "#111827",
-                                            cursor: usedInOther ? "not-allowed" : "pointer",
-                                            textAlign: "left", opacity: usedInOther ? 0.5 : 1,
+                                            color: isDisabled ? "#9CA3AF" : "#111827",
+                                            cursor: isDisabled ? "not-allowed" : "pointer",
+                                            textAlign: "left", opacity: isDisabled ? 0.55 : 1,
                                           }}
-                                          onMouseEnter={(e) => { if (!usedInOther) e.currentTarget.style.background = "#F9FAFB"; }}
+                                          onMouseEnter={(e) => { if (!isDisabled) e.currentTarget.style.background = "#F9FAFB"; }}
                                           onMouseLeave={(e) => { e.currentTarget.style.background = "none"; }}
                                         >
                                           <span>{seg.name}</span>
-                                          {usedInOther && <span style={{ fontSize: 11, color: "#9CA3AF" }}>In use</span>}
+                                          {disabledLabel && (
+                                            <span style={{ fontSize: 11, color: "#9CA3AF", background: "#F3F4F6", padding: "2px 6px", borderRadius: 4 }}>{disabledLabel}</span>
+                                          )}
                                         </button>
                                       );
                                     })
@@ -2141,14 +2164,12 @@ function RemoteConfigurationForm({
                             </div>
                           </div>
 
-                          {/* Inline validation: no segment */}
                           {segError && (
                             <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 5, fontSize: 12, color: "#DC2626" }}>
                               <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M6 1a5 5 0 1 0 0 10A5 5 0 0 0 6 1ZM5.25 3.5h1.5v3.5h-1.5V3.5Zm0 4.5h1.5V9.5h-1.5V8Z"/></svg>
                               {segError}
                             </div>
                           )}
-                          {/* Inline conflict warning */}
                           {hasConflict && !segError && (
                             <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 5, fontSize: 12, color: "#DC2626" }}>
                               <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M6 1a5 5 0 1 0 0 10A5 5 0 0 0 6 1ZM5.25 3.5h1.5v3.5h-1.5V3.5Zm0 4.5h1.5V9.5h-1.5V8Z"/></svg>
@@ -2196,55 +2217,102 @@ function RemoteConfigurationForm({
                                 const setOverride = (val) => updateVariant(variant.id, (v) => ({ ...v, parameterOverrides: { ...v.parameterOverrides, [param.key]: val } }));
                                 const menuKey = `${variant.id}_${param.key}`;
                                 const menuOpen = openActionMenuKey === menuKey;
+                                const isEditing = openInlineEditKey === menuKey;
+                                const isBoolean = param.type === "Boolean";
                                 return (
                                   <div key={param.id} style={{ display: "grid", gridTemplateColumns: "1fr 2fr 80px", borderTop: pi === 0 ? "none" : "1px solid #F3F4F6", alignItems: "center", position: "relative" }}>
+                                    {/* KEY */}
                                     <div style={{ padding: "14px 16px", fontFamily: "ui-monospace, monospace", fontSize: 13, color: "#3B82F6" }}>{param.key}</div>
-                                    <div style={{ padding: "14px 16px", display: "flex", alignItems: "center", gap: 8 }}>
-                                      <span style={{ width: 8, height: 8, borderRadius: "50%", background: isOverridden ? "#F59E0B" : "#D1D5DB", flexShrink: 0, display: "inline-block" }} />
-                                      {isOverridden ? (
-                                        <span style={{ fontSize: 13, color: "#374151", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 200 }}>{String(overrideValue)}</span>
+                                    {/* VALUE — static display or inline editor */}
+                                    <div style={{ padding: isEditing ? "8px 16px" : "14px 16px", display: "flex", alignItems: "center", gap: 8 }}>
+                                      {isEditing ? (
+                                        /* Inline editor */
+                                        <div style={{ display: "flex", alignItems: "center", gap: 6, flex: 1 }} onClick={(e) => e.stopPropagation()}>
+                                          {isBoolean ? (
+                                            <select
+                                              value={inlineEditValue}
+                                              onChange={(e) => setInlineEditValue(e.target.value)}
+                                              autoFocus
+                                              style={{ flex: 1, padding: "6px 10px", border: "2px solid #3B82F6", borderRadius: 6, fontSize: 13, color: "#111827", background: WHITE, outline: "none", cursor: "pointer" }}
+                                            >
+                                              <option value="true">True</option>
+                                              <option value="false">False</option>
+                                            </select>
+                                          ) : (
+                                            <input
+                                              autoFocus
+                                              value={inlineEditValue}
+                                              onChange={(e) => setInlineEditValue(e.target.value)}
+                                              onKeyDown={(e) => {
+                                                if (e.key === "Enter") { setOverride(isBoolean ? inlineEditValue === "true" : inlineEditValue); setOpenInlineEditKey(null); }
+                                                if (e.key === "Escape") { setOpenInlineEditKey(null); }
+                                              }}
+                                              style={{ flex: 1, padding: "6px 10px", border: "2px solid #3B82F6", borderRadius: 6, fontSize: 13, color: "#111827", background: WHITE, outline: "none" }}
+                                            />
+                                          )}
+                                          {/* Confirm */}
+                                          <button
+                                            onClick={(e) => { e.stopPropagation(); setOverride(isBoolean ? inlineEditValue === "true" : inlineEditValue); setOpenInlineEditKey(null); }}
+                                            style={{ background: "#3B82F6", border: "none", color: WHITE, borderRadius: 6, padding: "6px 10px", fontSize: 12, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}
+                                          >Save</button>
+                                          {/* Cancel */}
+                                          <button
+                                            onClick={(e) => { e.stopPropagation(); setOpenInlineEditKey(null); }}
+                                            style={{ background: "#F3F4F6", border: "none", color: "#374151", borderRadius: 6, padding: "6px 10px", fontSize: 12, cursor: "pointer" }}
+                                          >✕</button>
+                                        </div>
                                       ) : (
-                                        <span style={{ fontSize: 13, color: "#9CA3AF", fontStyle: "italic" }}>"{String(param.value)}" (Default)</span>
+                                        <>
+                                          <span style={{ width: 8, height: 8, borderRadius: "50%", background: isOverridden ? "#F59E0B" : "#D1D5DB", flexShrink: 0, display: "inline-block" }} />
+                                          {isOverridden ? (
+                                            <span style={{ fontSize: 13, color: "#374151", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 200 }}>{String(overrideValue)}</span>
+                                          ) : (
+                                            <span style={{ fontSize: 13, color: "#9CA3AF", fontStyle: "italic" }}>"{String(param.value)}" (Default)</span>
+                                          )}
+                                        </>
                                       )}
                                     </div>
-                                    {/* Action column with portal-like dropdown */}
+                                    {/* ACTION */}
                                     <div style={{ padding: "14px 16px", display: "flex", justifyContent: "flex-end" }} onClick={(e) => e.stopPropagation()}>
-                                      <div style={{ position: "relative" }}>
-                                        <button
-                                          onClick={() => setOpenActionMenuKey(menuOpen ? null : menuKey)}
-                                          style={{ background: menuOpen ? "#F3F4F6" : "none", border: "none", color: "#9CA3AF", cursor: "pointer", padding: "4px 8px", fontSize: 16, borderRadius: 6, letterSpacing: 2, lineHeight: 1 }}
-                                          onMouseEnter={(e) => { e.currentTarget.style.background = "#F3F4F6"; e.currentTarget.style.color = "#374151"; }}
-                                          onMouseLeave={(e) => { if (!menuOpen) { e.currentTarget.style.background = "none"; e.currentTarget.style.color = "#9CA3AF"; } }}
-                                        >…</button>
-                                        {menuOpen && (
-                                          <div style={{ position: "absolute", right: 0, top: "calc(100% + 4px)", background: WHITE, border: "1px solid #E5E7EB", borderRadius: 8, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", minWidth: 140, zIndex: 9999, overflow: "hidden" }}>
-                                            <button
-                                              style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "10px 14px", border: "none", background: "none", fontSize: 13, color: "#374151", cursor: "pointer", textAlign: "left" }}
-                                              onMouseEnter={(e) => { e.currentTarget.style.background = "#F9FAFB"; }}
-                                              onMouseLeave={(e) => { e.currentTarget.style.background = "none"; }}
-                                              onClick={() => {
-                                                const val = window.prompt(`Edit value for "${param.key}":`, String(overrideValue));
-                                                if (val !== null) setOverride(val);
-                                                setOpenActionMenuKey(null);
-                                              }}
-                                            >
-                                              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M9.5 1.5L12.5 4.5L4.5 12.5H1.5V9.5L9.5 1.5Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/></svg>
-                                              Edit
-                                            </button>
-                                            {isOverridden && (
+                                      {!isEditing && (
+                                        <div style={{ position: "relative" }}>
+                                          <button
+                                            onClick={() => setOpenActionMenuKey(menuOpen ? null : menuKey)}
+                                            style={{ background: menuOpen ? "#F3F4F6" : "none", border: "none", color: "#9CA3AF", cursor: "pointer", padding: "4px 8px", fontSize: 16, borderRadius: 6, letterSpacing: 2, lineHeight: 1 }}
+                                            onMouseEnter={(e) => { e.currentTarget.style.background = "#F3F4F6"; e.currentTarget.style.color = "#374151"; }}
+                                            onMouseLeave={(e) => { if (!menuOpen) { e.currentTarget.style.background = "none"; e.currentTarget.style.color = "#9CA3AF"; } }}
+                                          >…</button>
+                                          {menuOpen && (
+                                            <div style={{ position: "absolute", right: 0, top: "calc(100% + 4px)", background: WHITE, border: "1px solid #E5E7EB", borderRadius: 8, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", minWidth: 140, zIndex: 9999, overflow: "hidden" }}>
                                               <button
-                                                style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "10px 14px", border: "none", background: "none", fontSize: 13, color: "#DC2626", cursor: "pointer", textAlign: "left", borderTop: "1px solid #F3F4F6" }}
-                                                onMouseEnter={(e) => { e.currentTarget.style.background = "#FEF2F2"; }}
+                                                style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "10px 14px", border: "none", background: "none", fontSize: 13, color: "#374151", cursor: "pointer", textAlign: "left" }}
+                                                onMouseEnter={(e) => { e.currentTarget.style.background = "#F9FAFB"; }}
                                                 onMouseLeave={(e) => { e.currentTarget.style.background = "none"; }}
-                                                onClick={() => { setOverride(param.value); setOpenActionMenuKey(null); }}
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  setOpenActionMenuKey(null);
+                                                  setInlineEditValue(String(overrideValue));
+                                                  setOpenInlineEditKey(menuKey);
+                                                }}
                                               >
-                                                <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><path d="M5 1h4a.5.5 0 0 1 .5.5V2h3a.5.5 0 0 1 0 1h-.5v8.5A1.5 1.5 0 0 1 10.5 13h-7A1.5 1.5 0 0 1 2 11.5V3h-.5a.5.5 0 0 1 0-1h3V1.5A.5.5 0 0 1 5 1Zm-2 2v8.5a.5.5 0 0 0 .5.5h7a.5.5 0 0 0 .5-.5V3H3Zm2 1.5a.5.5 0 0 1 .5.5v5a.5.5 0 0 1-1 0V5a.5.5 0 0 1 .5-.5Zm4 0a.5.5 0 0 1 .5.5v5a.5.5 0 0 1-1 0V5a.5.5 0 0 1 .5-.5Z"/></svg>
-                                                Remove override
+                                                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M9.5 1.5L12.5 4.5L4.5 12.5H1.5V9.5L9.5 1.5Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/></svg>
+                                                Edit
                                               </button>
-                                            )}
-                                          </div>
-                                        )}
-                                      </div>
+                                              {isOverridden && (
+                                                <button
+                                                  style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "10px 14px", border: "none", background: "none", fontSize: 13, color: "#DC2626", cursor: "pointer", textAlign: "left", borderTop: "1px solid #F3F4F6" }}
+                                                  onMouseEnter={(e) => { e.currentTarget.style.background = "#FEF2F2"; }}
+                                                  onMouseLeave={(e) => { e.currentTarget.style.background = "none"; }}
+                                                  onClick={(e) => { e.stopPropagation(); setOverride(param.value); setOpenActionMenuKey(null); }}
+                                                >
+                                                  <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><path d="M5 1h4a.5.5 0 0 1 .5.5V2h3a.5.5 0 0 1 0 1h-.5v8.5A1.5 1.5 0 0 1 10.5 13h-7A1.5 1.5 0 0 1 2 11.5V3h-.5a.5.5 0 0 1 0-1h3V1.5A.5.5 0 0 1 5 1Zm-2 2v8.5a.5.5 0 0 0 .5.5h7a.5.5 0 0 0 .5-.5V3H3Zm2 1.5a.5.5 0 0 1 .5.5v5a.5.5 0 0 1-1 0V5a.5.5 0 0 1 .5-.5Zm4 0a.5.5 0 0 1 .5.5v5a.5.5 0 0 1-1 0V5a.5.5 0 0 1 .5-.5Z"/></svg>
+                                                  Remove override
+                                                </button>
+                                              )}
+                                            </div>
+                                          )}
+                                        </div>
+                                      )}
                                     </div>
                                   </div>
                                 );
@@ -2259,7 +2327,7 @@ function RemoteConfigurationForm({
               })}
             </div>
 
-            {/* Add Variant button — full width, dashed, with UI tooltip at max */}
+                        {/* Add Variant button — full width, dashed, with UI tooltip at max */}
             <div style={{ position: "relative", marginBottom: 24 }}>
               <button
                 disabled={atMax}
@@ -2310,7 +2378,7 @@ function RemoteConfigurationForm({
                   <rect x="6" y="5.5" width="1" height="4" rx="0.5" fill="white"/>
                   <rect x="6" y="3.5" width="1" height="1.2" rx="0.5" fill="white"/>
                 </svg>
-                Maximum of 10 variants reached
+                Maximum 10 variants is allowed
                 {/* Arrow */}
                 <span style={{ position: "absolute", top: "100%", left: "50%", transform: "translateX(-50%)", width: 0, height: 0, borderLeft: "5px solid transparent", borderRight: "5px solid transparent", borderTop: "5px solid #111827" }} />
               </div>
