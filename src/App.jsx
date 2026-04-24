@@ -2516,7 +2516,7 @@ function RemoteConfigurationDetail({ config, experiments, onBack, onEdit, onOpen
     <div>
       <div style={{ ...cardStyle, padding: "18px 18px 12px", marginBottom: 14 }}>
         <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
-          <div style={{ width: 4, alignSelf: "stretch", borderRadius: 999, background: PRIMARY }} />
+          <div style={{ width: 4, alignSelf: "stretch", borderRadius: 999, background: "#3B82F6" }} />
           <div style={{ flex: 1 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
               <h1 style={{ margin: 0, fontSize: 20, color: "#111827", fontWeight: 700 }}>{config.name}</h1>
@@ -2909,9 +2909,12 @@ function ExperimentList({
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
-        <div>
-          <h1 style={pageTitleStyle}>A/B Testing</h1>
-          <p style={pageDescriptionStyle}>Create experiments, test hypotheses, and measure impact on your key metrics.</p>
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+          <div style={{ width: 5, height: 58, borderRadius: 999, background: "#3B82F6", marginTop: 2, flexShrink: 0 }} />
+          <div>
+            <h1 style={pageTitleStyle}>A/B Testing</h1>
+            <p style={pageDescriptionStyle}>Create experiments, test hypotheses, and measure impact on your key metrics.</p>
+          </div>
         </div>
         <button onClick={onCreateNew} style={primaryButtonStyle}>
           <PlusIcon />
@@ -2937,8 +2940,8 @@ function ExperimentList({
             style={{
               padding: "7px 12px",
               borderRadius: 999,
-              border: `1px solid ${filter === filterName ? PRIMARY : "rgba(0,0,0,0.1)"}`,
-              background: filter === filterName ? PRIMARY : WHITE,
+              border: `1px solid ${filter === filterName ? "#3B82F6" : "rgba(0,0,0,0.1)"}`,
+              background: filter === filterName ? "#3B82F6" : WHITE,
               color: filter === filterName ? WHITE : TEXT_MUTED,
               fontSize: 12,
               fontWeight: 600,
