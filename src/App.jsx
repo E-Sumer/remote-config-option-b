@@ -1502,7 +1502,7 @@ function RemoteConfigurationForm({
   const addVariant = () => {
     setForm((current) => {
       const customs = current.variants.filter((v) => !v.isDefault);
-      if (customs.length >= 4) return current;
+      if (customs.length >= 10) return current;
       const deflt = current.variants.find((v) => v.isDefault);
       const newVariant = {
         id: createRcVariantId(),
@@ -2151,9 +2151,11 @@ function RemoteConfigurationForm({
                                           onMouseEnter={(e) => { if (!isDisabled) e.currentTarget.style.background = "#F9FAFB"; }}
                                           onMouseLeave={(e) => { e.currentTarget.style.background = "none"; }}
                                         >
-                                          <span>{seg.name}</span>
+                                          <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 120 }} title={seg.name.length > 13 ? seg.name : undefined}>
+                                            {seg.name.length > 13 ? seg.name.slice(0, 13) + "…" : seg.name}
+                                          </span>
                                           {disabledLabel && (
-                                            <span style={{ fontSize: 11, color: "#9CA3AF", background: "#F3F4F6", padding: "2px 6px", borderRadius: 4 }}>{disabledLabel}</span>
+                                            <span style={{ fontSize: 11, color: "#9CA3AF", background: "#F3F4F6", padding: "2px 6px", borderRadius: 4, flexShrink: 0 }}>{disabledLabel}</span>
                                           )}
                                         </button>
                                       );
@@ -2283,9 +2285,10 @@ function RemoteConfigurationForm({
                                             onMouseLeave={(e) => { if (!menuOpen) { e.currentTarget.style.background = "none"; e.currentTarget.style.color = "#9CA3AF"; } }}
                                           >…</button>
                                           {menuOpen && (
-                                            <div style={{ position: "absolute", right: 0, top: "calc(100% + 4px)", background: WHITE, border: "1px solid #E5E7EB", borderRadius: 8, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", minWidth: 140, zIndex: 9999, overflow: "hidden" }}>
+                                            <div style={{ position: "absolute", right: 0, top: "calc(100% + 4px)", background: WHITE, border: "1px solid #E5E7EB", borderRadius: 8, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", zIndex: 9999, overflow: "hidden", display: "flex", alignItems: "stretch" }}>
+                                              {/* Edit action */}
                                               <button
-                                                style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "10px 14px", border: "none", background: "none", fontSize: 13, color: "#374151", cursor: "pointer", textAlign: "left" }}
+                                                style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 14px", border: "none", background: "none", fontSize: 13, color: "#374151", cursor: "pointer", whiteSpace: "nowrap" }}
                                                 onMouseEnter={(e) => { e.currentTarget.style.background = "#F9FAFB"; }}
                                                 onMouseLeave={(e) => { e.currentTarget.style.background = "none"; }}
                                                 onClick={(e) => {
@@ -2295,19 +2298,23 @@ function RemoteConfigurationForm({
                                                   setOpenInlineEditKey(menuKey);
                                                 }}
                                               >
-                                                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M9.5 1.5L12.5 4.5L4.5 12.5H1.5V9.5L9.5 1.5Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/></svg>
+                                                <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M9.5 1.5L12.5 4.5L4.5 12.5H1.5V9.5L9.5 1.5Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/></svg>
                                                 Edit
                                               </button>
+                                              {/* Divider + Reset — only shown when value is overridden */}
                                               {isOverridden && (
-                                                <button
-                                                  style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "10px 14px", border: "none", background: "none", fontSize: 13, color: "#DC2626", cursor: "pointer", textAlign: "left", borderTop: "1px solid #F3F4F6" }}
-                                                  onMouseEnter={(e) => { e.currentTarget.style.background = "#FEF2F2"; }}
-                                                  onMouseLeave={(e) => { e.currentTarget.style.background = "none"; }}
-                                                  onClick={(e) => { e.stopPropagation(); setOverride(param.value); setOpenActionMenuKey(null); }}
-                                                >
-                                                  <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><path d="M5 1h4a.5.5 0 0 1 .5.5V2h3a.5.5 0 0 1 0 1h-.5v8.5A1.5 1.5 0 0 1 10.5 13h-7A1.5 1.5 0 0 1 2 11.5V3h-.5a.5.5 0 0 1 0-1h3V1.5A.5.5 0 0 1 5 1Zm-2 2v8.5a.5.5 0 0 0 .5.5h7a.5.5 0 0 0 .5-.5V3H3Zm2 1.5a.5.5 0 0 1 .5.5v5a.5.5 0 0 1-1 0V5a.5.5 0 0 1 .5-.5Zm4 0a.5.5 0 0 1 .5.5v5a.5.5 0 0 1-1 0V5a.5.5 0 0 1 .5-.5Z"/></svg>
-                                                  Remove override
-                                                </button>
+                                                <>
+                                                  <div style={{ width: 1, background: "#F3F4F6", flexShrink: 0 }} />
+                                                  <button
+                                                    style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 14px", border: "none", background: "none", fontSize: 13, color: "#DC2626", cursor: "pointer", whiteSpace: "nowrap" }}
+                                                    onMouseEnter={(e) => { e.currentTarget.style.background = "#FEF2F2"; }}
+                                                    onMouseLeave={(e) => { e.currentTarget.style.background = "none"; }}
+                                                    onClick={(e) => { e.stopPropagation(); setOverride(param.value); setOpenActionMenuKey(null); }}
+                                                  >
+                                                    <svg width="13" height="13" viewBox="0 0 14 14" fill="currentColor"><path d="M5 1h4a.5.5 0 0 1 .5.5V2h3a.5.5 0 0 1 0 1h-.5v8.5A1.5 1.5 0 0 1 10.5 13h-7A1.5 1.5 0 0 1 2 11.5V3h-.5a.5.5 0 0 1 0-1h3V1.5A.5.5 0 0 1 5 1Zm-2 2v8.5a.5.5 0 0 0 .5.5h7a.5.5 0 0 0 .5-.5V3H3Zm2 1.5a.5.5 0 0 1 .5.5v5a.5.5 0 0 1-1 0V5a.5.5 0 0 1 .5-.5Zm4 0a.5.5 0 0 1 .5.5v5a.5.5 0 0 1-1 0V5a.5.5 0 0 1 .5-.5Z"/></svg>
+                                                    Reset
+                                                  </button>
+                                                </>
                                               )}
                                             </div>
                                           )}
