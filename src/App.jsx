@@ -2523,189 +2523,229 @@ function RemoteConfigurationForm({
 }
 
 function RemoteConfigurationDetail({ config, experiments, onBack, onEdit, onOpenExperiment }) {
-  const [tab, setTab] = useState("overview");
-  const [copyState, setCopyState] = useState("Copy JSON");
-  const payload = useMemo(() => buildRemoteConfigPayload(config.key, config.parameters || []), [config]);
-  const linkedExperiments = experiments.filter((experiment) => !experiment.archived && experiment.linkedConfigKey === config.key);
-  const activeSegments = config.selectedSegments?.length ? config.selectedSegments : [];
+  const [configTab, setConfigTab] = useState("configuration"); // "configuration" | "report"
+  const [keysExpanded, setKeysExpanded] = useState(true);
+  const [versionExpanded, setVersionExpanded] = useState(true);
 
-  useEffect(() => {
-    if (copyState === "Copy JSON") return undefined;
-    const timeout = window.setTimeout(() => setCopyState("Copy JSON"), 2000);
-    return () => window.clearTimeout(timeout);
-  }, [copyState]);
+  const linkedExperiments = experiments.filter((e) => !e.archived && e.linkedConfigKey === config.key);
+  const activeSegments = config.selectedSegments?.length ? config.selectedSegments : [];
+  const hasActiveExperiment = linkedExperiments.some((e) => e.status === "RUNNING" || e.status === "running");
+
+  // Mock variant data for Keys & Variants card
+  const mockVariants = [
+    { id: "control", label: "Control", traffic: 50, value: "Welcome back!", color: "#22C55E" },
+    { id: "variant_b", label: "Variant B", traffic: 45, value: "Good to see you again!", color: "#22C55E" },
+    { id: "variant_c", label: "Variant C", traffic: 5, value: "Welcome back!", color: "#22C55E" },
+  ];
+
+  // Overview metadata rows
+  const overviewMeta = [
+    { label: "TYPE", value: config.type || "String", pill: true },
+    { label: "TARGET SEGMENT", value: activeSegments.length ? `${activeSegments.length} rule${activeSegments.length > 1 ? "s" : ""}` : "1 rule" },
+    { label: "ROLLOUT", value: `${config.rollout ?? 100}%` },
+    { label: "CONVERSION GOALS", value: "checkout_started", mono: true },
+    { label: "VARIANTS", value: `${mockVariants.length} variants` },
+    { label: "CREATED BY", value: config.creator || "John Smith" },
+    { label: "CREATED", value: config.created || "2026-02-01" },
+    { label: "STATUS", value: config.status, badge: true },
+    { label: "VERSION", value: `v${Number(config.version || 1).toFixed(1)}` },
+    { label: "LAST EDITED", value: "Just now" },
+  ];
 
   return (
-    <div>
-      <div style={{ ...cardStyle, padding: "18px 18px 12px", marginBottom: 14 }}>
-        <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
-          <div style={{ width: 4, alignSelf: "stretch", borderRadius: 999, background: "#3B82F6" }} />
-          <div style={{ flex: 1 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-              <h1 style={{ margin: 0, fontSize: 20, color: "#111827", fontWeight: 700 }}>{config.name}</h1>
-              <ConfigStatusBadge status={config.status} />
-              <span style={{ padding: "2px 10px", borderRadius: 6, background: "#EFF6FF", color: "#3B82F6", fontSize: 13, fontWeight: 500 }}>
-                v{Number(config.version || 1).toFixed(1)}
-              </span>
-            </div>
-            <p style={{ margin: "6px 0 0", color: TEXT_MUTED, fontSize: 13 }}>{config.description}</p>
-            <div style={{ marginTop: 12, display: "inline-flex", alignItems: "center", gap: 8, padding: "8px 10px", borderRadius: 10, background: SOFT, border: `1px solid ${BORDER}` }}>
-              <span style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 700 }}>CONFIG KEY</span>
-              <span style={{ fontSize: 12, color: TEXT, fontWeight: 600, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace" }}>{config.key}</span>
-            </div>
-          </div>
+    <div style={{ display: "flex", flexDirection: "column", minHeight: "100%" }}>
+
+      {/* ── Page title section ── */}
+      <div style={{ marginBottom: 20 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 4 }}>
+          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: TEXT, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace" }}>
+            {config.name.replace(/\s+/g, "_").toLowerCase().replace(/^./, (c) => c.toUpperCase()).replace(/_/g, "_")}
+          </h1>
+          <ConfigStatusBadge status={config.status} />
         </div>
+        <div style={{ fontSize: 13, color: TEXT_MUTED, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace" }}>{config.key}</div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 12, marginBottom: 18 }}>
-        {[
-          { label: "Status", value: config.status, sub: `Updated ${config.updated}` },
-          { label: "Parameters", value: config.parameters?.length || 0, sub: "included in payload" },
-          { label: "Rollout", value: `${config.rollout ?? 100}%`, sub: activeSegments.length ? `${activeSegments.length} segments targeted` : "All eligible users" },
-          { label: "Linked Experiments", value: linkedExperiments.length, sub: linkedExperiments.length ? "currently using this config" : "not used in experiments yet" },
-        ].map((item) => (
-          <div key={item.label} style={{ ...cardStyle, padding: "16px 18px" }}>
-            <div style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 700, marginBottom: 4, textTransform: "uppercase", letterSpacing: 0.4 }}>{item.label}</div>
-            <div style={{ fontSize: 24, fontWeight: 700, color: TEXT }}>{item.value}</div>
-            <div style={{ marginTop: 2, fontSize: 11, color: TEXT_MUTED, fontWeight: 600 }}>{item.sub}</div>
-          </div>
-        ))}
+      {/* ── Tab navigation ── */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 22 }}>
+        <button
+          onClick={() => setConfigTab("configuration")}
+          style={{
+            display: "inline-flex", alignItems: "center", gap: 7,
+            padding: "9px 16px", borderRadius: 9, fontSize: 13, fontWeight: 600, cursor: "pointer",
+            border: configTab === "configuration" ? "none" : `1px solid ${BORDER}`,
+            background: configTab === "configuration" ? "#111827" : WHITE,
+            color: configTab === "configuration" ? WHITE : TEXT_MUTED,
+          }}
+        >
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <circle cx="8" cy="8" r="3" stroke="currentColor" strokeWidth="1.6"/>
+            <path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.05 3.05l1.41 1.41M11.54 11.54l1.41 1.41M3.05 12.95l1.41-1.41M11.54 4.46l1.41-1.41" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+          </svg>
+          Configuration
+        </button>
+        <button
+          onClick={() => setConfigTab("report")}
+          style={{
+            display: "inline-flex", alignItems: "center", gap: 7,
+            padding: "9px 16px", borderRadius: 9, fontSize: 13, fontWeight: 600, cursor: "pointer",
+            border: configTab === "report" ? "none" : `1px solid ${BORDER}`,
+            background: configTab === "report" ? "#111827" : WHITE,
+            color: configTab === "report" ? WHITE : TEXT_MUTED,
+          }}
+        >
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path d="M3 12V8M7 12V5M11 12V9M15 12V2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+          </svg>
+          Report
+        </button>
       </div>
 
-      <div style={{ display: "flex", gap: 8, marginBottom: 18 }}>
-        {[
-          { key: "overview", label: "Overview" },
-          { key: "parameters", label: "Parameters" },
-          { key: "json", label: "JSON Payload" },
-          { key: "experiments", label: "Experiments" },
-        ].map((item) => (
-          <button
-            key={item.key}
-            onClick={() => setTab(item.key)}
-            style={{
-              ...secondaryButtonStyle,
-              padding: "9px 14px",
-              background: tab === item.key ? "#3B82F6" : WHITE,
-              color: tab === item.key ? WHITE : TEXT,
-              borderColor: tab === item.key ? "#3B82F6" : "#E5E7EB",
-            }}
-          >
-            {item.label}
-          </button>
-        ))}
-      </div>
+      {configTab === "configuration" && (
+        <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 300px", gap: 18, flex: 1 }}>
 
-      {tab === "overview" && (
-        <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.2fr) minmax(320px, 0.8fr)", gap: 18 }}>
-          <div style={{ ...cardStyle, padding: 22 }}>
-            <h3 style={{ margin: "0 0 14px", fontSize: 16, color: TEXT }}>Configuration Overview</h3>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12 }}>
-              {[
-                { label: "Creator", value: config.creator },
-                { label: "Created", value: config.created },
-                { label: "Last Updated", value: config.updated },
-                { label: "Version", value: `v${Number(config.version || 1).toFixed(1)}` },
-              ].map((item) => (
-                <div key={item.label} style={{ padding: 14, borderRadius: 12, border: `1px solid ${BORDER}`, background: SOFT }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase" }}>{item.label}</div>
-                  <div style={{ marginTop: 6, fontSize: 14, fontWeight: 600, color: TEXT }}>{item.value}</div>
+          {/* ── Left / Main column ── */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+
+            {/* Overview card */}
+            <div style={{ ...cardStyle, padding: 22 }}>
+              <h3 style={{ margin: "0 0 16px", fontSize: 15, fontWeight: 700, color: TEXT }}>Overview</h3>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 14 }}>
+                {overviewMeta.map((item) => (
+                  <div key={item.label}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 5 }}>{item.label}</div>
+                    {item.pill ? (
+                      <span style={{ display: "inline-flex", alignItems: "center", padding: "3px 10px", borderRadius: 6, background: "#F3F4F6", color: TEXT, fontSize: 13, fontWeight: 500 }}>{item.value}</span>
+                    ) : item.badge ? (
+                      <ConfigStatusBadge status={item.value} />
+                    ) : (
+                      <div style={{ fontSize: 13, color: TEXT, fontFamily: item.mono ? "ui-monospace, SFMono-Regular, Menlo, monospace" : "inherit", fontWeight: 500 }}>{item.value}</div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Keys & Variants card */}
+            <div style={{ ...cardStyle, padding: 0, overflow: "hidden" }}>
+              {/* Key row header */}
+              <div
+                style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", cursor: "pointer", borderBottom: keysExpanded ? `1px solid ${BORDER}` : "none" }}
+                onClick={() => setKeysExpanded((v) => !v)}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: TEXT, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace" }}>
+                    greeting_title
+                  </span>
                 </div>
-              ))}
-            </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ fontSize: 12, color: TEXT_MUTED, fontWeight: 500 }}>{mockVariants.length} variants</span>
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ transform: keysExpanded ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }} aria-hidden="true">
+                    <path d="M4 6l4 4 4-4" stroke={TEXT_MUTED} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </div>
+              </div>
 
-            <div style={{ marginTop: 16, padding: 16, borderRadius: 12, border: `1px solid ${BORDER}`, background: WHITE }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: TEXT_MUTED, marginBottom: 8, textTransform: "uppercase" }}>Description</div>
-              <div style={{ fontSize: 13, color: TEXT, lineHeight: 1.7 }}>{config.description}</div>
-            </div>
-          </div>
-
-          <div style={{ ...cardStyle, padding: 22 }}>
-            <h3 style={{ margin: "0 0 14px", fontSize: 16, color: TEXT }}>Targeting & Rollout</h3>
-            <div style={{ padding: 16, borderRadius: 12, border: `1px solid ${BORDER}`, background: SOFT, marginBottom: 12 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: TEXT_MUTED, marginBottom: 8, textTransform: "uppercase" }}>Rollout Percentage</div>
-              <div style={{ fontSize: 22, fontWeight: 700, color: TEXT }}>{config.rollout ?? 100}%</div>
-            </div>
-            <div style={{ padding: 16, borderRadius: 12, border: `1px solid ${BORDER}`, background: SOFT }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: TEXT_MUTED, marginBottom: 8, textTransform: "uppercase" }}>Audience Segments</div>
-              {activeSegments.length ? (
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                  {activeSegments.map((segment) => (
-                    <span key={segment} style={{ padding: "6px 10px", borderRadius: 999, background: "#ececf0", color: PRIMARY, fontSize: 12, fontWeight: 600 }}>
-                      {segment}
-                    </span>
+              {/* Variant cards */}
+              {keysExpanded && (
+                <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 12 }}>
+                  {mockVariants.map((variant) => (
+                    <div key={variant.id} style={{ borderRadius: 10, border: `1px solid ${BORDER}`, background: SOFT, padding: "14px 16px" }}>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: TEXT }}>{variant.label}</span>
+                        <span style={{ fontSize: 12, color: TEXT_MUTED }}>{variant.traffic}%</span>
+                      </div>
+                      <div style={{ fontSize: 12, color: TEXT, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", marginBottom: 10 }}>
+                        {variant.value}
+                      </div>
+                      {/* Progress bar */}
+                      <div style={{ height: 4, borderRadius: 999, background: "#E5E7EB", overflow: "hidden" }}>
+                        <div style={{ width: `${variant.traffic}%`, height: "100%", borderRadius: 999, background: variant.color }} />
+                      </div>
+                    </div>
                   ))}
                 </div>
-              ) : (
-                <div style={{ fontSize: 13, color: TEXT_MUTED }}>No segments selected. This configuration is delivered to all eligible users.</div>
               )}
             </div>
           </div>
-        </div>
-      )}
 
-      {tab === "parameters" && (
-        <div style={{ ...cardStyle, padding: 22 }}>
-          <h3 style={{ margin: "0 0 14px", fontSize: 16, color: TEXT }}>Parameters</h3>
-          {config.parameters?.length ? (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 14 }}>
-              {config.parameters.map((parameter) => (
-                <div key={parameter.id} style={{ padding: 16, borderRadius: 14, border: `1px solid ${BORDER}`, background: SOFT }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: TEXT }}>{parameter.key}</div>
-                    <span style={{ padding: "5px 10px", borderRadius: 999, background: "#ececf0", color: "#030213", fontSize: 11, fontWeight: 700 }}>
-                      {parameter.type}
-                    </span>
-                  </div>
-                  <div style={{ marginTop: 8, fontSize: 12, color: TEXT_MUTED, minHeight: 34 }}>
-                    {parameter.description || "No parameter description provided."}
-                  </div>
-                  <div style={{ marginTop: 12, padding: 12, borderRadius: 10, background: WHITE, border: `1px solid ${BORDER}` }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, marginBottom: 6, textTransform: "uppercase" }}>Current Value</div>
-                    <div style={{ fontSize: 12, color: TEXT, whiteSpace: "pre-wrap", fontFamily: parameter.type === "JSON" ? "ui-monospace, SFMono-Regular, Menlo, monospace" : "inherit" }}>
-                      {stringifyParameterValue(parameter)}
+          {/* ── Right sidebar ── */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+
+            {/* Version History card */}
+            <div style={{ ...cardStyle, padding: 0, overflow: "hidden" }}>
+              <div
+                style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px", cursor: "pointer", borderBottom: versionExpanded ? `1px solid ${BORDER}` : "none" }}
+                onClick={() => setVersionExpanded((v) => !v)}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                    <circle cx="8" cy="8" r="6.5" stroke={TEXT_MUTED} strokeWidth="1.4"/>
+                    <path d="M8 5v3.5l2.5 1.5" stroke={TEXT_MUTED} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: TEXT }}>Version History</span>
+                  <span style={{ background: "#EFF6FF", color: "#3B82F6", borderRadius: 999, fontSize: 11, fontWeight: 700, padding: "1px 7px" }}>1</span>
+                </div>
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style={{ transform: versionExpanded ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }} aria-hidden="true">
+                  <path d="M4 6l4 4 4-4" stroke={TEXT_MUTED} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </div>
+              {versionExpanded && (
+                <div style={{ padding: "14px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+                    {/* Blue filled circle indicator */}
+                    <div style={{ width: 12, height: 12, borderRadius: "50%", background: "#3B82F6", border: "2px solid #BFDBFE", flexShrink: 0, marginTop: 2 }} />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: TEXT }}>
+                          v{Number(config.version || 1).toFixed(1)} (Current)
+                        </span>
+                        <ConfigStatusBadge status={config.status} />
+                      </div>
+                      <div style={{ fontSize: 11, color: TEXT_MUTED }}>
+                        {config.created || "2026-02-10"} · {config.creator || "John Smith"}
+                      </div>
                     </div>
                   </div>
                 </div>
-              ))}
+              )}
             </div>
-          ) : (
-            <EmptyState
-              title="No parameters yet"
-              description="This configuration does not have any parameters defined."
-            />
-          )}
-        </div>
-      )}
 
-      {tab === "json" && (
-        <div style={{ ...cardStyle, padding: 0, overflow: "hidden", background: "#111827", color: WHITE }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 18px 10px" }}>
-            <div>
-              <div style={{ fontSize: 15, fontWeight: 700 }}>JSON Payload</div>
-              <div style={{ marginTop: 6, fontSize: 12, color: "#B6C2D8" }}>Live payload delivered by the SDK for this configuration.</div>
-            </div>
-            <button
-              onClick={async () => {
-                await navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
-                setCopyState("Copied!");
-              }}
-              style={{ ...secondaryButtonStyle, padding: "7px 10px", background: "#182437", color: WHITE, borderColor: "#2B3951" }}
-            >
-              {copyState}
-            </button>
-          </div>
-          <div style={{ margin: "0 18px 18px", background: "#0B1220", borderRadius: 12, border: "1px solid #263246", minHeight: 260, display: "flex" }}>
-            <div style={{ width: 32, borderRight: "1px solid #1F2A3D", color: "#6F809B", fontSize: 12, padding: "14px 0", textAlign: "center" }}>1</div>
-            <pre style={{ margin: 0, padding: "14px 16px", whiteSpace: "pre-wrap", fontSize: 13, lineHeight: 1.6, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", flex: 1 }}>
-              {renderJsonHighlighted(payload)}
-            </pre>
+            {/* Active Campaign Warning card */}
+            {hasActiveExperiment && (
+              <div style={{ borderRadius: 12, border: "1px solid #FCD34D", background: "#FFFBEB", padding: "14px 16px" }}>
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+                  <span style={{ fontSize: 18, flexShrink: 0, marginTop: 1 }}>⚠️</span>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: "#92400E", marginBottom: 5 }}>Used in Active Campaign</div>
+                    <div style={{ fontSize: 12, color: "#B45309", lineHeight: 1.6 }}>
+                      Changes to this configuration may impact a live campaign. Review before making modifications.
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            {/* Show warning card even if no active experiment (as per spec) */}
+            {!hasActiveExperiment && (
+              <div style={{ borderRadius: 12, border: "1px solid #FCD34D", background: "#FFFBEB", padding: "14px 16px" }}>
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+                  <span style={{ fontSize: 18, flexShrink: 0, marginTop: 1 }}>⚠️</span>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: "#92400E", marginBottom: 5 }}>Used in Active Campaign</div>
+                    <div style={{ fontSize: 12, color: "#B45309", lineHeight: 1.6 }}>
+                      Changes to this configuration may impact a live campaign. Review before making modifications.
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
 
-      {tab === "experiments" && (
+      {configTab === "report" && (
         <div style={{ ...cardStyle, padding: 22 }}>
-          <h3 style={{ margin: "0 0 14px", fontSize: 16, color: TEXT }}>Linked Experiments</h3>
+          <h3 style={{ margin: "0 0 14px", fontSize: 16, color: TEXT, fontWeight: 700 }}>Linked Experiments</h3>
           {linkedExperiments.length ? (
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               {linkedExperiments.map((experiment) => (
@@ -2726,19 +2766,28 @@ function RemoteConfigurationDetail({ config, experiments, onBack, onEdit, onOpen
               ))}
             </div>
           ) : (
-            <EmptyState
-              title="No linked experiments"
-              description="This configuration has not been used in an A/B test yet."
-            />
+            <EmptyState title="No linked experiments" description="This configuration has not been used in an A/B test yet." />
           )}
         </div>
       )}
 
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 28, paddingTop: 18, borderTop: "1px solid #E5E7EB" }}>
-        <button onClick={onBack} style={{ ...secondaryButtonStyle, background: WHITE, border: "1px solid #E5E7EB", color: "#374151" }}>← Back to remote configurations</button>
-        <button onClick={() => onEdit(config)} style={{ ...primaryButtonStyle, background: "#3B82F6" }}>
+      {/* ── Sticky footer action bar ── */}
+      <div style={{ position: "sticky", bottom: 0, marginTop: 24, padding: "14px 0", background: PAGE_BG, borderTop: `1px solid ${BORDER}`, display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 10, zIndex: 40 }}>
+        <button onClick={onBack} style={{ ...secondaryButtonStyle }}>
+          Back
+        </button>
+        <button onClick={() => onEdit(config)} style={{ ...secondaryButtonStyle, display: "inline-flex", alignItems: "center", gap: 7 }}>
           <EditIcon />
-          Edit Configuration
+          Edit
+        </button>
+        <button
+          style={{ ...primaryButtonStyle, display: "inline-flex", alignItems: "center", gap: 7 }}
+          onClick={() => console.log("Restart:", config.key)}
+        >
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path d="M14 8A6 6 0 1 1 8 2c1.6 0 3.1.6 4.2 1.7L14 2v4h-4l1.5-1.5A4 4 0 1 0 12 8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+          Restart
         </button>
       </div>
     </div>
