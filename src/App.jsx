@@ -3136,56 +3136,6 @@ function CreateExperiment({
     return Object.keys(nextErrors).length === 0;
   };
 
-
-  const updateVariant = (variantId, updater) => {
-    setForm((current) => ({
-      ...current,
-      variants: current.variants.map((v) => v.id === variantId ? updater(v) : v),
-    }));
-  };
-
-  const addVariant = () => {
-    setForm((current) => {
-      const customs = current.variants.filter((v) => !v.isDefault);
-      if (customs.length >= 4) return current;
-      const deflt = current.variants.find((v) => v.isDefault);
-      const newVariant = {
-        id: createRcVariantId(),
-        name: `Variant ${customs.length + 1}`,
-        priority: customs.length + 1,
-        isDefault: false,
-        segments: [],
-        rolloutPercentage: 100,
-        parameterOverrides: deflt ? { ...deflt.parameterOverrides } : {},
-        collapsed: false,
-      };
-      return { ...current, variants: [...customs, newVariant, deflt] };
-    });
-  };
-
-  const removeVariant = (variantId) => {
-    setForm((current) => ({
-      ...current,
-      variants: current.variants.filter((v) => v.id !== variantId || v.isDefault),
-    }));
-  };
-
-  const handleVariantDrop = (targetId) => {
-    if (!varDragId || varDragId === targetId) return;
-    setForm((current) => {
-      const customs = current.variants.filter((v) => !v.isDefault);
-      const deflt = current.variants.find((v) => v.isDefault);
-      const si = customs.findIndex((v) => v.id === varDragId);
-      const ti = customs.findIndex((v) => v.id === targetId);
-      if (si === -1 || ti === -1) return current;
-      const reordered = [...customs];
-      const [moved] = reordered.splice(si, 1);
-      reordered.splice(ti, 0, moved);
-      return { ...current, variants: [...reordered, deflt] };
-    });
-    setVarDragId(null);
-  };
-
   const handleSaveDraft = async () => {
     if (!validate("draft")) return;
     setSaveLoading(true);
