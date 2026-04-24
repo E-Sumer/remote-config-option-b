@@ -3462,7 +3462,6 @@ function CreateExperiment({
         onConfirm={() => setRunningConflict(null)}
       />
 
-      <button onClick={showBackConfirmation} style={{ ...secondaryButtonStyle, marginBottom: 20 }}>← Back to experiments</button>
       <div style={{ marginBottom: 24 }}>
         <h1 style={pageTitleStyle}>New Experiment</h1>
         <p style={pageDescriptionStyle}>Define your hypothesis, pick a remote config and launch an experiment.</p>
@@ -3657,14 +3656,19 @@ function CreateExperiment({
             </div>
           )}
 
-          <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 6 }}>
-            <button type="button" onClick={handleSaveDraft} disabled={saveLoading} style={{ ...secondaryButtonStyle, minWidth: 118, justifyContent: "center" }}>
-              {saveLoading ? <Spinner /> : "Save Draft"}
-            </button>
-            <button type="button" onClick={handleLaunchClick} disabled={launchLoading} style={{ ...primaryButtonStyle, minWidth: 160, justifyContent: "center" }}>
-              {launchLoading ? <Spinner color="#FFFFFF" /> : "Launch Experiment"}
-            </button>
-          </div>
+        </div>
+      </div>
+
+      {/* Sticky footer */}
+      <div style={{ position: "sticky", bottom: 0, marginTop: 24, padding: "14px 0", background: PAGE_BG, borderTop: `1px solid ${BORDER}`, display: "flex", alignItems: "center", justifyContent: "space-between", zIndex: 40 }}>
+        <button onClick={showBackConfirmation} style={{ ...secondaryButtonStyle }}>← Back to experiments</button>
+        <div style={{ display: "flex", gap: 10 }}>
+          <button type="button" onClick={handleSaveDraft} disabled={saveLoading} style={{ ...secondaryButtonStyle, minWidth: 118, justifyContent: "center" }}>
+            {saveLoading ? <Spinner /> : "Save Draft"}
+          </button>
+          <button type="button" onClick={handleLaunchClick} disabled={launchLoading} style={{ ...primaryButtonStyle, minWidth: 160, justifyContent: "center" }}>
+            {launchLoading ? <Spinner color="#FFFFFF" /> : "Launch Experiment"}
+          </button>
         </div>
       </div>
     </div>
@@ -3680,7 +3684,6 @@ function ExperimentDetail({ experiment, onBack, onOpenRemoteConfig, linkedConfig
 
   return (
     <div>
-      <button onClick={onBack} style={{ ...secondaryButtonStyle, marginBottom: 20 }}>← Back to experiments</button>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -3808,6 +3811,11 @@ function ExperimentDetail({ experiment, onBack, onOpenRemoteConfig, linkedConfig
           </div>
         </div>
       )}
+
+      {/* Sticky footer */}
+      <div style={{ position: "sticky", bottom: 0, marginTop: 24, padding: "14px 0", background: PAGE_BG, borderTop: `1px solid ${BORDER}`, display: "flex", alignItems: "center", zIndex: 40 }}>
+        <button onClick={onBack} style={{ ...secondaryButtonStyle }}>← Back to experiments</button>
+      </div>
     </div>
   );
 }
