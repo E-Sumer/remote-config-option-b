@@ -2523,22 +2523,27 @@ function RemoteConfigurationForm({
 }
 
 function RemoteConfigurationDetail({ config, experiments, onBack, onEdit, onOpenExperiment }) {
-  const [configTab, setConfigTab] = useState("configuration"); // "configuration" | "report"
+  const [configTab, setConfigTab] = useState("configuration");
   const [keysExpanded, setKeysExpanded] = useState(true);
   const [versionExpanded, setVersionExpanded] = useState(true);
+  const [restartConfirmOpen, setRestartConfirmOpen] = useState(false);
 
   const linkedExperiments = experiments.filter((e) => !e.archived && e.linkedConfigKey === config.key);
   const activeSegments = config.selectedSegments?.length ? config.selectedSegments : [];
-  const hasActiveExperiment = linkedExperiments.some((e) => e.status === "RUNNING" || e.status === "running");
 
-  // Mock variant data for Keys & Variants card
+  // Variant data with traffic split colours
+  const variantColors = ["#3B82F6", "#22C55E", "#F59E0B", "#EF4444", "#8B5CF6"];
   const mockVariants = [
-    { id: "control", label: "Control", traffic: 50, value: "Welcome back!", color: "#22C55E" },
-    { id: "variant_b", label: "Variant B", traffic: 45, value: "Good to see you again!", color: "#22C55E" },
-    { id: "variant_c", label: "Variant C", traffic: 5, value: "Welcome back!", color: "#22C55E" },
+    { id: "control", label: "Control", traffic: 50, value: "Welcome back!", color: variantColors[0] },
+    { id: "variant_b", label: "Variant B", traffic: 45, value: "Good to see you again!", color: variantColors[1] },
+    { id: "variant_c", label: "Variant C", traffic: 5, value: "Welcome back!", color: variantColors[2] },
   ];
+  const controlValue = mockVariants.find((v) => v.id === "control")?.value;
 
-  // Overview metadata rows
+  // Human-readable title (spaces instead of underscores)
+  const displayTitle = config.name;
+
+  // Overview metadata
   const overviewMeta = [
     { label: "TYPE", value: config.type || "String", pill: true },
     { label: "TARGET SEGMENT", value: activeSegments.length ? `${activeSegments.length} rule${activeSegments.length > 1 ? "s" : ""}` : "1 rule" },
@@ -2552,59 +2557,77 @@ function RemoteConfigurationDetail({ config, experiments, onBack, onEdit, onOpen
     { label: "LAST EDITED", value: "Just now" },
   ];
 
+  // Tab style helper
+  const tabStyle = (key) => ({
+    display: "inline-flex", alignItems: "center", gap: 7,
+    padding: "9px 16px", borderRadius: 9, fontSize: 13, fontWeight: 600, cursor: "pointer",
+    border: configTab === key ? "1px solid #3B82F6" : `1px solid ${BORDER}`,
+    background: configTab === key ? "#3B82F6" : WHITE,
+    color: configTab === key ? WHITE : TEXT_MUTED,
+    outline: "none",
+  });
+
+  // Outlined ghost button (Back / Edit) — clearly active, not disabled
+  const ghostButtonStyle = {
+    ...secondaryButtonStyle,
+    background: WHITE,
+    border: "1px solid #D1D5DB",
+    color: "#374151",
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100%" }}>
+
+      {/* ── Breadcrumb ── */}
+      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 14, fontSize: 12, color: TEXT_MUTED }}>
+        <span style={{ cursor: "pointer", color: TEXT_MUTED }} onClick={onBack}>Remote Configuration</span>
+        <span style={{ color: "#D1D5DB" }}>›</span>
+        <span style={{ color: "#3B82F6", fontWeight: 500 }}>{displayTitle}</span>
+      </div>
+
+      {/* ── Active Campaign — inline banner at top ── */}
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "12px 16px", borderRadius: 10, border: "1px solid #FCD34D", background: "#FFFBEB", marginBottom: 18 }}>
+        <span style={{ fontSize: 16, flexShrink: 0 }}>⚠️</span>
+        <div style={{ flex: 1 }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: "#92400E" }}>Used in Active Campaign — </span>
+          <span style={{ fontSize: 13, color: "#B45309" }}>Changes to this configuration may impact a live campaign. Review before making modifications.</span>
+        </div>
+      </div>
 
       {/* ── Page title section ── */}
       <div style={{ marginBottom: 20 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 4 }}>
-          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: TEXT, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace" }}>
-            {config.name.replace(/\s+/g, "_").toLowerCase().replace(/^./, (c) => c.toUpperCase()).replace(/_/g, "_")}
-          </h1>
+          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: TEXT }}>{displayTitle}</h1>
           <ConfigStatusBadge status={config.status} />
         </div>
-        <div style={{ fontSize: 13, color: TEXT_MUTED, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace" }}>{config.key}</div>
+        <div style={{ fontSize: 12, color: TEXT_MUTED, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace" }}>{config.key}</div>
       </div>
 
       {/* ── Tab navigation ── */}
       <div style={{ display: "flex", gap: 8, marginBottom: 22 }}>
-        <button
-          onClick={() => setConfigTab("configuration")}
-          style={{
-            display: "inline-flex", alignItems: "center", gap: 7,
-            padding: "9px 16px", borderRadius: 9, fontSize: 13, fontWeight: 600, cursor: "pointer",
-            border: configTab === "configuration" ? "none" : `1px solid ${BORDER}`,
-            background: configTab === "configuration" ? "#111827" : WHITE,
-            color: configTab === "configuration" ? WHITE : TEXT_MUTED,
-          }}
-        >
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-            <circle cx="8" cy="8" r="3" stroke="currentColor" strokeWidth="1.6"/>
-            <path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.05 3.05l1.41 1.41M11.54 11.54l1.41 1.41M3.05 12.95l1.41-1.41M11.54 4.46l1.41-1.41" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+        {/* Configuration tab — proper gear/cog icon */}
+        <button onClick={() => setConfigTab("configuration")} style={tabStyle("configuration")}>
+          <svg width="14" height="14" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+            <path d="M9 11.5A2.5 2.5 0 1 0 9 6.5a2.5 2.5 0 0 0 0 5Z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M14.7 11a1 1 0 0 0 .2 1.1l.04.04a1.5 1.5 0 1 1-2.12 2.12l-.04-.04a1 1 0 0 0-1.1-.2 1 1 0 0 0-.6.91V15a1.5 1.5 0 1 1-3 0v-.07a1 1 0 0 0-.65-.91 1 1 0 0 0-1.1.2l-.04.04a1.5 1.5 0 1 1-2.12-2.12l.04-.04A1 1 0 0 0 4.4 11a1 1 0 0 0-.91-.6H3a1.5 1.5 0 1 1 0-3h.07a1 1 0 0 0 .91-.65 1 1 0 0 0-.2-1.1l-.04-.04A1.5 1.5 0 1 1 5.86 3.5l.04.04A1 1 0 0 0 7 3.74a1 1 0 0 0 .6-.91V3a1.5 1.5 0 1 1 3 0v.07a1 1 0 0 0 .6.91 1 1 0 0 0 1.1-.2l.04-.04a1.5 1.5 0 1 1 2.12 2.12l-.04.04A1 1 0 0 0 14.26 7a1 1 0 0 0 .91.6H15a1.5 1.5 0 1 1 0 3h-.07a1 1 0 0 0-.91.6l-.02-.16Z" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
           Configuration
         </button>
-        <button
-          onClick={() => setConfigTab("report")}
-          style={{
-            display: "inline-flex", alignItems: "center", gap: 7,
-            padding: "9px 16px", borderRadius: 9, fontSize: 13, fontWeight: 600, cursor: "pointer",
-            border: configTab === "report" ? "none" : `1px solid ${BORDER}`,
-            background: configTab === "report" ? "#111827" : WHITE,
-            color: configTab === "report" ? WHITE : TEXT_MUTED,
-          }}
-        >
+        {/* Details tab — document/list icon */}
+        <button onClick={() => setConfigTab("report")} style={tabStyle("report")}>
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-            <path d="M3 12V8M7 12V5M11 12V9M15 12V2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+            <rect x="2" y="1.5" width="12" height="13" rx="2" stroke="currentColor" strokeWidth="1.5"/>
+            <path d="M5 5.5h6M5 8h6M5 10.5h4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
           </svg>
-          Report
+          Details
         </button>
       </div>
 
+      {/* ══ CONFIGURATION TAB ══ */}
       {configTab === "configuration" && (
         <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 300px", gap: 18, flex: 1 }}>
 
-          {/* ── Left / Main column ── */}
+          {/* Left column */}
           <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
 
             {/* Overview card */}
@@ -2613,9 +2636,9 @@ function RemoteConfigurationDetail({ config, experiments, onBack, onEdit, onOpen
               <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 14 }}>
                 {overviewMeta.map((item) => (
                   <div key={item.label}>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 5 }}>{item.label}</div>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 5 }}>{item.label}</div>
                     {item.pill ? (
-                      <span style={{ display: "inline-flex", alignItems: "center", padding: "3px 10px", borderRadius: 6, background: "#F3F4F6", color: TEXT, fontSize: 13, fontWeight: 500 }}>{item.value}</span>
+                      <span style={{ display: "inline-flex", alignItems: "center", padding: "3px 10px", borderRadius: 6, background: "#EFF6FF", color: "#1D4ED8", fontSize: 12, fontWeight: 600 }}>{item.value}</span>
                     ) : item.badge ? (
                       <ConfigStatusBadge status={item.value} />
                     ) : (
@@ -2630,46 +2653,72 @@ function RemoteConfigurationDetail({ config, experiments, onBack, onEdit, onOpen
             <div style={{ ...cardStyle, padding: 0, overflow: "hidden" }}>
               {/* Key row header */}
               <div
-                style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", cursor: "pointer", borderBottom: keysExpanded ? `1px solid ${BORDER}` : "none" }}
+                style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", cursor: "pointer", borderBottom: `1px solid ${BORDER}` }}
                 onClick={() => setKeysExpanded((v) => !v)}
               >
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <span style={{ fontSize: 14, fontWeight: 700, color: TEXT, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace" }}>
-                    greeting_title
-                  </span>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: TEXT, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace" }}>greeting_title</span>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <span style={{ fontSize: 12, color: TEXT_MUTED, fontWeight: 500 }}>{mockVariants.length} variants</span>
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ transform: keysExpanded ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }} aria-hidden="true">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ transform: keysExpanded ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s", flexShrink: 0 }} aria-hidden="true">
                     <path d="M4 6l4 4 4-4" stroke={TEXT_MUTED} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
                 </div>
               </div>
 
-              {/* Variant cards */}
               {keysExpanded && (
-                <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 12 }}>
-                  {mockVariants.map((variant) => (
-                    <div key={variant.id} style={{ borderRadius: 10, border: `1px solid ${BORDER}`, background: SOFT, padding: "14px 16px" }}>
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-                        <span style={{ fontSize: 13, fontWeight: 700, color: TEXT }}>{variant.label}</span>
-                        <span style={{ fontSize: 12, color: TEXT_MUTED }}>{variant.traffic}%</span>
-                      </div>
-                      <div style={{ fontSize: 12, color: TEXT, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", marginBottom: 10 }}>
-                        {variant.value}
-                      </div>
-                      {/* Progress bar */}
-                      <div style={{ height: 4, borderRadius: 999, background: "#E5E7EB", overflow: "hidden" }}>
-                        <div style={{ width: `${variant.traffic}%`, height: "100%", borderRadius: 999, background: variant.color }} />
-                      </div>
+                <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 14 }}>
+                  {/* Stacked traffic distribution bar (improvement #10) */}
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: TEXT_MUTED, marginBottom: 6 }}>Traffic Distribution</div>
+                    <div style={{ display: "flex", height: 8, borderRadius: 999, overflow: "hidden", gap: 1 }}>
+                      {mockVariants.map((v) => (
+                        <div key={v.id} title={`${v.label}: ${v.traffic}%`} style={{ width: `${v.traffic}%`, height: "100%", background: v.color, minWidth: 2 }} />
+                      ))}
                     </div>
-                  ))}
+                    <div style={{ display: "flex", gap: 14, marginTop: 7, flexWrap: "wrap" }}>
+                      {mockVariants.map((v) => (
+                        <div key={v.id} style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                          <span style={{ width: 8, height: 8, borderRadius: 2, background: v.color, flexShrink: 0 }} />
+                          <span style={{ fontSize: 11, color: TEXT_MUTED }}>{v.label} <b style={{ color: TEXT }}>{v.traffic}%</b></span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Individual variant cards */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    {mockVariants.map((variant) => {
+                      const sameAsControl = variant.id !== "control" && variant.value === controlValue;
+                      return (
+                        <div key={variant.id} style={{ borderRadius: 10, border: `1px solid ${BORDER}`, background: SOFT, padding: "14px 16px" }}>
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                              <span style={{ width: 8, height: 8, borderRadius: 2, background: variant.color, flexShrink: 0 }} aria-hidden="true" />
+                              <span style={{ fontSize: 13, fontWeight: 700, color: TEXT }}>{variant.label}</span>
+                              {sameAsControl && (
+                                <span style={{ fontSize: 10, fontWeight: 600, color: "#6B7280", background: "#F3F4F6", borderRadius: 4, padding: "2px 7px", border: "1px solid #E5E7EB" }}>same as control</span>
+                              )}
+                            </div>
+                            <span style={{ fontSize: 12, color: TEXT_MUTED, fontWeight: 600 }}>{variant.traffic}%</span>
+                          </div>
+                          <div style={{ fontSize: 12, color: TEXT, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", marginBottom: 10, padding: "6px 8px", background: WHITE, borderRadius: 6, border: `1px solid ${BORDER}` }}>
+                            {variant.value}
+                          </div>
+                          <div style={{ height: 4, borderRadius: 999, background: "#E5E7EB", overflow: "hidden" }}>
+                            <div style={{ width: `${variant.traffic}%`, height: "100%", borderRadius: 999, background: variant.color }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
             </div>
           </div>
 
-          {/* ── Right sidebar ── */}
+          {/* Right sidebar */}
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
 
             {/* Version History card */}
@@ -2679,7 +2728,7 @@ function RemoteConfigurationDetail({ config, experiments, onBack, onEdit, onOpen
                 onClick={() => setVersionExpanded((v) => !v)}
               >
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
                     <circle cx="8" cy="8" r="6.5" stroke={TEXT_MUTED} strokeWidth="1.4"/>
                     <path d="M8 5v3.5l2.5 1.5" stroke={TEXT_MUTED} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
@@ -2691,92 +2740,125 @@ function RemoteConfigurationDetail({ config, experiments, onBack, onEdit, onOpen
                 </svg>
               </div>
               {versionExpanded && (
-                <div style={{ padding: "14px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
+                <div style={{ padding: "14px 16px", display: "flex", flexDirection: "column", gap: 12 }}>
+                  {/* Current version entry */}
                   <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
-                    {/* Blue filled circle indicator */}
-                    <div style={{ width: 12, height: 12, borderRadius: "50%", background: "#3B82F6", border: "2px solid #BFDBFE", flexShrink: 0, marginTop: 2 }} />
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, flexShrink: 0 }}>
+                      <div style={{ width: 12, height: 12, borderRadius: "50%", background: "#3B82F6", border: "2.5px solid #BFDBFE", marginTop: 2 }} />
+                    </div>
                     <div style={{ flex: 1 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                        <span style={{ fontSize: 13, fontWeight: 700, color: TEXT }}>
-                          v{Number(config.version || 1).toFixed(1)} (Current)
-                        </span>
+                      <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 4, flexWrap: "wrap" }}>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: TEXT }}>v{Number(config.version || 1).toFixed(1)} (Current)</span>
                         <ConfigStatusBadge status={config.status} />
                       </div>
-                      <div style={{ fontSize: 11, color: TEXT_MUTED }}>
+                      <div style={{ fontSize: 11, color: TEXT_MUTED, marginBottom: 8 }}>
                         {config.created || "2026-02-10"} · {config.creator || "John Smith"}
                       </div>
+                      {/* Version actions */}
+                      <div style={{ display: "flex", gap: 6 }}>
+                        <button
+                          style={{ fontSize: 11, padding: "4px 9px", borderRadius: 6, border: "1px solid #E5E7EB", background: WHITE, color: "#374151", cursor: "pointer", fontWeight: 500 }}
+                          onClick={() => console.log("Compare versions:", config.key)}
+                        >Compare</button>
+                        <button
+                          style={{ fontSize: 11, padding: "4px 9px", borderRadius: 6, border: "1px solid #E5E7EB", background: WHITE, color: "#374151", cursor: "pointer", fontWeight: 500 }}
+                          onClick={() => { const url = `/remoteconfiguration/${config.key}/v${Number(config.version || 1).toFixed(0)}`; console.log("Deep link:", url); }}
+                        >Copy link</button>
+                      </div>
                     </div>
+                  </div>
+                  <div style={{ fontSize: 11, color: "#9CA3AF", padding: "8px 0 0", borderTop: `1px dashed #E5E7EB`, textAlign: "center" }}>
+                    Only 1 version exists. Previous versions appear here after edits.
                   </div>
                 </div>
               )}
             </div>
-
-            {/* Active Campaign Warning card */}
-            {hasActiveExperiment && (
-              <div style={{ borderRadius: 12, border: "1px solid #FCD34D", background: "#FFFBEB", padding: "14px 16px" }}>
-                <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-                  <span style={{ fontSize: 18, flexShrink: 0, marginTop: 1 }}>⚠️</span>
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: "#92400E", marginBottom: 5 }}>Used in Active Campaign</div>
-                    <div style={{ fontSize: 12, color: "#B45309", lineHeight: 1.6 }}>
-                      Changes to this configuration may impact a live campaign. Review before making modifications.
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-            {/* Show warning card even if no active experiment (as per spec) */}
-            {!hasActiveExperiment && (
-              <div style={{ borderRadius: 12, border: "1px solid #FCD34D", background: "#FFFBEB", padding: "14px 16px" }}>
-                <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-                  <span style={{ fontSize: 18, flexShrink: 0, marginTop: 1 }}>⚠️</span>
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: "#92400E", marginBottom: 5 }}>Used in Active Campaign</div>
-                    <div style={{ fontSize: 12, color: "#B45309", lineHeight: 1.6 }}>
-                      Changes to this configuration may impact a live campaign. Review before making modifications.
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       )}
 
+      {/* ══ DETAILS TAB ══ */}
       {configTab === "report" && (
-        <div style={{ ...cardStyle, padding: 22 }}>
-          <h3 style={{ margin: "0 0 14px", fontSize: 16, color: TEXT, fontWeight: 700 }}>Linked Experiments</h3>
-          {linkedExperiments.length ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              {linkedExperiments.map((experiment) => (
-                <button
-                  key={experiment.id}
-                  onClick={() => onOpenExperiment(experiment)}
-                  style={{ ...secondaryButtonStyle, width: "100%", justifyContent: "space-between", padding: "14px 16px", textAlign: "left" }}
-                >
-                  <span style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 4 }}>
-                    <span style={{ fontSize: 14, fontWeight: 700, color: TEXT }}>{experiment.name}</span>
-                    <span style={{ fontSize: 12, color: TEXT_MUTED }}>{experiment.hypothesis}</span>
-                  </span>
-                  <span style={{ display: "inline-flex", alignItems: "center", gap: 10 }}>
-                    <StatusBadge status={experiment.status} />
-                    <span style={{ color: TEXT_MUTED }}><ChevronRightIcon /></span>
-                  </span>
-                </button>
+        <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+
+          {/* Linked Experiments */}
+          <div style={{ ...cardStyle, padding: 22 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+              <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: TEXT }}>Linked Experiments</h3>
+              <span style={{ background: "#EFF6FF", color: "#3B82F6", borderRadius: 999, fontSize: 11, fontWeight: 700, padding: "2px 9px" }}>{linkedExperiments.length}</span>
+            </div>
+            {linkedExperiments.length ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {linkedExperiments.map((experiment) => (
+                  <button
+                    key={experiment.id}
+                    onClick={() => onOpenExperiment(experiment)}
+                    style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", padding: "14px 16px", borderRadius: 10, border: `1px solid ${BORDER}`, background: SOFT, cursor: "pointer", textAlign: "left" }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = "#F0F4FF"; e.currentTarget.style.borderColor = "#BFDBFE"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = SOFT; e.currentTarget.style.borderColor = BORDER; }}
+                  >
+                    <span style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: TEXT }}>{experiment.name}</span>
+                      <span style={{ fontSize: 12, color: TEXT_MUTED }}>{experiment.hypothesis}</span>
+                    </span>
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+                      <StatusBadge status={experiment.status} />
+                      <span style={{ color: TEXT_MUTED }}><ChevronRightIcon /></span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <EmptyState title="No linked experiments" description="This configuration has not been used in an A/B test yet." />
+            )}
+          </div>
+
+          {/* Performance summary */}
+          <div style={{ ...cardStyle, padding: 22 }}>
+            <h3 style={{ margin: "0 0 14px", fontSize: 15, fontWeight: 700, color: TEXT }}>Performance Summary</h3>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 14 }}>
+              {[
+                { label: "Total Impressions", value: "—", sub: "No data yet" },
+                { label: "Unique Users", value: "—", sub: "No data yet" },
+                { label: "Avg. Session Duration", value: "—", sub: "No data yet" },
+              ].map((stat) => (
+                <div key={stat.label} style={{ padding: "14px 16px", borderRadius: 10, border: `1px solid ${BORDER}`, background: SOFT }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 6 }}>{stat.label}</div>
+                  <div style={{ fontSize: 22, fontWeight: 700, color: TEXT_MUTED }}>{stat.value}</div>
+                  <div style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 3 }}>{stat.sub}</div>
+                </div>
               ))}
             </div>
-          ) : (
-            <EmptyState title="No linked experiments" description="This configuration has not been used in an A/B test yet." />
-          )}
+          </div>
+
+          {/* Config metadata summary */}
+          <div style={{ ...cardStyle, padding: 22 }}>
+            <h3 style={{ margin: "0 0 14px", fontSize: 15, fontWeight: 700, color: TEXT }}>Configuration Details</h3>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12 }}>
+              {[
+                { label: "Config Key", value: config.key, mono: true },
+                { label: "Type", value: config.type || "String" },
+                { label: "Version", value: `v${Number(config.version || 1).toFixed(1)}` },
+                { label: "Created By", value: config.creator || "—" },
+                { label: "Created", value: config.created || "—" },
+                { label: "Last Updated", value: config.updated || "—" },
+              ].map((item) => (
+                <div key={item.label} style={{ padding: "12px 14px", borderRadius: 10, border: `1px solid ${BORDER}`, background: SOFT }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 5 }}>{item.label}</div>
+                  <div style={{ fontSize: 13, color: TEXT, fontWeight: 500, fontFamily: item.mono ? "ui-monospace, SFMono-Regular, Menlo, monospace" : "inherit" }}>{item.value}</div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       )}
 
-      {/* ── Sticky footer action bar ── */}
-      <div style={{ position: "sticky", bottom: 0, marginTop: 24, padding: "14px 0", background: PAGE_BG, borderTop: `1px solid ${BORDER}`, display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 10, zIndex: 40 }}>
-        <button onClick={onBack} style={{ ...secondaryButtonStyle }}>
+      {/* ── Sticky footer action bar — clear separation, all-white buttons ── */}
+      <div style={{ position: "sticky", bottom: 0, marginTop: 24, padding: "14px 0", background: WHITE, borderTop: "2px solid #E5E7EB", boxShadow: "0 -4px 16px rgba(0,0,0,0.06)", display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 10, zIndex: 40 }}>
+        <button onClick={onBack} style={ghostButtonStyle}>
           Back
         </button>
-        <button onClick={() => onEdit(config)} style={{ ...secondaryButtonStyle, display: "inline-flex", alignItems: "center", gap: 7 }}>
+        <button onClick={() => onEdit(config)} style={{ ...ghostButtonStyle, display: "inline-flex", alignItems: "center", gap: 7 }}>
           <EditIcon />
           Edit
         </button>
@@ -2784,8 +2866,12 @@ function RemoteConfigurationDetail({ config, experiments, onBack, onEdit, onOpen
           style={{ ...primaryButtonStyle, display: "inline-flex", alignItems: "center", gap: 7 }}
           onClick={() => console.log("Restart:", config.key)}
         >
+          {/* Rotate/refresh arrow — restart semantics */}
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-            <path d="M14 8A6 6 0 1 1 8 2c1.6 0 3.1.6 4.2 1.7L14 2v4h-4l1.5-1.5A4 4 0 1 0 12 8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M2 8a6 6 0 0 1 10.5-4H10.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M14 8a6 6 0 0 1-10.5 4H5.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M12.5 4V7H9.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M3.5 9v3h3" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
           Restart
         </button>
