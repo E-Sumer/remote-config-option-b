@@ -275,10 +275,9 @@ const initialExperiments = [
 
 const mockSegments = [
   { id: "all_users", name: "All Users" },
-  { id: "new_users", name: "New Users" },
-  { id: "premium_users", name: "Premium Users" },
-  { id: "ios_users", name: "iOS Users" },
-  { id: "android_users", name: "Android Users" },
+  { id: "vip_users", name: "VIP Users" },
+  { id: "students", name: "Students" },
+  { id: "churn_signal", name: "Churn Signal Segment" },
 ];
 
 const mockEvents = [
@@ -1264,6 +1263,8 @@ function RemoteConfigurationForm({
   const [draggingId, setDraggingId] = useState(null);
   const [varDragId, setVarDragId] = useState(null);
   const [priorityBannerDismissed, setPriorityBannerDismissed] = useState(false);
+  const [openSegmentMenuId, setOpenSegmentMenuId] = useState(null);
+  const [openActionMenuKey, setOpenActionMenuKey] = useState(null);
 
   useEffect(() => {
     setForm(buildInitialForm());
@@ -1424,7 +1425,7 @@ function RemoteConfigurationForm({
 
     customVariants.forEach((variant, i) => {
       if (!variant.segments.length) {
-        nextErrors[`variant_${variant.id}_segments`] = `Variant ${i + 1} must have at least one segment.`;
+        nextErrors[`variant_${variant.id}_segments`] = `"${variant.name || `Variant ${i + 1}`}" needs at least one target segment.`;
       }
     });
 
@@ -1432,7 +1433,7 @@ function RemoteConfigurationForm({
     customVariants.forEach((v, i) => {
       v.segments.forEach((s) => {
         if (segUsage[s] !== undefined) {
-          nextErrors[`segment_conflict_${s}`] = `Segment "${s}" is targeted by multiple variants.`;
+          nextErrors[`segment_conflict_${s}`] = `Segment "${s}" is used in multiple variants.`;
         } else {
           segUsage[s] = i + 1;
         }
@@ -1440,6 +1441,13 @@ function RemoteConfigurationForm({
     });
 
     setErrors((current) => ({ ...current, ...nextErrors }));
+
+    if (Object.keys(nextErrors).length > 0) {
+      const count = Object.keys(nextErrors).length;
+      setToastMessage(`${count} issue${count > 1 ? "s" : ""} found — fix the highlighted fields below before going live.`);
+      setToastType("error");
+    }
+
     return Object.keys(nextErrors).length === 0;
   };
 
@@ -1934,35 +1942,13 @@ function RemoteConfigurationForm({
 
       {step === 2 && (() => {
         const customVariants = (form.variants || []).filter((v) => !v.isDefault);
-        const defaultVariant = (form.variants || []).find((v) => v.isDefault) || createDefaultRcVariant(form.parameters);
-        const atMax = customVariants.length >= 4;
-        const variantColors = ["#3B82F6", "#22C55E", "#F59E0B", "#8B5CF6"];
+        const atMax = customVariants.length >= 10;
+        const variantColors = ["#3B82F6", "#22C55E", "#F59E0B", "#8B5CF6", "#EC4899", "#14B8A6", "#F97316", "#6366F1", "#84CC16", "#06B6D4"];
         const segUsage = {};
         customVariants.forEach((v, i) => { v.segments.forEach((s) => { segUsage[s] = segUsage[s] || []; segUsage[s].push(i + 1); }); });
 
         return (
-          <div>
-            {/* Evaluation Logic Banner — always visible on mount, only hides on explicit dismiss */}
-            {!priorityBannerDismissed && (
-              <div style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "12px 16px", borderRadius: 8, background: "#EFF6FF", border: "1px solid #BFDBFE", marginBottom: 24 }}>
-                {/* Info circle icon */}
-                <svg style={{ flexShrink: 0, marginTop: 1 }} width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <circle cx="8" cy="8" r="7.5" stroke="#3B82F6"/>
-                  <rect x="7.25" y="6.5" width="1.5" height="5" rx="0.75" fill="#3B82F6"/>
-                  <rect x="7.25" y="4" width="1.5" height="1.5" rx="0.75" fill="#3B82F6"/>
-                </svg>
-                <div style={{ flex: 1, fontSize: 13, color: "#1E40AF", lineHeight: 1.5 }}>
-                  Variants are evaluated top to bottom. The first segment match wins.<br />
-                  Users who don't match any variant receive the Default Experience below.
-                </div>
-                <button
-                  onClick={() => setPriorityBannerDismissed(true)}
-                  style={{ background: "none", border: "none", color: "#9CA3AF", fontSize: 18, cursor: "pointer", padding: 0, lineHeight: 1, flexShrink: 0 }}
-                  onMouseEnter={(e) => { e.currentTarget.style.color = "#374151"; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.color = "#9CA3AF"; }}
-                >×</button>
-              </div>
-            )}
+          <div onClick={() => { setOpenSegmentMenuId(null); setOpenActionMenuKey(null); }}>
 
             {/* Variant cards */}
             <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 12 }}>
@@ -1970,6 +1956,9 @@ function RemoteConfigurationForm({
                 const varColor = variantColors[idx % variantColors.length];
                 const conflictSegs = variant.segments.filter((s) => segUsage[s]?.length > 1);
                 const hasConflict = conflictSegs.length > 0;
+                const segError = errors[`variant_${variant.id}_segments`];
+                const availableSegs = mockSegments.filter((s) => !variant.segments.includes(s.name));
+                const segMenuOpen = openSegmentMenuId === variant.id;
                 return (
                   <div
                     key={variant.id}
@@ -1980,22 +1969,19 @@ function RemoteConfigurationForm({
                     style={{
                       background: WHITE,
                       borderRadius: 8,
-                      border: hasConflict ? "1px solid #FECACA" : "1px solid #E5E7EB",
-                      borderLeft: hasConflict ? "4px solid #EF4444" : `4px solid ${varColor}`,
-                      overflow: "hidden",
+                      border: (hasConflict || segError) ? "1px solid #FECACA" : "1px solid #E5E7EB",
+                      borderLeft: (hasConflict || segError) ? "4px solid #EF4444" : `4px solid ${varColor}`,
+                      position: "relative",
                     }}
                   >
                     {/* Card header */}
                     <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", borderBottom: "1px solid #F3F4F6" }}>
-                      {/* Drag handle */}
                       <svg style={{ color: "#D1D5DB", cursor: "grab", flexShrink: 0 }} width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
                         <circle cx="5" cy="4" r="1.5"/><circle cx="11" cy="4" r="1.5"/>
                         <circle cx="5" cy="8" r="1.5"/><circle cx="11" cy="8" r="1.5"/>
                         <circle cx="5" cy="12" r="1.5"/><circle cx="11" cy="12" r="1.5"/>
                       </svg>
-                      {/* Priority badge */}
                       <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 28, height: 28, borderRadius: "50%", background: "#EFF6FF", color: "#3B82F6", fontSize: 13, fontWeight: 700, flexShrink: 0 }}>{idx + 1}</span>
-                      {/* Variant name input */}
                       <input
                         value={variant.name}
                         onChange={(e) => updateVariant(variant.id, (v) => ({ ...v, name: e.target.value }))}
@@ -2004,7 +1990,6 @@ function RemoteConfigurationForm({
                         onFocus={(e) => { e.target.style.borderBottomColor = "#3B82F6"; }}
                         onBlur={(e) => { e.target.style.borderBottomColor = "transparent"; if (!e.target.value.trim()) updateVariant(variant.id, (v) => ({ ...v, name: `Variant ${idx + 1}` })); }}
                       />
-                      {/* Delete */}
                       <button
                         onClick={() => removeVariant(variant.id)}
                         style={{ background: "none", border: "none", color: "#9CA3AF", cursor: "pointer", padding: 4, display: "flex", alignItems: "center", borderRadius: 4 }}
@@ -2023,44 +2008,97 @@ function RemoteConfigurationForm({
 
                         {/* TARGET SEGMENT */}
                         <div style={{ marginTop: 20 }}>
-                          <div style={{ fontSize: 11, fontWeight: 600, color: "#9CA3AF", letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 8 }}>TARGET SEGMENT</div>
+                          <div style={{ fontSize: 11, fontWeight: 600, color: segError ? "#EF4444" : "#9CA3AF", letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 8 }}>TARGET SEGMENT</div>
                           <div style={{ fontSize: 13, color: "#6B7280", marginBottom: 12 }}>Users matching this segment will receive the values defined below.</div>
-                          {/* Segment pills + search */}
+
+                          {/* Segment pills + search dropdown */}
                           <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
                             {variant.segments.map((segName) => (
-                              <span key={segName} style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "4px 12px 4px 12px", borderRadius: 999, background: "#EFF6FF", color: "#3B82F6", border: "1px solid #BFDBFE", fontSize: 12, fontWeight: 500 }}>
+                              <span key={segName} style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "4px 8px 4px 12px", borderRadius: 999, background: "#EFF6FF", color: "#3B82F6", border: "1px solid #BFDBFE", fontSize: 12, fontWeight: 500 }}>
                                 {segName}
                                 <button
-                                  onClick={() => updateVariant(variant.id, (v) => ({ ...v, segments: v.segments.filter((s) => s !== segName) }))}
-                                  style={{ background: "none", border: "none", color: "#93C5FD", cursor: "pointer", padding: 0, fontSize: 14, lineHeight: 1, display: "flex", alignItems: "center", marginLeft: 2 }}
+                                  onClick={(e) => { e.stopPropagation(); updateVariant(variant.id, (v) => ({ ...v, segments: v.segments.filter((s) => s !== segName) })); setErrors((curr) => ({ ...curr, [`variant_${variant.id}_segments`]: undefined })); }}
+                                  style={{ background: "none", border: "none", color: "#93C5FD", cursor: "pointer", padding: "0 2px", fontSize: 14, lineHeight: 1, display: "flex", alignItems: "center" }}
                                   onMouseEnter={(e) => { e.currentTarget.style.color = "#3B82F6"; }}
                                   onMouseLeave={(e) => { e.currentTarget.style.color = "#93C5FD"; }}
                                 >×</button>
                               </span>
                             ))}
-                            {/* Search dropdown trigger */}
-                            <div
-                              style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", border: "1px solid #E5E7EB", borderRadius: 6, background: WHITE, cursor: "pointer", minWidth: 180 }}
-                              onClick={() => {
-                                const seg = mockSegments.filter((s) => s.name !== "All Users" && !variant.segments.includes(s.name))[0];
-                                if (seg) updateVariant(variant.id, (v) => ({ ...v, segments: [...v.segments, seg.name] }));
-                              }}
-                            >
-                              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                                <circle cx="6.5" cy="6.5" r="4.5" stroke="#9CA3AF" strokeWidth="1.5"/>
-                                <path d="M10.5 10.5L14 14" stroke="#9CA3AF" strokeWidth="1.5" strokeLinecap="round"/>
-                              </svg>
-                              <span style={{ fontSize: 13, color: "#9CA3AF", flex: 1 }}>Search Segments...</span>
-                              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                                <path d="M4 6l4 4 4-4" stroke="#9CA3AF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                              </svg>
+
+                            {/* Segment search dropdown */}
+                            <div style={{ position: "relative" }} onClick={(e) => e.stopPropagation()}>
+                              <button
+                                onClick={() => setOpenSegmentMenuId(segMenuOpen ? null : variant.id)}
+                                style={{
+                                  display: "flex", alignItems: "center", gap: 8,
+                                  padding: "7px 12px",
+                                  border: `1px solid ${segMenuOpen ? "#3B82F6" : (segError ? "#FCA5A5" : "#E5E7EB")}`,
+                                  borderRadius: 6, background: WHITE, cursor: "pointer", minWidth: 180,
+                                }}
+                              >
+                                <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                                  <circle cx="6.5" cy="6.5" r="4.5" stroke="#9CA3AF" strokeWidth="1.5"/>
+                                  <path d="M10.5 10.5L14 14" stroke="#9CA3AF" strokeWidth="1.5" strokeLinecap="round"/>
+                                </svg>
+                                <span style={{ fontSize: 13, color: "#9CA3AF", flex: 1, textAlign: "left" }}>Search Segments...</span>
+                                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style={{ transform: segMenuOpen ? "rotate(180deg)" : "none", transition: "transform 0.15s" }}>
+                                  <path d="M4 6l4 4 4-4" stroke="#9CA3AF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                                </svg>
+                              </button>
+
+                              {/* Dropdown menu */}
+                              {segMenuOpen && (
+                                <div style={{ position: "absolute", left: 0, top: "calc(100% + 4px)", background: WHITE, border: "1px solid #E5E7EB", borderRadius: 8, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", minWidth: 220, zIndex: 9999, overflow: "hidden" }}>
+                                  {availableSegs.length === 0 ? (
+                                    <div style={{ padding: "12px 16px", fontSize: 13, color: "#9CA3AF", textAlign: "center" }}>All segments selected</div>
+                                  ) : (
+                                    availableSegs.map((seg) => {
+                                      const usedInOther = customVariants.some((v, vi) => vi !== idx && v.segments.includes(seg.name));
+                                      return (
+                                        <button
+                                          key={seg.id}
+                                          disabled={usedInOther}
+                                          onClick={() => {
+                                            if (usedInOther) return;
+                                            updateVariant(variant.id, (v) => ({ ...v, segments: [...v.segments, seg.name] }));
+                                            setErrors((curr) => ({ ...curr, [`variant_${variant.id}_segments`]: undefined }));
+                                            setOpenSegmentMenuId(null);
+                                          }}
+                                          style={{
+                                            display: "flex", alignItems: "center", justifyContent: "space-between",
+                                            width: "100%", padding: "10px 14px", border: "none",
+                                            background: "none", fontSize: 13,
+                                            color: usedInOther ? "#9CA3AF" : "#111827",
+                                            cursor: usedInOther ? "not-allowed" : "pointer",
+                                            textAlign: "left", opacity: usedInOther ? 0.5 : 1,
+                                          }}
+                                          onMouseEnter={(e) => { if (!usedInOther) e.currentTarget.style.background = "#F9FAFB"; }}
+                                          onMouseLeave={(e) => { e.currentTarget.style.background = "none"; }}
+                                        >
+                                          <span>{seg.name}</span>
+                                          {usedInOther && <span style={{ fontSize: 11, color: "#9CA3AF" }}>In use</span>}
+                                        </button>
+                                      );
+                                    })
+                                  )}
+                                </div>
+                              )}
                             </div>
                           </div>
-                          {variant.segments.length === 0 && (
-                            <div style={{ marginTop: 8, fontSize: 12, color: "#D97706" }}>Select at least one segment to activate this variant.</div>
+
+                          {/* Inline validation: no segment */}
+                          {segError && (
+                            <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 5, fontSize: 12, color: "#DC2626" }}>
+                              <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M6 1a5 5 0 1 0 0 10A5 5 0 0 0 6 1ZM5.25 3.5h1.5v3.5h-1.5V3.5Zm0 4.5h1.5V9.5h-1.5V8Z"/></svg>
+                              {segError}
+                            </div>
                           )}
-                          {hasConflict && (
-                            <div style={{ marginTop: 8, fontSize: 12, color: "#DC2626" }}>Segment conflict: {conflictSegs.join(", ")} is already targeted by another variant.</div>
+                          {/* Inline conflict warning */}
+                          {hasConflict && !segError && (
+                            <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 5, fontSize: 12, color: "#DC2626" }}>
+                              <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M6 1a5 5 0 1 0 0 10A5 5 0 0 0 6 1ZM5.25 3.5h1.5v3.5h-1.5V3.5Zm0 4.5h1.5V9.5h-1.5V8Z"/></svg>
+                              Segment conflict: {conflictSegs.join(", ")} already targeted by another variant.
+                            </div>
                           )}
                         </div>
 
@@ -2089,10 +2127,9 @@ function RemoteConfigurationForm({
                         {form.parameters.length > 0 && (
                           <div style={{ marginTop: 20 }}>
                             <div style={{ fontSize: 11, fontWeight: 600, color: "#9CA3AF", letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 12 }}>PARAMETER VALUES FOR THIS VARIANT</div>
-                            {/* Table */}
-                            <div style={{ border: "1px solid #E5E7EB", borderRadius: 8, overflow: "hidden" }}>
+                            <div style={{ border: "1px solid #E5E7EB", borderRadius: 8, overflow: "visible" }}>
                               {/* Header */}
-                              <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr auto", background: "#F9FAFB", borderBottom: "1px solid #E5E7EB", padding: "0" }}>
+                              <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr 80px", background: "#F9FAFB", borderBottom: "1px solid #E5E7EB", borderRadius: "8px 8px 0 0" }}>
                                 <div style={{ fontSize: 11, fontWeight: 600, color: "#9CA3AF", letterSpacing: "0.06em", textTransform: "uppercase", padding: "12px 16px" }}>KEY</div>
                                 <div style={{ fontSize: 11, fontWeight: 600, color: "#9CA3AF", letterSpacing: "0.06em", textTransform: "uppercase", padding: "12px 16px" }}>VALUE</div>
                                 <div style={{ fontSize: 11, fontWeight: 600, color: "#9CA3AF", letterSpacing: "0.06em", textTransform: "uppercase", padding: "12px 16px", textAlign: "right" }}>ACTION</div>
@@ -2102,68 +2139,62 @@ function RemoteConfigurationForm({
                                 const overrideValue = variant.parameterOverrides[param.key] ?? param.value;
                                 const isOverridden = String(overrideValue) !== String(param.value);
                                 const setOverride = (val) => updateVariant(variant.id, (v) => ({ ...v, parameterOverrides: { ...v.parameterOverrides, [param.key]: val } }));
+                                const menuKey = `${variant.id}_${param.key}`;
+                                const menuOpen = openActionMenuKey === menuKey;
                                 return (
-                                  <div key={param.id} style={{ display: "grid", gridTemplateColumns: "1fr 2fr auto", borderTop: pi === 0 ? "none" : "1px solid #F3F4F6", alignItems: "center" }}>
-                                    {/* Key */}
+                                  <div key={param.id} style={{ display: "grid", gridTemplateColumns: "1fr 2fr 80px", borderTop: pi === 0 ? "none" : "1px solid #F3F4F6", alignItems: "center", position: "relative" }}>
                                     <div style={{ padding: "14px 16px", fontFamily: "ui-monospace, monospace", fontSize: 13, color: "#3B82F6" }}>{param.key}</div>
-                                    {/* Value */}
                                     <div style={{ padding: "14px 16px", display: "flex", alignItems: "center", gap: 8 }}>
                                       <span style={{ width: 8, height: 8, borderRadius: "50%", background: isOverridden ? "#F59E0B" : "#D1D5DB", flexShrink: 0, display: "inline-block" }} />
                                       {isOverridden ? (
-                                        <span style={{ fontSize: 13, color: "#374151", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 240 }}>{String(overrideValue)}</span>
+                                        <span style={{ fontSize: 13, color: "#374151", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 200 }}>{String(overrideValue)}</span>
                                       ) : (
                                         <span style={{ fontSize: 13, color: "#9CA3AF", fontStyle: "italic" }}>"{String(param.value)}" (Default)</span>
                                       )}
                                     </div>
-                                    {/* Action */}
-                                    <div style={{ padding: "14px 16px", display: "flex", justifyContent: "flex-end" }}>
+                                    {/* Action column with portal-like dropdown */}
+                                    <div style={{ padding: "14px 16px", display: "flex", justifyContent: "flex-end" }} onClick={(e) => e.stopPropagation()}>
                                       <div style={{ position: "relative" }}>
                                         <button
-                                          style={{ background: "none", border: "none", color: "#9CA3AF", cursor: "pointer", padding: "4px 8px", fontSize: 16, borderRadius: 4, letterSpacing: 2 }}
-                                          onClick={(e) => {
-                                            const menu = e.currentTarget.nextSibling;
-                                            menu.style.display = menu.style.display === "block" ? "none" : "block";
-                                          }}
-                                          onBlur={(e) => { if (!e.currentTarget.parentNode.contains(e.relatedTarget)) { const menu = e.currentTarget.nextSibling; if (menu) menu.style.display = "none"; } }}
+                                          onClick={() => setOpenActionMenuKey(menuOpen ? null : menuKey)}
+                                          style={{ background: menuOpen ? "#F3F4F6" : "none", border: "none", color: "#9CA3AF", cursor: "pointer", padding: "4px 8px", fontSize: 16, borderRadius: 6, letterSpacing: 2, lineHeight: 1 }}
+                                          onMouseEnter={(e) => { e.currentTarget.style.background = "#F3F4F6"; e.currentTarget.style.color = "#374151"; }}
+                                          onMouseLeave={(e) => { if (!menuOpen) { e.currentTarget.style.background = "none"; e.currentTarget.style.color = "#9CA3AF"; } }}
                                         >…</button>
-                                        <div style={{ display: "none", position: "absolute", right: 0, top: "100%", background: WHITE, border: "1px solid #E5E7EB", borderRadius: 8, boxShadow: "0 4px 12px rgba(0,0,0,0.1)", minWidth: 120, zIndex: 100, overflow: "hidden" }}>
-                                          <button
-                                            style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "10px 14px", border: "none", background: "none", fontSize: 13, color: "#374151", cursor: "pointer", textAlign: "left" }}
-                                            onMouseEnter={(e) => { e.currentTarget.style.background = "#F9FAFB"; }}
-                                            onMouseLeave={(e) => { e.currentTarget.style.background = "none"; }}
-                                            onClick={() => {
-                                              const val = window.prompt(`Edit value for "${param.key}":`, String(overrideValue));
-                                              if (val !== null) setOverride(val);
-                                            }}
-                                          >
-                                            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M9.5 1.5L12.5 4.5L4.5 12.5H1.5V9.5L9.5 1.5Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/></svg>
-                                            Edit
-                                          </button>
-                                          {isOverridden && (
+                                        {menuOpen && (
+                                          <div style={{ position: "absolute", right: 0, top: "calc(100% + 4px)", background: WHITE, border: "1px solid #E5E7EB", borderRadius: 8, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", minWidth: 140, zIndex: 9999, overflow: "hidden" }}>
                                             <button
-                                              style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "10px 14px", border: "none", background: "none", fontSize: 13, color: "#DC2626", cursor: "pointer", textAlign: "left" }}
-                                              onMouseEnter={(e) => { e.currentTarget.style.background = "#FEF2F2"; }}
+                                              style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "10px 14px", border: "none", background: "none", fontSize: 13, color: "#374151", cursor: "pointer", textAlign: "left" }}
+                                              onMouseEnter={(e) => { e.currentTarget.style.background = "#F9FAFB"; }}
                                               onMouseLeave={(e) => { e.currentTarget.style.background = "none"; }}
-                                              onClick={() => setOverride(param.value)}
+                                              onClick={() => {
+                                                const val = window.prompt(`Edit value for "${param.key}":`, String(overrideValue));
+                                                if (val !== null) setOverride(val);
+                                                setOpenActionMenuKey(null);
+                                              }}
                                             >
-                                              <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><path d="M5 1h4a.5.5 0 0 1 .5.5V2h3a.5.5 0 0 1 0 1h-.5v8.5A1.5 1.5 0 0 1 10.5 13h-7A1.5 1.5 0 0 1 2 11.5V3h-.5a.5.5 0 0 1 0-1h3V1.5A.5.5 0 0 1 5 1Zm-2 2v8.5a.5.5 0 0 0 .5.5h7a.5.5 0 0 0 .5-.5V3H3Zm2 1.5a.5.5 0 0 1 .5.5v5a.5.5 0 0 1-1 0V5a.5.5 0 0 1 .5-.5Zm4 0a.5.5 0 0 1 .5.5v5a.5.5 0 0 1-1 0V5a.5.5 0 0 1 .5-.5Z"/></svg>
-                                              Remove
+                                              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M9.5 1.5L12.5 4.5L4.5 12.5H1.5V9.5L9.5 1.5Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/></svg>
+                                              Edit
                                             </button>
-                                          )}
-                                        </div>
+                                            {isOverridden && (
+                                              <button
+                                                style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "10px 14px", border: "none", background: "none", fontSize: 13, color: "#DC2626", cursor: "pointer", textAlign: "left", borderTop: "1px solid #F3F4F6" }}
+                                                onMouseEnter={(e) => { e.currentTarget.style.background = "#FEF2F2"; }}
+                                                onMouseLeave={(e) => { e.currentTarget.style.background = "none"; }}
+                                                onClick={() => { setOverride(param.value); setOpenActionMenuKey(null); }}
+                                              >
+                                                <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><path d="M5 1h4a.5.5 0 0 1 .5.5V2h3a.5.5 0 0 1 0 1h-.5v8.5A1.5 1.5 0 0 1 10.5 13h-7A1.5 1.5 0 0 1 2 11.5V3h-.5a.5.5 0 0 1 0-1h3V1.5A.5.5 0 0 1 5 1Zm-2 2v8.5a.5.5 0 0 0 .5.5h7a.5.5 0 0 0 .5-.5V3H3Zm2 1.5a.5.5 0 0 1 .5.5v5a.5.5 0 0 1-1 0V5a.5.5 0 0 1 .5-.5Zm4 0a.5.5 0 0 1 .5.5v5a.5.5 0 0 1-1 0V5a.5.5 0 0 1 .5-.5Z"/></svg>
+                                                Remove override
+                                              </button>
+                                            )}
+                                          </div>
+                                        )}
                                       </div>
                                     </div>
                                   </div>
                                 );
                               })}
                             </div>
-                            {/* Back to Step 1 link */}
-                            <button
-                              onClick={() => { if (window.confirm("Your variant settings will be saved as a draft. Continue to Step 1?")) setStep(1); }}
-                              style={{ background: "none", border: "none", color: "#3B82F6", fontSize: 13, cursor: "pointer", padding: "8px 0 0", display: "block" }}
-                              onMouseEnter={(e) => { e.currentTarget.style.textDecoration = "underline"; }}
-                              onMouseLeave={(e) => { e.currentTarget.style.textDecoration = "none"; }}
-                            >← Edit parameter keys in Step 1</button>
                           </div>
                         )}
                       </div>
@@ -2173,35 +2204,62 @@ function RemoteConfigurationForm({
               })}
             </div>
 
-            {/* Add Variant button — full width, dashed */}
-            <button
-              disabled={atMax}
-              onClick={() => addVariant()}
-              title={atMax ? "Maximum of 4 custom variants allowed." : undefined}
-              style={{
-                width: "100%",
-                marginBottom: 24,
-                padding: "14px 0",
-                border: `1.5px dashed ${atMax ? "#E5E7EB" : "#BFDBFE"}`,
-                borderRadius: 8,
-                background: atMax ? "#F9FAFB" : "#F8FBFF",
-                color: atMax ? "#9CA3AF" : "#3B82F6",
-                fontSize: 14,
-                fontWeight: 600,
-                cursor: atMax ? "not-allowed" : "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 8,
-              }}
-              onMouseEnter={(e) => { if (!atMax) { e.currentTarget.style.background = "#EFF6FF"; e.currentTarget.style.borderColor = "#3B82F6"; } }}
-              onMouseLeave={(e) => { if (!atMax) { e.currentTarget.style.background = "#F8FBFF"; e.currentTarget.style.borderColor = "#BFDBFE"; } }}
-            >
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                <path d="M8 2a6 6 0 1 0 0 12A6 6 0 0 0 8 2ZM0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-3.5a.75.75 0 0 1 .75.75v2h2a.75.75 0 0 1 0 1.5h-2v2a.75.75 0 0 1-1.5 0v-2h-2a.75.75 0 0 1 0-1.5h2v-2A.75.75 0 0 1 8 4.5Z"/>
-              </svg>
-              Add Variant
-            </button>
+            {/* Add Variant button — full width, dashed, with UI tooltip at max */}
+            <div style={{ position: "relative", marginBottom: 24 }}>
+              <button
+                disabled={atMax}
+                onClick={() => { if (!atMax) addVariant(); }}
+                style={{
+                  width: "100%",
+                  padding: "14px 0",
+                  border: `1.5px dashed ${atMax ? "#E5E7EB" : "#BFDBFE"}`,
+                  borderRadius: 8,
+                  background: atMax ? "#F9FAFB" : "#F8FBFF",
+                  color: atMax ? "#9CA3AF" : "#3B82F6",
+                  fontSize: 14,
+                  fontWeight: 600,
+                  cursor: atMax ? "not-allowed" : "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 8,
+                }}
+                onMouseEnter={(e) => {
+                  if (!atMax) { e.currentTarget.style.background = "#EFF6FF"; e.currentTarget.style.borderColor = "#3B82F6"; }
+                  if (atMax) { e.currentTarget.parentNode.querySelector("[data-max-tooltip]").style.display = "flex"; }
+                }}
+                onMouseLeave={(e) => {
+                  if (!atMax) { e.currentTarget.style.background = "#F8FBFF"; e.currentTarget.style.borderColor = "#BFDBFE"; }
+                  if (atMax) { e.currentTarget.parentNode.querySelector("[data-max-tooltip]").style.display = "none"; }
+                }}
+              >
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                  <path d="M8 2a6 6 0 1 0 0 12A6 6 0 0 0 8 2ZM0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-3.5a.75.75 0 0 1 .75.75v2h2a.75.75 0 0 1 0 1.5h-2v2a.75.75 0 0 1-1.5 0v-2h-2a.75.75 0 0 1 0-1.5h2v-2A.75.75 0 0 1 8 4.5Z"/>
+                </svg>
+                Add Variant
+              </button>
+              {/* UI-system tooltip for max-reached state */}
+              <div
+                data-max-tooltip
+                style={{
+                  display: "none",
+                  position: "absolute", bottom: "calc(100% + 8px)", left: "50%", transform: "translateX(-50%)",
+                  background: "#111827", color: WHITE, fontSize: 12, fontWeight: 500,
+                  padding: "6px 12px", borderRadius: 6, whiteSpace: "nowrap",
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.15)", zIndex: 9999,
+                  alignItems: "center", gap: 6, pointerEvents: "none",
+                }}
+              >
+                <svg width="13" height="13" viewBox="0 0 13 13" fill="none" style={{ flexShrink: 0 }}>
+                  <circle cx="6.5" cy="6.5" r="6" stroke="rgba(255,255,255,0.5)"/>
+                  <rect x="6" y="5.5" width="1" height="4" rx="0.5" fill="white"/>
+                  <rect x="6" y="3.5" width="1" height="1.2" rx="0.5" fill="white"/>
+                </svg>
+                Maximum of 10 variants reached
+                {/* Arrow */}
+                <span style={{ position: "absolute", top: "100%", left: "50%", transform: "translateX(-50%)", width: 0, height: 0, borderLeft: "5px solid transparent", borderRight: "5px solid transparent", borderTop: "5px solid #111827" }} />
+              </div>
+            </div>
 
             {/* DEFAULT FALLBACK divider */}
             <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
@@ -2212,30 +2270,41 @@ function RemoteConfigurationForm({
 
             {/* Default Experience card */}
             <div style={{ background: WHITE, border: "1px solid #E5E7EB", borderRadius: 8, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12 }}>
-              {/* Lock icon */}
               <svg style={{ flexShrink: 0, color: "#9CA3AF" }} width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
                 <path d="M8 1a3.5 3.5 0 0 0-3.5 3.5V6H3.5A1.5 1.5 0 0 0 2 7.5v6A1.5 1.5 0 0 0 3.5 15h9a1.5 1.5 0 0 0 1.5-1.5v-6A1.5 1.5 0 0 0 12.5 6h-1V4.5A3.5 3.5 0 0 0 8 1Zm-2 3.5a2 2 0 0 1 4 0V6H6V4.5ZM3.5 7h9a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-.5.5h-9a.5.5 0 0 1-.5-.5v-6a.5.5 0 0 1 .5-.5ZM8 9a1 1 0 1 0 0 2 1 1 0 0 0 0-2Z"/>
               </svg>
-              {/* Label */}
-              <span style={{ fontSize: 14, fontWeight: 600, color: "#374151", flex: 1 }}>Default Experience</span>
-              {/* Pill */}
+              {/* Label + info tooltip */}
+              <div style={{ display: "flex", alignItems: "center", gap: 6, flex: 1 }}>
+                <span style={{ fontSize: 14, fontWeight: 600, color: "#374151" }}>Default Experience</span>
+                {/* Info icon with hover tooltip */}
+                <div
+                  style={{ position: "relative", display: "inline-flex", cursor: "default" }}
+                  onMouseEnter={(e) => { e.currentTarget.lastChild.style.visibility = "visible"; e.currentTarget.lastChild.style.opacity = "1"; }}
+                  onMouseLeave={(e) => { e.currentTarget.lastChild.style.visibility = "hidden"; e.currentTarget.lastChild.style.opacity = "0"; }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                    <circle cx="7" cy="7" r="6.5" stroke="#D1D5DB"/>
+                    <rect x="6.5" y="6" width="1" height="4.5" rx="0.5" fill="#9CA3AF"/>
+                    <rect x="6.5" y="3.5" width="1" height="1.3" rx="0.5" fill="#9CA3AF"/>
+                  </svg>
+                  <div style={{
+                    visibility: "hidden", opacity: 0,
+                    position: "absolute", bottom: "calc(100% + 8px)", left: "50%", transform: "translateX(-50%)",
+                    background: "#111827", color: WHITE, fontSize: 12, fontWeight: 400,
+                    padding: "7px 12px", borderRadius: 6, whiteSpace: "nowrap",
+                    boxShadow: "0 4px 12px rgba(0,0,0,0.15)", zIndex: 9999,
+                    transition: "opacity 0.15s, visibility 0.15s", pointerEvents: "none",
+                  }}>
+                    All users will receive the Default until you configure a variant above.
+                    <span style={{ position: "absolute", top: "100%", left: "50%", transform: "translateX(-50%)", width: 0, height: 0, borderLeft: "5px solid transparent", borderRight: "5px solid transparent", borderTop: "5px solid #111827" }} />
+                  </div>
+                </div>
+              </div>
               <span style={{ padding: "3px 10px", borderRadius: 999, background: "#F3F4F6", color: "#6B7280", border: "1px solid #E5E7EB", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>ALL UNMATCHED USERS</span>
-              {/* Percentage */}
               <span style={{ fontSize: 14, fontWeight: 600, color: "#111827", marginLeft: 12 }}>100%</span>
-              {/* Chevron */}
               <svg style={{ color: "#9CA3AF", marginLeft: 4 }} width="16" height="16" viewBox="0 0 16 16" fill="none">
                 <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
-            </div>
-
-            {/* Helper note below default card */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 8 }}>
-              <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-                <circle cx="6.5" cy="6.5" r="6" stroke="#9CA3AF"/>
-                <rect x="6" y="5.5" width="1" height="4" rx="0.5" fill="#9CA3AF"/>
-                <rect x="6" y="3.5" width="1" height="1.2" rx="0.5" fill="#9CA3AF"/>
-              </svg>
-              <span style={{ fontSize: 12, color: "#9CA3AF" }}>All users will receive the Default until you configure a variant above.</span>
             </div>
           </div>
         );
