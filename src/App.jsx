@@ -1636,7 +1636,6 @@ function RemoteConfigurationForm({
           rows={4}
           value={parameter.value}
           onChange={(event) => updateParameter(parameter.id, (current) => ({ ...current, value: event.target.value }))}
-          onBlur={validateStepOne}
           style={{ ...inputStyle, resize: "vertical", borderColor: parameterErrorFor(parameter.id, "value") ? "#EF4444" : BORDER_DARK, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}
           placeholder='e.g. { "theme": "light" }'
         />
@@ -1744,13 +1743,9 @@ function RemoteConfigurationForm({
       <div style={{ display: "flex", alignItems: "flex-start", padding: "20px 0", marginBottom: 24 }}>
         {/* Step 1 */}
         <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-          {step === 2 ? (
+          {step === 2 && (
             <div style={{ width: 20, height: 20, borderRadius: "50%", background: "#22C55E", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 2 }}>
               <svg width="11" height="9" viewBox="0 0 11 9" fill="none"><path d="M1 4.5L4 7.5L10 1.5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
-            </div>
-          ) : (
-            <div style={{ width: 20, height: 20, borderRadius: "50%", background: "#3B82F6", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 2 }}>
-              <span style={{ color: "white", fontSize: 11, fontWeight: 700 }}>1</span>
             </div>
           )}
           <div>
@@ -1777,7 +1772,7 @@ function RemoteConfigurationForm({
       </div>
 
       {step === 1 && (
-        <div style={{ display: "grid", gridTemplateColumns: jsonHidden ? "1fr" : "minmax(0, 1fr) 320px", gap: 18 }}>
+        <div style={{ display: "grid", gridTemplateColumns: jsonHidden ? "1fr 260px" : "minmax(0, 1fr) 460px", gap: 18 }}>
           <div style={{ ...cardStyle, padding: 18 }}>
             <h3 style={{ margin: "0 0 4px", fontSize: 15, color: TEXT }}>Basic Information</h3>
             <p style={{ margin: "0 0 18px", fontSize: 13, color: TEXT_MUTED }}>Name your configuration and define the key your app will use to fetch it.</p>
@@ -1785,7 +1780,7 @@ function RemoteConfigurationForm({
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
               <div>
                 <label style={{ display: "flex", alignItems: "center", marginBottom: 8, fontSize: 12, fontWeight: 700, color: TEXT_MUTED }}>CONFIGURATION NAME * <FieldInfoIcon /></label>
-                <input value={form.name} onChange={(event) => handleNameChange(event.target.value)} onBlur={validateStepOne} placeholder="e.g. Flight Details UI" style={fieldInputStyle("name")} />
+                <input value={form.name} onChange={(event) => handleNameChange(event.target.value)} placeholder="e.g. Flight Details UI" style={fieldInputStyle("name")} />
                 {errors.name && <div style={{ marginTop: 6, fontSize: 12, color: "#EF4444" }}>{errors.name}</div>}
               </div>
               <div>
@@ -1796,7 +1791,6 @@ function RemoteConfigurationForm({
                     setKeyTouched(true);
                     setFieldValue("key", slugifyKey(event.target.value));
                   }}
-                  onBlur={validateStepOne}
                   placeholder="e.g. flight_details_ui"
                   style={fieldInputStyle("key")}
                 />
@@ -1810,7 +1804,7 @@ function RemoteConfigurationForm({
                 rows={3}
                 maxLength={500}
                 value={form.description}
-                onChange={(event) => setFieldValue("description", event.target.value)}
+                onChange={(event) => { setFieldValue("description", event.target.value); setErrors((curr) => ({ ...curr, description: undefined })); }}
                 placeholder=""
                 style={{ ...fieldInputStyle("description"), resize: "vertical" }}
               />
@@ -1847,15 +1841,34 @@ function RemoteConfigurationForm({
                       >
                         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: parameter.collapsed ? 0 : 16 }}>
                           <span style={{ color: TEXT_MUTED, cursor: "grab" }}><GripIcon /></span>
-                          <button onClick={() => updateParameter(parameter.id, (current) => ({ ...current, collapsed: !current.collapsed }))} style={{ ...secondaryButtonStyle, padding: "7px 10px", minWidth: 38, justifyContent: "center" }}>
-                            <ChevronDownIcon />
-                          </button>
                           <div style={{ flex: 1 }}>
                             <div style={{ fontSize: 13, fontWeight: 700, color: TEXT }}>{parameter.key || `Parameter ${index + 1}`}</div>
                             <div style={{ marginTop: 2, fontSize: 12, color: TEXT_MUTED }}>{parameter.type}</div>
                           </div>
-                          <button onClick={() => setForm((current) => ({ ...current, parameters: current.parameters.filter((item) => item.id !== parameter.id) }))} style={{ ...secondaryButtonStyle, color: "#EF4444" }}>
-                            <TrashIcon />
+                          {/* Chevron — T&R style: plain button, no box */}
+                          <button
+                            onClick={() => updateParameter(parameter.id, (current) => ({ ...current, collapsed: !current.collapsed }))}
+                            style={{ background: "none", border: "none", color: "#9CA3AF", cursor: "pointer", padding: 4, display: "flex", alignItems: "center", borderRadius: 4, transition: "color 0.15s" }}
+                            onMouseEnter={(e) => { e.currentTarget.style.color = "#374151"; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.color = "#9CA3AF"; }}
+                          >
+                            <svg
+                              width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                              style={{ transform: parameter.collapsed ? "rotate(-90deg)" : "rotate(0deg)", transition: "transform 0.2s" }}
+                            >
+                              <path d="m6 9 6 6 6-6"/>
+                            </svg>
+                          </button>
+                          {/* Trash — T&R style: plain button, no box, #9CA3AF → #DC2626 on hover */}
+                          <button
+                            onClick={() => setForm((current) => ({ ...current, parameters: current.parameters.filter((item) => item.id !== parameter.id) }))}
+                            style={{ background: "none", border: "none", color: "#9CA3AF", cursor: "pointer", padding: 4, display: "flex", alignItems: "center", borderRadius: 4, transition: "color 0.15s" }}
+                            onMouseEnter={(e) => { e.currentTarget.style.color = "#DC2626"; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.color = "#9CA3AF"; }}
+                          >
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                              <path d="M6.5 1h3a.5.5 0 0 1 .5.5V2h3.5a.5.5 0 0 1 0 1H13v9.5a1.5 1.5 0 0 1-1.5 1.5h-7A1.5 1.5 0 0 1 3 12.5V3H2.5a.5.5 0 0 1 0-1H6V1.5a.5.5 0 0 1 .5-.5ZM4 3v9.5a.5.5 0 0 0 .5.5h7a.5.5 0 0 0 .5-.5V3H4Zm2.5 1.5a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V5a.5.5 0 0 1 .5-.5Zm3 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V5a.5.5 0 0 1 .5-.5Z"/>
+                            </svg>
                           </button>
                         </div>
 
@@ -1906,32 +1919,74 @@ function RemoteConfigurationForm({
             </div>
           </div>
 
-          {!jsonHidden && (
+          {jsonHidden ? (
+            /* Minimized JSON panel */
+            <div style={{ alignSelf: "start", background: "#111827", borderRadius: 12, border: "1px solid #263246", padding: "14px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  {/* Stacked-lines icon */}
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                    <rect x="1" y="2" width="12" height="1.5" rx="0.75" fill="#6B7280"/>
+                    <rect x="1" y="5.5" width="8" height="1.5" rx="0.75" fill="#6B7280"/>
+                    <rect x="1" y="9" width="10" height="1.5" rx="0.75" fill="#6B7280"/>
+                  </svg>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: WHITE }}>JSON Output</span>
+                  <span style={{ padding: "2px 6px", borderRadius: 4, background: "rgba(255,255,255,0.12)", color: "#9CA3AF", fontSize: 10 }}>READ-ONLY</span>
+                </div>
+                <button
+                  onClick={() => setJsonHidden(false)}
+                  style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 6, background: "rgba(255,255,255,0.08)", color: "#D1D5DB", border: "1px solid rgba(255,255,255,0.15)", fontSize: 12, fontWeight: 500, cursor: "pointer", whiteSpace: "nowrap" }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.14)"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.08)"; }}
+                >
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                    <path d="M1 6C1 6 3 2 6 2C9 2 11 6 11 6C11 6 9 10 6 10C3 10 1 6 1 6Z" stroke="#D1D5DB" strokeWidth="1.3"/>
+                    <circle cx="6" cy="6" r="1.5" fill="#D1D5DB"/>
+                  </svg>
+                  Show
+                </button>
+              </div>
+              <div style={{ fontSize: 11, color: "#6B7280", fontStyle: "italic" }}>Click Show to expand the JSON preview.</div>
+            </div>
+          ) : (
+            /* Full JSON panel */
             <div style={{ ...cardStyle, padding: 0, alignSelf: "start", overflow: "hidden", background: "#111827", color: WHITE }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 16px 10px" }}>
                 <div>
                   <div style={{ display: "flex", alignItems: "center", gap: 0 }}>
-                  <span style={{ fontSize: 14, fontWeight: 600, color: WHITE }}>JSON Output</span>
-                  <span style={{ marginLeft: 8, padding: "2px 6px", borderRadius: 4, background: "rgba(255,255,255,0.12)", color: "#9CA3AF", fontSize: 11 }}>READ-ONLY</span>
+                    <span style={{ fontSize: 14, fontWeight: 600, color: WHITE }}>JSON Output</span>
+                    <span style={{ marginLeft: 8, padding: "2px 6px", borderRadius: 4, background: "rgba(255,255,255,0.12)", color: "#9CA3AF", fontSize: 11 }}>READ-ONLY</span>
                   </div>
                   <div style={{ marginTop: 6, fontSize: 12, color: "#9CA3AF" }}>This is the payload your SDK will receive.</div>
                 </div>
                 <div style={{ display: "flex", gap: 8 }}>
-                  <button onClick={() => setJsonHidden(true)} style={{ padding: "4px 10px", borderRadius: 6, background: "rgba(255,255,255,0.08)", color: "#D1D5DB", border: "1px solid rgba(255,255,255,0.15)", fontSize: 12, cursor: "pointer" }}>Hide</button>
+                  <button
+                    onClick={() => setJsonHidden(true)}
+                    style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 6, background: "rgba(255,255,255,0.08)", color: "#D1D5DB", border: "1px solid rgba(255,255,255,0.15)", fontSize: 12, cursor: "pointer" }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.14)"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.08)"; }}
+                  >
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                      <path d="M1 6C1 6 3 2 6 2C9 2 11 6 11 6" stroke="#D1D5DB" strokeWidth="1.3" strokeLinecap="round"/>
+                      <line x1="1" y1="10" x2="11" y2="2" stroke="#D1D5DB" strokeWidth="1.3" strokeLinecap="round"/>
+                    </svg>
+                    Hide
+                  </button>
                   <button
                     onClick={async () => {
                       await navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
                       setCopyState("Copied!");
                     }}
                     style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 6, background: "rgba(255,255,255,0.08)", color: "#D1D5DB", border: "1px solid rgba(255,255,255,0.15)", fontSize: 12, cursor: "pointer" }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.14)"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.08)"; }}
                   >
                     <CopyIcon />{copyState}
                   </button>
                 </div>
               </div>
               <div style={{ margin: "0 16px 16px", background: "#0B1220", borderRadius: 12, border: "1px solid #263246", minHeight: 240, display: "flex" }}>
-                <div style={{ width: 32, borderRight: "1px solid #1F2A3D", color: "#6F809B", fontSize: 12, padding: "14px 0", textAlign: "center" }}>1</div>
-                <pre style={{ margin: 0, padding: "14px 16px", whiteSpace: "pre-wrap", fontSize: 13, lineHeight: 1.6, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', flex: 1 }}>
+                <pre style={{ margin: 0, padding: "14px 16px", whiteSpace: "pre-wrap", fontSize: 13, lineHeight: 1.6, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', flex: 1, overflowX: "auto" }}>
                   {renderJsonHighlighted(payload)}
                 </pre>
               </div>
