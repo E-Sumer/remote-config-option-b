@@ -820,8 +820,8 @@ function RemoteConfigActionMenu({ config, isOpen, onToggle, onEdit, onClone, onR
             borderRadius: 10,
             background: WHITE,
             border: `1px solid ${BORDER}`,
-            boxShadow: SHADOW,
-            zIndex: 20,
+            boxShadow: "0 4px 16px rgba(0,0,0,0.13)",
+            zIndex: 200,
           }}
         >
           {actionItems.map((item) => (
@@ -915,6 +915,7 @@ function RemoteConfigurationList({
   const [pageSize, setPageSize] = useState(20);
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("All");
+  const [typeTooltipVisible, setTypeTooltipVisible] = useState(false);
 
   const customStart = parseInputDate(customStartDate);
   const customEnd = parseInputDate(customEndDate);
@@ -1106,7 +1107,7 @@ function RemoteConfigurationList({
               <p style={pageDescriptionStyle}>Control app behavior and features without releasing a new version.</p>
             </div>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginTop: 18, position: "relative" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "nowrap", marginTop: 18, position: "relative" }}>
             <button
               onClick={(event) => {
                 event.stopPropagation();
@@ -1217,22 +1218,23 @@ function RemoteConfigurationList({
         </button>
       </div>
 
-      {/* Search + Type filter toolbar */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
-        {/* Search input */}
-        <div style={{ position: "relative", flex: "1 1 240px", maxWidth: 360 }}>
+      {/* Search toolbar */}
+      <div style={{ marginBottom: 16 }}>
+        <div style={{ position: "relative", maxWidth: 360 }}>
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "#9CA3AF", pointerEvents: "none" }}>
             <circle cx="6.5" cy="6.5" r="4.5" stroke="currentColor" strokeWidth="1.5" />
             <path d="M10 10L14 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
           </svg>
           <input
             type="text"
-            placeholder="Search by name…"
+            placeholder="Search by configuration name"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             style={{
               ...inputStyle,
               width: "100%",
+              background: WHITE,
+              border: `1px solid ${BORDER}`,
               paddingLeft: 32,
               paddingRight: searchQuery ? 32 : 12,
               fontSize: 13,
@@ -1263,32 +1265,6 @@ function RemoteConfigurationList({
             </button>
           )}
         </div>
-
-        {/* Type filter pills */}
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          {["All", "Rolled Out", "A/B Test Experiment"].map((opt) => {
-            const active = typeFilter === opt;
-            return (
-              <button
-                key={opt}
-                onClick={() => setTypeFilter(opt)}
-                style={{
-                  padding: "6px 12px",
-                  borderRadius: 8,
-                  border: `1px solid ${active ? "#3B82F6" : "#E5E7EB"}`,
-                  background: active ? "#3B82F6" : WHITE,
-                  color: active ? WHITE : TEXT_MUTED,
-                  fontSize: 12,
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                {opt}
-              </button>
-            );
-          })}
-        </div>
       </div>
 
       {configs.length === 0 ? (
@@ -1303,28 +1279,83 @@ function RemoteConfigurationList({
           <div style={{ fontSize: 32, marginBottom: 10 }}>🔍</div>
           <div style={{ fontSize: 14, fontWeight: 600, color: TEXT, marginBottom: 6 }}>No configurations found</div>
           <div style={{ fontSize: 13, color: TEXT_MUTED }}>
-            {searchQuery
-              ? <>No results matching <strong>"{searchQuery}"</strong>{typeFilter !== "All" ? ` in "${typeFilter}"` : ""}.</>
-              : <>No configurations of type <strong>"{typeFilter}"</strong> found.</>}
+            No results matching <strong>"{searchQuery}"</strong> — try a different name.
           </div>
-          {(searchQuery || typeFilter !== "All") && (
+          {searchQuery && (
             <button
-              onClick={() => { setSearchQuery(""); setTypeFilter("All"); }}
+              onClick={() => setSearchQuery("")}
               style={{ ...secondaryButtonStyle, marginTop: 14, padding: "8px 16px" }}
             >
-              Clear filters
+              Clear search
             </button>
           )}
         </div>
       ) : (
         <>
-          <div style={{ ...cardStyle, overflow: "hidden" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+          <div style={{ ...cardStyle, overflow: "visible" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, borderRadius: 12, overflow: "hidden", display: "table" }}>
               <thead>
                 <tr style={{ background: WHITE }}>
                   {columns.map((column) => (
                     <th key={column.key} style={{ padding: "16px 18px", textAlign: column.key === "actions" ? "center" : "left", fontSize: 12, fontWeight: 600, color: TEXT_MUTED, borderBottom: `1px solid ${BORDER}` }}>
-                      {column.sortable ? (
+                      {column.key === "deploymentType" ? (
+                        <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                          <button
+                            onClick={() => handleSort(column.key)}
+                            style={{ border: "none", background: "transparent", padding: 0, margin: 0, color: "inherit", fontSize: "inherit", fontWeight: "inherit", cursor: "pointer", display: "inline-flex", alignItems: "center" }}
+                          >
+                            {column.label}
+                            <SortIndicator active={sortBy === column.key} direction={sortDir} />
+                          </button>
+                          <div style={{ position: "relative", display: "inline-flex", alignItems: "center" }}>
+                            <span
+                              onMouseEnter={() => setTypeTooltipVisible(true)}
+                              onMouseLeave={() => setTypeTooltipVisible(false)}
+                              style={{ display: "inline-flex", alignItems: "center", cursor: "default", color: "#9CA3AF" }}
+                            >
+                              <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                                <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.4" />
+                                <path d="M8 7v4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                                <circle cx="8" cy="5" r="0.75" fill="currentColor" />
+                              </svg>
+                            </span>
+                            {typeTooltipVisible && (
+                              <div style={{
+                                position: "absolute",
+                                top: "calc(100% + 8px)",
+                                left: "50%",
+                                transform: "translateX(-50%)",
+                                width: 240,
+                                background: "#1F2937",
+                                color: WHITE,
+                                fontSize: 12,
+                                lineHeight: 1.5,
+                                padding: "9px 12px",
+                                borderRadius: 8,
+                                boxShadow: "0 4px 16px rgba(0,0,0,0.2)",
+                                zIndex: 300,
+                                pointerEvents: "none",
+                                whiteSpace: "normal",
+                                fontWeight: 400,
+                              }}>
+                                <div style={{ fontWeight: 600, marginBottom: 4 }}>Deployment Type</div>
+                                Shows how this configuration is being used: <strong style={{ color: "#86EFAC" }}>Rolled Out</strong> means it is directly deployed to users, while <strong style={{ color: "#A5B4FC" }}>A/B Test Experiment</strong> means it is part of a running experiment.
+                                {/* Tooltip arrow */}
+                                <div style={{
+                                  position: "absolute",
+                                  top: -5,
+                                  left: "50%",
+                                  transform: "translateX(-50%)",
+                                  width: 10,
+                                  height: 10,
+                                  background: "#1F2937",
+                                  clipPath: "polygon(50% 0%, 0% 100%, 100% 100%)",
+                                }} />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ) : column.sortable ? (
                         <button
                           onClick={() => handleSort(column.key)}
                           style={{ border: "none", background: "transparent", padding: 0, margin: 0, color: "inherit", fontSize: "inherit", fontWeight: "inherit", cursor: "pointer", display: "inline-flex", alignItems: "center" }}
