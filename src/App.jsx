@@ -403,6 +403,7 @@ const initialConfigs = [
     ...configDateBuckets[0],
     creator: "Burak Alparslan",
     type: "String",
+    deploymentType: "A/B Test Experiment",
     params: 2,
     version: 1.0,
     description: "Controls welcome message variants shown on the home screen.",
@@ -419,6 +420,7 @@ const initialConfigs = [
     ...configDateBuckets[1],
     creator: "Gulsen Hacarlioglugil",
     type: "JSON",
+    deploymentType: "Rolled Out",
     params: 2,
     version: 1.3,
     description: "Configures purchase CTA label and color set.",
@@ -435,6 +437,7 @@ const initialConfigs = [
     ...configDateBuckets[2],
     creator: "Aylin Yildiz",
     type: "Boolean",
+    deploymentType: "A/B Test Experiment",
     params: 1,
     version: 1.1,
     description: "Turns the promo banner experience on or off.",
@@ -450,6 +453,7 @@ const initialConfigs = [
     ...configDateBuckets[3],
     creator: "Emre Sumer",
     type: "JSON",
+    deploymentType: "Rolled Out",
     params: 2,
     version: 2.0,
     description: "Defines the onboarding screen order and content.",
@@ -466,6 +470,7 @@ const initialConfigs = [
     ...configDateBuckets[4],
     creator: "Deniz Kaya",
     type: "Boolean",
+    deploymentType: "Rolled Out",
     params: 1,
     version: 2.2,
     description: "Controls dark mode eligibility for the workspace.",
@@ -481,6 +486,7 @@ const initialConfigs = [
     ...configDateBuckets[5],
     creator: "Can Aydin",
     type: "Integer",
+    deploymentType: "A/B Test Experiment",
     params: 1,
     version: 3.1,
     description: "Adjusts the weight of the ranking model used in search.",
@@ -851,6 +857,40 @@ function RemoteConfigActionMenu({ config, isOpen, onToggle, onEdit, onClone, onR
   );
 }
 
+function DeploymentTypeBadge({ deploymentType }) {
+  const isAB = deploymentType === "A/B Test Experiment";
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 5,
+        padding: "3px 9px",
+        borderRadius: 6,
+        fontSize: 11,
+        fontWeight: 600,
+        background: isAB ? "#EEF3FF" : "#EAFBF4",
+        color: isAB ? "#4E5FE2" : "#15803D",
+        border: `1px solid ${isAB ? "#C7D2FB" : "#BBF7D0"}`,
+        whiteSpace: "nowrap",
+      }}
+    >
+      {isAB ? (
+        <svg width="11" height="11" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
+          <circle cx="4.5" cy="4.5" r="3.5" stroke="currentColor" strokeWidth="1.5" />
+          <circle cx="11.5" cy="11.5" r="3.5" stroke="currentColor" strokeWidth="1.5" />
+          <path d="M7.5 4.5h1M7.5 11.5h1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        </svg>
+      ) : (
+        <svg width="11" height="11" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
+          <path d="M8 2L10 6H14L11 9L12.5 13.5L8 11L3.5 13.5L5 9L2 6H6L8 2Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+        </svg>
+      )}
+      {deploymentType || "Rolled Out"}
+    </span>
+  );
+}
+
 function RemoteConfigurationList({
   configs,
   openActionId,
@@ -873,6 +913,8 @@ function RemoteConfigurationList({
   const [sortDir, setSortDir] = useState("desc");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [typeFilter, setTypeFilter] = useState("All");
 
   const customStart = parseInputDate(customStartDate);
   const customEnd = parseInputDate(customEndDate);
@@ -895,7 +937,13 @@ function RemoteConfigurationList({
 
   const filteredConfigs = useMemo(() => {
     const today = startOfDay(new Date());
+    const trimmedSearch = searchQuery.trim().toLowerCase();
     const filtered = configs.filter((config) => {
+      // Search filter
+      if (trimmedSearch && !config.name.toLowerCase().includes(trimmedSearch)) return false;
+      // Type filter
+      if (typeFilter !== "All" && config.deploymentType !== typeFilter) return false;
+
       const updatedDate = parseDisplayDate(config.updated);
       const diffInDays = Math.floor((today - updatedDate) / (1000 * 60 * 60 * 24));
 
@@ -928,6 +976,7 @@ function RemoteConfigurationList({
     });
 
     const statusOrder = { Live: 0, Draft: 1, Stopped: 2 };
+    const typeOrder = { "Rolled Out": 0, "A/B Test Experiment": 1 };
     const sorted = [...filtered].sort((left, right) => {
       let leftValue = left[sortBy];
       let rightValue = right[sortBy];
@@ -935,6 +984,11 @@ function RemoteConfigurationList({
       if (sortBy === "status") {
         leftValue = statusOrder[left.status] ?? 99;
         rightValue = statusOrder[right.status] ?? 99;
+      }
+
+      if (sortBy === "deploymentType") {
+        leftValue = typeOrder[left.deploymentType] ?? 99;
+        rightValue = typeOrder[right.deploymentType] ?? 99;
       }
 
       if (sortBy === "created" || sortBy === "updated") {
@@ -951,11 +1005,11 @@ function RemoteConfigurationList({
     });
 
     return sorted;
-  }, [activeDateFilter, configs, customEnd, customStart, sortBy, sortDir]);
+  }, [activeDateFilter, configs, customEnd, customStart, searchQuery, sortBy, sortDir, typeFilter]);
 
   useEffect(() => {
     setPage(1);
-  }, [activeDateFilter, customEndDate, customStartDate, pageSize, sortBy, sortDir]);
+  }, [activeDateFilter, customEndDate, customStartDate, pageSize, searchQuery, sortBy, sortDir, typeFilter]);
 
   const totalConfigs = filteredConfigs.length;
   const totalPages = Math.max(1, Math.ceil(totalConfigs / pageSize));
@@ -992,6 +1046,7 @@ function RemoteConfigurationList({
   const columns = [
     { key: "status", label: "Status", sortable: true },
     { key: "name", label: "Configuration Name", sortable: true },
+    { key: "deploymentType", label: "Type", sortable: true },
     { key: "created", label: "Create Date", sortable: true },
     { key: "updated", label: "Update Date", sortable: true },
     { key: "creator", label: "Creator User", sortable: true },
@@ -1162,13 +1217,105 @@ function RemoteConfigurationList({
         </button>
       </div>
 
-      {totalConfigs === 0 ? (
+      {/* Search + Type filter toolbar */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
+        {/* Search input */}
+        <div style={{ position: "relative", flex: "1 1 240px", maxWidth: 360 }}>
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "#9CA3AF", pointerEvents: "none" }}>
+            <circle cx="6.5" cy="6.5" r="4.5" stroke="currentColor" strokeWidth="1.5" />
+            <path d="M10 10L14 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+          </svg>
+          <input
+            type="text"
+            placeholder="Search by name…"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{
+              ...inputStyle,
+              width: "100%",
+              paddingLeft: 32,
+              paddingRight: searchQuery ? 32 : 12,
+              fontSize: 13,
+              boxSizing: "border-box",
+            }}
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery("")}
+              title="Clear search"
+              style={{
+                position: "absolute",
+                right: 8,
+                top: "50%",
+                transform: "translateY(-50%)",
+                border: "none",
+                background: "transparent",
+                cursor: "pointer",
+                color: "#9CA3AF",
+                padding: 2,
+                lineHeight: 1,
+                fontSize: 14,
+                display: "flex",
+                alignItems: "center",
+              }}
+            >
+              ×
+            </button>
+          )}
+        </div>
+
+        {/* Type filter pills */}
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          {["All", "Rolled Out", "A/B Test Experiment"].map((opt) => {
+            const active = typeFilter === opt;
+            return (
+              <button
+                key={opt}
+                onClick={() => setTypeFilter(opt)}
+                style={{
+                  padding: "6px 12px",
+                  borderRadius: 8,
+                  border: `1px solid ${active ? "#3B82F6" : "#E5E7EB"}`,
+                  background: active ? "#3B82F6" : WHITE,
+                  color: active ? WHITE : TEXT_MUTED,
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {opt}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {configs.length === 0 ? (
         <EmptyState
           title="No remote configurations yet"
           description="Create your first configuration to start controlling app behavior without a release."
           ctaLabel="New Remote Configuration"
           onClick={onCreate}
         />
+      ) : filteredConfigs.length === 0 ? (
+        <div style={{ ...cardStyle, padding: "40px 24px", textAlign: "center" }}>
+          <div style={{ fontSize: 32, marginBottom: 10 }}>🔍</div>
+          <div style={{ fontSize: 14, fontWeight: 600, color: TEXT, marginBottom: 6 }}>No configurations found</div>
+          <div style={{ fontSize: 13, color: TEXT_MUTED }}>
+            {searchQuery
+              ? <>No results matching <strong>"{searchQuery}"</strong>{typeFilter !== "All" ? ` in "${typeFilter}"` : ""}.</>
+              : <>No configurations of type <strong>"{typeFilter}"</strong> found.</>}
+          </div>
+          {(searchQuery || typeFilter !== "All") && (
+            <button
+              onClick={() => { setSearchQuery(""); setTypeFilter("All"); }}
+              style={{ ...secondaryButtonStyle, marginTop: 14, padding: "8px 16px" }}
+            >
+              Clear filters
+            </button>
+          )}
+        </div>
       ) : (
         <>
           <div style={{ ...cardStyle, overflow: "hidden" }}>
@@ -1201,6 +1348,7 @@ function RemoteConfigurationList({
                   >
                     <td style={{ padding: "16px 18px" }}><ConfigStatusBadge status={config.status} /></td>
                     <td style={{ padding: "16px 18px", color: TEXT, fontWeight: 500 }}>{config.name}</td>
+                    <td style={{ padding: "16px 18px" }}><DeploymentTypeBadge deploymentType={config.deploymentType} /></td>
                     <td style={{ padding: "16px 18px", color: TEXT, fontWeight: 500 }}>{config.created}</td>
                     <td style={{ padding: "16px 18px", color: TEXT, fontWeight: 500 }}>{config.updated}</td>
                     <td style={{ padding: "16px 18px", color: TEXT, fontWeight: 500 }}>{config.creator}</td>
