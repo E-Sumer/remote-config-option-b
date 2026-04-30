@@ -496,6 +496,71 @@ const initialConfigs = [
   },
 ];
 
+const mockSchemas = [
+  {
+    id: "s1",
+    name: "Product Page Layout",
+    key: "product_page_layout",
+    description: "Controls layout variants for product detail pages.",
+    sdks: ["iOS", "Android"],
+    parameters: [
+      { id: "sp1", key: "hero_image_size", type: "String", description: "Size of the hero image area", defaultValue: "large" },
+      { id: "sp2", key: "show_reviews", type: "Boolean", description: "Toggle customer review section", defaultValue: "true" },
+      { id: "sp3", key: "cta_label", type: "String", description: "Label on the primary CTA button", defaultValue: "Add to Cart" },
+      { id: "sp4", key: "related_limit", type: "Integer", description: "Number of related products shown", defaultValue: "4" },
+    ],
+    created: formatDateOffset(18),
+    updated: formatDateOffset(3),
+  },
+  {
+    id: "s2",
+    name: "Onboarding Flow Config",
+    key: "onboarding_flow_config",
+    description: "Defines steps and copy used in the onboarding sequence.",
+    sdks: ["iOS", "Android", "React Native"],
+    parameters: [
+      { id: "sp5", key: "skip_enabled", type: "Boolean", description: "Allow users to skip onboarding", defaultValue: "false" },
+      { id: "sp6", key: "steps_count", type: "Integer", description: "Total number of onboarding steps", defaultValue: "4" },
+      { id: "sp7", key: "welcome_title", type: "String", description: "Title text on the welcome screen", defaultValue: "Welcome aboard!" },
+      { id: "sp8", key: "progress_style", type: "String", description: "Style of progress indicator (dots | bar)", defaultValue: "dots" },
+      { id: "sp9", key: "animation_speed", type: "Float", description: "Transition animation duration in seconds", defaultValue: "0.35" },
+      { id: "sp10", key: "show_social_proof", type: "Boolean", description: "Show testimonials on last step", defaultValue: "true" },
+    ],
+    created: formatDateOffset(55),
+    updated: formatDateOffset(10),
+  },
+  {
+    id: "s3",
+    name: "Search Results Display",
+    key: "search_results_display",
+    description: "Manages pagination and display options for search result pages.",
+    sdks: ["Web"],
+    parameters: [
+      { id: "sp11", key: "page_size", type: "Integer", description: "Number of results per page", defaultValue: "20" },
+      { id: "sp12", key: "show_filters", type: "Boolean", description: "Show faceted filter sidebar", defaultValue: "true" },
+      { id: "sp13", key: "layout", type: "String", description: "Results layout (grid | list)", defaultValue: "grid" },
+    ],
+    created: formatDateOffset(32),
+    updated: formatDateOffset(7),
+  },
+  {
+    id: "s4",
+    name: "Cart Checkout Config",
+    key: "cart_checkout_config",
+    description: "Feature flags and copy for the cart and checkout funnel.",
+    sdks: ["iOS", "Android", "Web"],
+    parameters: [
+      { id: "sp14", key: "express_checkout", type: "Boolean", description: "Enable one-tap express checkout", defaultValue: "false" },
+      { id: "sp15", key: "promo_banner", type: "String", description: "Promotional banner text (empty = hidden)", defaultValue: "" },
+      { id: "sp16", key: "trust_badges", type: "Boolean", description: "Show security / trust badges", defaultValue: "true" },
+      { id: "sp17", key: "upsell_limit", type: "Integer", description: "Max upsell items shown in cart", defaultValue: "3" },
+      { id: "sp18", key: "delivery_eta_label", type: "String", description: "Delivery estimate copy below CTA", defaultValue: "Ships in 2-3 days" },
+    ],
+    created: formatDateOffset(72),
+    updated: formatDateOffset(14),
+  },
+];
+
 function formatToday() {
   const now = new Date();
   const day = String(now.getDate()).padStart(2, "0");
@@ -3802,6 +3867,7 @@ function SearchableSelect({
 function CreateExperiment({
   configs,
   experiments,
+  schemas,
   onBack,
   onOpenRemoteConfigCreate,
   onSaveDraft,
@@ -3826,6 +3892,7 @@ function CreateExperiment({
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
   const [draftConfigWarningOpen, setDraftConfigWarningOpen] = useState(false);
   const [runningConflict, setRunningConflict] = useState(null);
+  const [browseSchemasOpen, setBrowseSchemasOpen] = useState(false);
   const [savedSnapshot, setSavedSnapshot] = useState(JSON.stringify({
     id: null,
     name: "",
@@ -4057,6 +4124,36 @@ function CreateExperiment({
             />
             {errors.name && <div style={{ marginTop: 6, fontSize: 12, color: "#EF4444" }}>{errors.name}</div>}
           </div>
+
+          {/* Browse Schemas banner */}
+          {schemas && schemas.length > 0 && (
+            <div style={{ padding: "12px 16px", borderRadius: 10, border: "1px solid #C7D2FB", background: "#EEF3FF", display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{ width: 32, height: 32, borderRadius: 8, background: "#4F46E5", color: WHITE, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <DeveloperIcon />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#3730A3" }}>Use a Schema</div>
+                <div style={{ fontSize: 12, color: "#4F46E5", marginTop: 1 }}>Pre-populate parameters from a Developer schema ({schemas.length} available)</div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setBrowseSchemasOpen(true)}
+                style={{ padding: "7px 14px", background: "#4F46E5", color: WHITE, border: "none", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }}
+              >
+                Browse Schemas
+              </button>
+            </div>
+          )}
+
+          {browseSchemasOpen && schemas && (
+            <BrowseSchemasModal
+              schemas={schemas}
+              onClose={() => setBrowseSchemasOpen(false)}
+              onUseSchema={(schema) => {
+                setBrowseSchemasOpen(false);
+              }}
+            />
+          )}
 
           <SearchableSelect
             label="LINKED REMOTE CONFIG"
@@ -4748,6 +4845,494 @@ function ExperimentDetail({ experiment, onBack, onOpenRemoteConfig, linkedConfig
   );
 }
 
+// ─── SDK Pill ──────────────────────────────────────────────────────────────
+function SdkPill({ sdk }) {
+  const colors = {
+    iOS: { bg: "#F0F9FF", color: "#0369A1", border: "#BAE6FD" },
+    Android: { bg: "#F0FDF4", color: "#15803D", border: "#BBF7D0" },
+    Web: { bg: "#FFF7ED", color: "#C2410C", border: "#FED7AA" },
+    "React Native": { bg: "#FAF5FF", color: "#7C3AED", border: "#DDD6FE" },
+  };
+  const c = colors[sdk] || { bg: "#F3F4F6", color: "#374151", border: "#D1D5DB" };
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", padding: "2px 8px", borderRadius: 5, fontSize: 11, fontWeight: 600, background: c.bg, color: c.color, border: `1px solid ${c.border}`, whiteSpace: "nowrap" }}>
+      {sdk}
+    </span>
+  );
+}
+
+// ─── DevRemoteConfigList ───────────────────────────────────────────────────
+function DevRemoteConfigList({ schemas, onCreateNew, onViewSchema }) {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [copiedKey, setCopiedKey] = useState(null);
+  const [openActionId, setOpenActionId] = useState(null);
+
+  const filtered = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return schemas;
+    return schemas.filter((s) => s.name.toLowerCase().includes(q) || s.key.toLowerCase().includes(q));
+  }, [schemas, searchQuery]);
+
+  const handleCopyKey = (key) => {
+    try { navigator.clipboard.writeText(key); } catch (_) {}
+    setCopiedKey(key);
+    setTimeout(() => setCopiedKey(null), 1600);
+  };
+
+  useEffect(() => {
+    const handler = () => setOpenActionId(null);
+    window.addEventListener("click", handler);
+    return () => window.removeEventListener("click", handler);
+  }, []);
+
+  return (
+    <div>
+      {/* Header */}
+      <div style={{ marginBottom: 24, display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16 }}>
+        <div>
+          <h1 style={pageTitleStyle}>Remote Configuration Schemas</h1>
+          <p style={pageDescriptionStyle}>Define reusable parameter schemas to structure your remote configurations.</p>
+        </div>
+        <button onClick={onCreateNew} style={{ ...primaryButtonStyle, flexShrink: 0 }}>
+          <PlusIcon />
+          New Schema
+        </button>
+      </div>
+
+      {/* Search + count */}
+      <div style={{ marginBottom: 16, display: "flex", alignItems: "center", gap: 12 }}>
+        <div style={{ position: "relative", flex: 1, maxWidth: 320 }}>
+          <span style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", color: TEXT_MUTED, pointerEvents: "none" }}><SearchIcon /></span>
+          <input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search by schema name or key…"
+            style={{ ...inputStyle, paddingLeft: 36, background: WHITE }}
+          />
+        </div>
+        <div style={{ fontSize: 13, color: TEXT_MUTED, whiteSpace: "nowrap" }}>
+          {filtered.length} schema{filtered.length !== 1 ? "s" : ""}
+        </div>
+      </div>
+
+      {/* Table */}
+      <div style={{ ...cardStyle, overflow: "visible" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", display: "table", borderRadius: 14, overflow: "hidden" }}>
+          <thead>
+            <tr style={{ borderBottom: `1px solid ${BORDER}`, background: SOFT }}>
+              {["Name", "Key", "Parameters", "SDKs", "Created", "Last Updated", ""].map((h) => (
+                <th key={h} style={{ padding: "11px 16px", textAlign: "left", fontSize: 11, fontWeight: 700, color: TEXT_MUTED, letterSpacing: 0.5, whiteSpace: "nowrap" }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.length === 0 ? (
+              <tr>
+                <td colSpan={7} style={{ padding: 40, textAlign: "center", color: TEXT_MUTED, fontSize: 13 }}>
+                  No schemas match your search.
+                </td>
+              </tr>
+            ) : filtered.map((schema, idx) => (
+              <tr
+                key={schema.id}
+                style={{ borderBottom: idx < filtered.length - 1 ? `1px solid ${BORDER}` : "none", cursor: "pointer", transition: "background 0.12s" }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = SOFT; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = ""; }}
+                onClick={() => onViewSchema(schema)}
+              >
+                <td style={{ padding: "14px 16px" }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: TEXT }}>{schema.name}</div>
+                  {schema.description && <div style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 2 }}>{schema.description}</div>}
+                </td>
+                <td style={{ padding: "14px 16px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <code style={{ fontSize: 12, color: "#4F46E5", background: "#EEF2FF", border: "1px solid #C7D2FB", borderRadius: 5, padding: "2px 7px", fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace" }}>{schema.key}</code>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleCopyKey(schema.key); }}
+                      title="Copy key"
+                      style={{ padding: 4, background: "transparent", border: "none", cursor: "pointer", color: copiedKey === schema.key ? CTA_GREEN : TEXT_MUTED, display: "flex", alignItems: "center", borderRadius: 5 }}
+                    >
+                      {copiedKey === schema.key ? <CheckIcon /> : <CopyIcon />}
+                    </button>
+                  </div>
+                </td>
+                <td style={{ padding: "14px 16px" }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: TEXT }}>{schema.parameters.length}</span>
+                  <span style={{ fontSize: 12, color: TEXT_MUTED, marginLeft: 4 }}>param{schema.parameters.length !== 1 ? "s" : ""}</span>
+                </td>
+                <td style={{ padding: "14px 16px" }}>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                    {schema.sdks.map((sdk) => <SdkPill key={sdk} sdk={sdk} />)}
+                  </div>
+                </td>
+                <td style={{ padding: "14px 16px", fontSize: 12, color: TEXT_MUTED, whiteSpace: "nowrap" }}>{schema.created}</td>
+                <td style={{ padding: "14px 16px", fontSize: 12, color: TEXT_MUTED, whiteSpace: "nowrap" }}>{schema.updated}</td>
+                <td style={{ padding: "14px 16px" }} onClick={(e) => e.stopPropagation()}>
+                  <div style={{ position: "relative" }}>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setOpenActionId(openActionId === schema.id ? null : schema.id); }}
+                      style={{ padding: 6, background: "transparent", border: "none", cursor: "pointer", color: TEXT_MUTED, borderRadius: 6, display: "flex", alignItems: "center" }}
+                    >
+                      <MoreIcon />
+                    </button>
+                    {openActionId === schema.id && (
+                      <div style={{ position: "absolute", right: 0, top: "calc(100% + 4px)", width: 160, background: WHITE, border: `1px solid ${BORDER}`, borderRadius: 10, boxShadow: "0 4px 16px rgba(0,0,0,0.13)", zIndex: 200, overflow: "hidden" }}>
+                        {[
+                          { icon: <EditIcon />, label: "Edit Schema", action: () => { setOpenActionId(null); onViewSchema(schema); } },
+                          { icon: <CopyIcon />, label: "Duplicate", action: () => setOpenActionId(null) },
+                          { icon: <TrashIcon />, label: "Delete", danger: true, action: () => setOpenActionId(null) },
+                        ].map((item) => (
+                          <button
+                            key={item.label}
+                            onClick={item.action}
+                            style={{ width: "100%", display: "flex", alignItems: "center", gap: 9, padding: "10px 12px", border: "none", background: "transparent", color: item.danger ? "#EF4444" : TEXT, fontSize: 13, cursor: "pointer", textAlign: "left" }}
+                            onMouseEnter={(e) => { e.currentTarget.style.background = item.danger ? "#FEF2F2" : SOFT; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                          >
+                            {item.icon}
+                            {item.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+// ─── DevRemoteConfigNew ────────────────────────────────────────────────────
+function DevRemoteConfigNew({ schema, onBack, onSave }) {
+  const isEdit = Boolean(schema);
+
+  const [name, setName] = useState(isEdit ? schema.name : "");
+  const [key, setKey] = useState(isEdit ? schema.key : "");
+  const [description, setDescription] = useState(isEdit ? (schema.description || "") : "");
+  const [sdks, setSdks] = useState(isEdit ? schema.sdks : []);
+  const [params, setParams] = useState(isEdit ? schema.parameters : []);
+  const [activeTab, setActiveTab] = useState("iOS");
+  const [errors, setErrors] = useState({});
+
+  const AUTO_KEY_ACTIVE = !isEdit;
+  const derivedKey = name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+
+  const displayKey = AUTO_KEY_ACTIVE ? (name.trim() ? derivedKey : "") : key;
+
+  const SDK_OPTIONS = ["iOS", "Android", "Web", "React Native"];
+
+  const toggleSdk = (sdk) => setSdks((prev) => prev.includes(sdk) ? prev.filter((s) => s !== sdk) : [...prev, sdk]);
+
+  const addParam = () => {
+    setParams((prev) => [...prev, { id: `sp_new_${Date.now()}`, key: "", type: "String", description: "", defaultValue: "" }]);
+  };
+
+  const updateParam = (id, field, value) => {
+    setParams((prev) => prev.map((p) => p.id === id ? { ...p, [field]: value } : p));
+  };
+
+  const removeParam = (id) => setParams((prev) => prev.filter((p) => p.id !== id));
+
+  const validate = () => {
+    const e = {};
+    if (!name.trim()) e.name = "Schema name is required.";
+    if (!displayKey) e.key = "Key is required.";
+    if (sdks.length === 0) e.sdks = "Select at least one target SDK.";
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
+
+  const handleSave = () => {
+    if (!validate()) return;
+    if (onSave) onSave({ name, key: displayKey, description, sdks, parameters: params });
+  };
+
+  const codeSnippets = {
+    iOS: `import NetmeraSDK
+
+// Fetch schema: ${displayKey || "your_schema_key"}
+let config = Netmera.getRemoteConfig(key: "${displayKey || "your_schema_key"}")
+${params.slice(0, 3).map((p) => {
+  const cast = p.type === "Integer" ? "config.intValue(for: \"\(p.key)\")" : p.type === "Boolean" ? "config.boolValue(for: \"\(p.key)\")" : `config.stringValue(for: "${p.key}")`;
+  return `let ${p.key || "param"} = ${cast}`;
+}).join("\n")}`,
+    Android: `import com.netmera.sdk.RemoteConfig
+
+// Fetch schema: ${displayKey || "your_schema_key"}
+val config = Netmera.getRemoteConfig("${displayKey || "your_schema_key"}")
+${params.slice(0, 3).map((p) => {
+  const type = p.type === "Integer" ? "Int" : p.type === "Boolean" ? "Boolean" : "String";
+  return `val ${p.key || "param"}: ${type} = config.get${type}("${p.key || "param"}")`;
+}).join("\n")}`,
+    Web: `import { Netmera } from '@netmera/web-sdk';
+
+// Fetch schema: ${displayKey || "your_schema_key"}
+const config = await Netmera.getRemoteConfig('${displayKey || "your_schema_key"}');
+${params.slice(0, 3).map((p) => `const ${p.key || "param"} = config.get('${p.key || "param"}');`).join("\n")}`,
+    "React Native": `import { Netmera } from '@netmera/react-native-sdk';
+
+// Fetch schema: ${displayKey || "your_schema_key"}
+const config = await Netmera.getRemoteConfig('${displayKey || "your_schema_key"}');
+${params.slice(0, 3).map((p) => `const ${p.key || "param"} = config.get('${p.key || "param"}');`).join("\n")}`,
+  };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", minHeight: "100%" }}>
+      {/* Page header */}
+      <div style={{ marginBottom: 24, display: "flex", alignItems: "center", gap: 14 }}>
+        <button onClick={onBack} style={{ ...secondaryButtonStyle, padding: "9px 14px" }}>
+          <ChevronRightIcon style={{ transform: "rotate(180deg)" }} />
+          Back
+        </button>
+        <div>
+          <h1 style={pageTitleStyle}>{isEdit ? "Edit Schema" : "New Schema"}</h1>
+          <p style={pageDescriptionStyle}>{isEdit ? `Editing ${schema.name}` : "Define a reusable parameter schema for your remote configurations."}</p>
+        </div>
+      </div>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 18, flex: 1, paddingBottom: 90 }}>
+        {/* Basic Info */}
+        <div style={{ ...cardStyle, padding: 24 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: TEXT, marginBottom: 18 }}>Basic Information</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <div>
+              <label style={{ display: "block", marginBottom: 6, fontSize: 12, fontWeight: 700, color: TEXT_MUTED }}>SCHEMA NAME *</label>
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="e.g. Product Page Layout"
+                style={{ ...inputStyle, borderColor: errors.name ? "#EF4444" : BORDER, background: WHITE }}
+              />
+              {errors.name && <div style={{ marginTop: 5, fontSize: 12, color: "#EF4444" }}>{errors.name}</div>}
+            </div>
+            <div>
+              <label style={{ display: "block", marginBottom: 6, fontSize: 12, fontWeight: 700, color: TEXT_MUTED }}>KEY (SDK IDENTIFIER)</label>
+              <div style={{ position: "relative" }}>
+                <input
+                  value={displayKey}
+                  readOnly={AUTO_KEY_ACTIVE}
+                  onChange={(e) => !AUTO_KEY_ACTIVE && setKey(e.target.value)}
+                  placeholder="auto-generated from name"
+                  style={{ ...inputStyle, background: AUTO_KEY_ACTIVE ? "#F9FAFB" : WHITE, color: displayKey ? "#4F46E5" : TEXT_MUTED, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", fontSize: 12, borderColor: errors.key ? "#EF4444" : BORDER }}
+                />
+                {AUTO_KEY_ACTIVE && displayKey && (
+                  <span style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", fontSize: 11, color: TEXT_MUTED }}>auto</span>
+                )}
+              </div>
+              {errors.key && <div style={{ marginTop: 5, fontSize: 12, color: "#EF4444" }}>{errors.key}</div>}
+            </div>
+            <div>
+              <label style={{ display: "block", marginBottom: 6, fontSize: 12, fontWeight: 700, color: TEXT_MUTED }}>DESCRIPTION</label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={3}
+                placeholder="What does this schema control?"
+                style={{ ...inputStyle, resize: "vertical", background: WHITE }}
+              />
+            </div>
+            <div>
+              <label style={{ display: "block", marginBottom: 8, fontSize: 12, fontWeight: 700, color: TEXT_MUTED }}>TARGET SDKs *</label>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {SDK_OPTIONS.map((sdk) => {
+                  const selected = sdks.includes(sdk);
+                  return (
+                    <button
+                      key={sdk}
+                      type="button"
+                      onClick={() => toggleSdk(sdk)}
+                      style={{
+                        padding: "7px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer", border: "1px solid",
+                        background: selected ? "#EEF3FF" : WHITE,
+                        color: selected ? "#4E5FE2" : TEXT_MUTED,
+                        borderColor: selected ? "#C7D2FB" : BORDER,
+                        transition: "all 0.12s",
+                      }}
+                    >
+                      {selected && <span style={{ marginRight: 5 }}>✓</span>}{sdk}
+                    </button>
+                  );
+                })}
+              </div>
+              {errors.sdks && <div style={{ marginTop: 6, fontSize: 12, color: "#EF4444" }}>{errors.sdks}</div>}
+            </div>
+          </div>
+        </div>
+
+        {/* Parameters */}
+        <div style={{ ...cardStyle, padding: 24 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: TEXT }}>Parameters</div>
+              <div style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 2 }}>Define the keys, types and default values for this schema.</div>
+            </div>
+            <button onClick={addParam} style={{ ...secondaryButtonStyle, padding: "8px 14px", fontSize: 12 }}>
+              <PlusIcon />
+              Add Parameter
+            </button>
+          </div>
+          {params.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "32px 16px", borderRadius: 10, border: `1.5px dashed ${BORDER}`, color: TEXT_MUTED, fontSize: 13 }}>
+              No parameters yet — click <strong>Add Parameter</strong> to get started.
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {params.map((p, idx) => (
+                <div key={p.id} style={{ padding: 16, borderRadius: 10, border: `1px solid ${BORDER}`, background: SOFT }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: TEXT_MUTED }}>PARAMETER {idx + 1}</span>
+                    <button onClick={() => removeParam(p.id)} style={{ padding: 5, background: "transparent", border: "none", cursor: "pointer", color: "#EF4444", borderRadius: 5, display: "flex" }}>
+                      <TrashIcon />
+                    </button>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 140px", gap: 10, marginBottom: 10 }}>
+                    <div>
+                      <label style={{ display: "block", marginBottom: 4, fontSize: 11, fontWeight: 700, color: TEXT_MUTED }}>KEY</label>
+                      <input value={p.key} onChange={(e) => updateParam(p.id, "key", e.target.value)} placeholder="e.g. hero_title" style={{ ...inputStyle, background: WHITE, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", fontSize: 12 }} />
+                    </div>
+                    <div>
+                      <label style={{ display: "block", marginBottom: 4, fontSize: 11, fontWeight: 700, color: TEXT_MUTED }}>TYPE</label>
+                      <select value={p.type} onChange={(e) => updateParam(p.id, "type", e.target.value)} style={{ ...inputStyle, background: WHITE }}>
+                        {["String", "Integer", "Boolean", "Float", "JSON"].map((t) => <option key={t} value={t}>{t}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                    <div>
+                      <label style={{ display: "block", marginBottom: 4, fontSize: 11, fontWeight: 700, color: TEXT_MUTED }}>DESCRIPTION</label>
+                      <input value={p.description} onChange={(e) => updateParam(p.id, "description", e.target.value)} placeholder="What does this parameter control?" style={{ ...inputStyle, background: WHITE }} />
+                    </div>
+                    <div>
+                      <label style={{ display: "block", marginBottom: 4, fontSize: 11, fontWeight: 700, color: TEXT_MUTED }}>DEFAULT VALUE</label>
+                      <input value={p.defaultValue} onChange={(e) => updateParam(p.id, "defaultValue", e.target.value)} placeholder="e.g. true, 42, hello" style={{ ...inputStyle, background: WHITE, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", fontSize: 12 }} />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* SDK Code Snippet */}
+        <div style={{ ...cardStyle, padding: 24 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: TEXT, marginBottom: 4 }}>SDK Code Snippet</div>
+          <div style={{ fontSize: 12, color: TEXT_MUTED, marginBottom: 16 }}>Copy this snippet into your app to fetch schema values at runtime.</div>
+          <div style={{ display: "flex", gap: 4, marginBottom: 14, borderBottom: `1px solid ${BORDER}`, paddingBottom: 0 }}>
+            {["iOS", "Android", "Web", "React Native"].map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                style={{
+                  padding: "8px 14px", border: "none", borderRadius: "8px 8px 0 0", cursor: "pointer", fontSize: 12, fontWeight: activeTab === tab ? 700 : 400,
+                  background: activeTab === tab ? WHITE : "transparent",
+                  color: activeTab === tab ? TEXT : TEXT_MUTED,
+                  borderBottom: activeTab === tab ? `2px solid #4F46E5` : "2px solid transparent",
+                }}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+          <pre style={{ margin: 0, padding: 16, borderRadius: 10, background: "#1E293B", color: "#E2E8F0", fontSize: 12, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", overflowX: "auto", lineHeight: 1.7 }}>
+            {codeSnippets[activeTab]}
+          </pre>
+          <button
+            onClick={() => { try { navigator.clipboard.writeText(codeSnippets[activeTab]); } catch (_) {} }}
+            style={{ ...secondaryButtonStyle, marginTop: 10, padding: "7px 12px", fontSize: 12 }}
+          >
+            <CopyIcon />
+            Copy Snippet
+          </button>
+        </div>
+      </div>
+
+      {/* Sticky footer */}
+      <div style={{ position: "sticky", bottom: 0, background: WHITE, borderTop: `1px solid ${BORDER}`, padding: "14px 0", marginLeft: -28, marginRight: -28, paddingLeft: 28, paddingRight: 28, display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 10 }}>
+        <button onClick={onBack} style={secondaryButtonStyle}>Cancel</button>
+        <button onClick={handleSave} style={{ ...primaryButtonStyle }}>
+          <CheckIcon />
+          {isEdit ? "Save Changes" : "Save Schema"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── BrowseSchemasModal ────────────────────────────────────────────────────
+function BrowseSchemasModal({ schemas, onClose, onUseSchema }) {
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filtered = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return schemas;
+    return schemas.filter((s) => s.name.toLowerCase().includes(q) || s.key.toLowerCase().includes(q));
+  }, [schemas, searchQuery]);
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }} onClick={onClose}>
+      <div
+        style={{ background: WHITE, borderRadius: 16, width: "100%", maxWidth: 580, maxHeight: "82vh", display: "flex", flexDirection: "column", boxShadow: "0 8px 40px rgba(0,0,0,0.22)" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Modal header */}
+        <div style={{ padding: "20px 24px 16px", borderBottom: `1px solid ${BORDER}` }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+            <div style={{ fontSize: 16, fontWeight: 700, color: TEXT }}>Browse Schemas</div>
+            <button onClick={onClose} style={{ padding: 6, background: "transparent", border: "none", cursor: "pointer", color: TEXT_MUTED, borderRadius: 6, display: "flex" }}>
+              <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
+            </button>
+          </div>
+          <p style={{ fontSize: 13, color: TEXT_MUTED, margin: 0 }}>Pick a schema to pre-populate your configuration's parameters.</p>
+          {/* Search */}
+          <div style={{ position: "relative", marginTop: 14 }}>
+            <span style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", color: TEXT_MUTED, pointerEvents: "none" }}><SearchIcon /></span>
+            <input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search schemas…"
+              style={{ ...inputStyle, paddingLeft: 36, background: WHITE }}
+            />
+          </div>
+        </div>
+
+        {/* Schema list */}
+        <div style={{ overflowY: "auto", flex: 1, padding: "12px 12px" }}>
+          {filtered.length === 0 ? (
+            <div style={{ textAlign: "center", padding: 32, color: TEXT_MUTED, fontSize: 13 }}>No schemas match your search.</div>
+          ) : filtered.map((schema) => (
+            <div
+              key={schema.id}
+              style={{ padding: "14px 16px", borderRadius: 10, border: `1px solid ${BORDER}`, marginBottom: 8, display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, background: WHITE }}
+            >
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: TEXT }}>{schema.name}</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 3 }}>
+                  <code style={{ fontSize: 11, color: "#4F46E5", background: "#EEF2FF", border: "1px solid #C7D2FB", borderRadius: 4, padding: "1px 6px", fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace" }}>{schema.key}</code>
+                  <span style={{ fontSize: 11, color: TEXT_MUTED }}>{schema.parameters.length} param{schema.parameters.length !== 1 ? "s" : ""}</span>
+                </div>
+                {schema.description && <div style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 4 }}>{schema.description}</div>}
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 8 }}>
+                  {schema.sdks.map((sdk) => <SdkPill key={sdk} sdk={sdk} />)}
+                </div>
+              </div>
+              <button
+                onClick={() => { onUseSchema(schema); onClose(); }}
+                style={{ ...primaryButtonStyle, padding: "8px 14px", fontSize: 12, flexShrink: 0 }}
+              >
+                Use Schema
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [activeMenu, setActiveMenu] = useState("remote_config");
   const [remoteConfigView, setRemoteConfigView] = useState("list");
@@ -4760,6 +5345,10 @@ export default function App() {
   const [experiments, setExperiments] = useState(initialExperiments);
   const [openActionId, setOpenActionId] = useState(null);
   const [experienceHovered, setExperienceHovered] = useState(false);
+  const [devHovered, setDevHovered] = useState(false);
+  const [devSchemaView, setDevSchemaView] = useState("list");
+  const [selectedSchema, setSelectedSchema] = useState(null);
+  const [schemas, setSchemas] = useState(mockSchemas);
   const [toast, setToast] = useState(null);
   const [loadingAction, setLoadingAction] = useState(null);
   const [removeModal, setRemoveModal] = useState({ open: false, config: null });
@@ -4782,6 +5371,29 @@ export default function App() {
     setRemoteConfigView("list");
     setEditingConfig(null);
     setSelectedConfigReport(null);
+  };
+
+  const goToDevSchemaList = () => {
+    setActiveMenu("dev_remote_config");
+    setDevSchemaView("list");
+    setSelectedSchema(null);
+  };
+
+  const goToDevSchemaNew = (schema = null) => {
+    setActiveMenu("dev_remote_config");
+    setDevSchemaView("new");
+    setSelectedSchema(schema);
+  };
+
+  const handleSaveSchema = (data) => {
+    if (selectedSchema) {
+      setSchemas((prev) => prev.map((s) => s.id === selectedSchema.id ? { ...s, ...data, updated: formatToday() } : s));
+    } else {
+      const newSchema = { id: `s_${Date.now()}`, ...data, created: formatToday(), updated: formatToday() };
+      setSchemas((prev) => [newSchema, ...prev]);
+    }
+    setToast({ type: "success", message: selectedSchema ? "Schema updated." : "Schema created." });
+    goToDevSchemaList();
   };
 
   const goToRemoteConfigCreate = () => {
@@ -5087,6 +5699,25 @@ export default function App() {
   };
 
   const renderMainContent = () => {
+    if (activeMenu === "dev_remote_config") {
+      if (devSchemaView === "new") {
+        return (
+          <DevRemoteConfigNew
+            schema={selectedSchema}
+            onBack={goToDevSchemaList}
+            onSave={handleSaveSchema}
+          />
+        );
+      }
+      return (
+        <DevRemoteConfigList
+          schemas={schemas}
+          onCreateNew={() => goToDevSchemaNew(null)}
+          onViewSchema={(schema) => goToDevSchemaNew(schema)}
+        />
+      );
+    }
+
     if (activeMenu === "remote_config") {
       if (remoteConfigView === "create" || remoteConfigView === "edit") {
         return (
@@ -5134,6 +5765,7 @@ export default function App() {
         <CreateExperiment
           configs={configs}
           experiments={experiments}
+          schemas={schemas}
           onBack={() => setAbView("list")}
           onOpenRemoteConfigCreate={goToRemoteConfigCreate}
           onSaveDraft={saveNewExperimentDraft}
@@ -5301,7 +5933,48 @@ export default function App() {
             </div>
 
             <SidebarItem icon={<SettingsIcon />} label="Settings" trailing={<ChevronRightIcon />} />
-            <SidebarItem icon={<DeveloperIcon />} label="Developers" trailing={<ChevronRightIcon />} />
+
+            <div
+              style={{ position: "relative" }}
+              onMouseEnter={() => setDevHovered(true)}
+              onMouseLeave={() => setDevHovered(false)}
+            >
+              <SidebarItem
+                icon={<DeveloperIcon />}
+                label="Developers"
+                active={activeMenu === "dev_remote_config"}
+                trailing={<ChevronDownIcon />}
+              />
+              {devHovered && (
+                <div style={{ position: "absolute", left: "100%", top: 0, marginLeft: 12, width: 180, padding: 8, borderRadius: 12, background: WHITE, border: `1px solid ${BORDER}`, boxShadow: SHADOW, zIndex: 40 }}>
+                  {[
+                    { key: "dev_remote_config", label: "Remote Configuration", action: goToDevSchemaList },
+                  ].map((item) => (
+                    <button
+                      key={item.key}
+                      onClick={item.action}
+                      style={{
+                        width: "100%",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                        padding: "10px 10px",
+                        border: "none",
+                        borderRadius: 9,
+                        background: activeMenu === item.key ? PAGE_BG : "transparent",
+                        color: TEXT,
+                        cursor: "pointer",
+                        fontSize: 13,
+                        textAlign: "left",
+                      }}
+                    >
+                      <span style={{ color: TEXT_MUTED }}><DeveloperIcon /></span>
+                      <span style={{ flex: 1 }}>{item.label}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
