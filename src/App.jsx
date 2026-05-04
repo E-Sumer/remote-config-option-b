@@ -1168,8 +1168,8 @@ function RemoteConfigurationList({
           <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
             <div style={{ width: 5, height: 58, borderRadius: 999, background: "#3B82F6", marginTop: 2 }} />
             <div>
-              <h1 style={{ ...pageTitleStyle, color: "#111827", fontSize: 21 }}>Remote Configuration</h1>
-              <p style={pageDescriptionStyle}>Control app behavior and features without releasing a new version.</p>
+              <h1 style={{ ...pageTitleStyle, color: "#111827", fontSize: 21 }}>Feature Rollouts</h1>
+              <p style={pageDescriptionStyle}>Roll out configuration changes to specific segments or your entire user base.</p>
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "nowrap", marginTop: 18, position: "relative" }}>
@@ -1279,7 +1279,7 @@ function RemoteConfigurationList({
           </div>
         </div>
         <button onClick={onCreate} style={{ ...primaryButtonStyle, background: "#3B82F6" }}>
-          New Remote Configuration
+          + New Rollout
         </button>
       </div>
 
@@ -1292,7 +1292,7 @@ function RemoteConfigurationList({
           </svg>
           <input
             type="text"
-            placeholder="Search by configuration name"
+            placeholder="Search by rollout name..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             style={{
@@ -1334,9 +1334,9 @@ function RemoteConfigurationList({
 
       {configs.length === 0 ? (
         <EmptyState
-          title="No remote configurations yet"
-          description="Create your first configuration to start controlling app behavior without a release."
-          ctaLabel="New Remote Configuration"
+          title="No rollouts yet"
+          description="Create your first rollout to start delivering configuration changes."
+          ctaLabel="+ New Rollout"
           onClick={onCreate}
         />
       ) : filteredConfigs.length === 0 ? (
@@ -2028,7 +2028,9 @@ function RemoteConfigurationForm({
       <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 18 }}>
         <span style={{ color: "#6B7280", fontSize: 13 }}>Platform</span>
         <span style={{ color: "#D1D5DB", fontSize: 13 }}>›</span>
-        <span style={{ color: "#3B82F6", fontWeight: 500, fontSize: 13 }}>Remote Configuration</span>
+        <span style={{ color: "#6B7280", fontSize: 13, cursor: "pointer" }} onClick={onCancel}>Feature Rollouts</span>
+        <span style={{ color: "#D1D5DB", fontSize: 13 }}>›</span>
+        <span style={{ color: "#3B82F6", fontWeight: 500, fontSize: 13 }}>{mode === "edit" ? "Edit" : "New Rollout"}</span>
       </div>
 
       <div style={{ ...cardStyle, padding: "18px 18px 12px", marginBottom: 12 }}>
@@ -2037,13 +2039,13 @@ function RemoteConfigurationForm({
           <div style={{ flex: 1 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <h1 style={{ margin: 0, fontSize: 18, color: TEXT, fontWeight: 700 }}>
-                {mode === "edit" ? "Edit Remote Configuration" : "Create Remote Configuration"}
+                {mode === "edit" ? "Edit Feature Rollout" : "Create Feature Rollout"}
               </h1>
               <span style={{ padding: "2px 10px", borderRadius: 6, background: "#EFF6FF", color: "#3B82F6", fontSize: 13, fontWeight: 500 }}>
                 {versionLabel}
               </span>
             </div>
-            <p style={{ margin: "4px 0 0", color: TEXT_MUTED, fontSize: 13 }}>Create a configuration and control its rollout.</p>
+            <p style={{ margin: "4px 0 0", color: TEXT_MUTED, fontSize: 13 }}>Choose a config and define who receives it.</p>
           </div>
         </div>
       </div>
@@ -2057,8 +2059,8 @@ function RemoteConfigurationForm({
             </div>
           )}
           <div>
-            <div style={{ fontSize: 16, fontWeight: 600, color: step === 1 ? "#3B82F6" : "#9CA3AF" }}>Parameters & Keys</div>
-            <div style={{ fontSize: 13, color: step === 1 ? "#6B7280" : "#9CA3AF", marginTop: 2, marginLeft: 0 }}>Define the configuration your app will receive.</div>
+            <div style={{ fontSize: 16, fontWeight: 600, color: step === 1 ? "#3B82F6" : "#9CA3AF" }}>Config & Parameters</div>
+            <div style={{ fontSize: 13, color: step === 1 ? "#6B7280" : "#9CA3AF", marginTop: 2, marginLeft: 0 }}>Select a config and define its values.</div>
           </div>
         </div>
         {/* Arrow separator */}
@@ -2884,7 +2886,9 @@ function RemoteConfigurationDetail({ config, experiments, onBack, onEdit, onOpen
 
       {/* ── Breadcrumb ── */}
       <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 14, fontSize: 12, color: TEXT_MUTED }}>
-        <span style={{ cursor: "pointer", color: TEXT_MUTED }} onClick={onBack}>Remote Configuration</span>
+        <span style={{ color: TEXT_MUTED }}>Platform</span>
+        <span style={{ color: "#D1D5DB" }}>›</span>
+        <span style={{ cursor: "pointer", color: TEXT_MUTED }} onClick={onBack}>Feature Rollouts</span>
         <span style={{ color: "#D1D5DB" }}>›</span>
         <span style={{ color: "#3B82F6", fontWeight: 500 }}>{displayTitle}</span>
       </div>
@@ -3555,7 +3559,7 @@ function ExperimentList({
         <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
           <div style={{ width: 5, height: 58, borderRadius: 999, background: "#3B82F6", marginTop: 2, flexShrink: 0 }} />
           <div>
-            <h1 style={pageTitleStyle}>A/B Testing</h1>
+            <h1 style={pageTitleStyle}>A/B Tests</h1>
             <p style={pageDescriptionStyle}>Create experiments, test hypotheses, and measure impact on your key metrics.</p>
           </div>
         </div>
@@ -4510,9 +4514,11 @@ function ExperimentDetail({ experiment, onBack, onOpenRemoteConfig, linkedConfig
 
       {/* ── Breadcrumb ── */}
       <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 14, fontSize: 12, color: "#6B7280" }}>
-        <button onClick={onBack} style={{ background: "none", border: "none", padding: 0, color: "#6B7280", cursor: "pointer", fontSize: 12 }}>Experiments</button>
+        <span style={{ color: "#6B7280" }}>Platform</span>
         <span style={{ color: "#D1D5DB" }}>›</span>
-        <span style={{ color: "#374151", fontWeight: 500 }}>{experiment.name}</span>
+        <button onClick={onBack} style={{ background: "none", border: "none", padding: 0, color: "#6B7280", cursor: "pointer", fontSize: 12 }}>A/B Tests</button>
+        <span style={{ color: "#D1D5DB" }}>›</span>
+        <span style={{ color: "#3B82F6", fontWeight: 500 }}>{experiment.name}</span>
       </div>
 
       {/* ── Page Header ── */}
@@ -4890,12 +4896,12 @@ function DevRemoteConfigList({ schemas, onCreateNew, onViewSchema }) {
       {/* Header */}
       <div style={{ marginBottom: 24, display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16 }}>
         <div>
-          <h1 style={pageTitleStyle}>Remote Configuration Schemas</h1>
-          <p style={pageDescriptionStyle}>Define reusable parameter schemas to structure your remote configurations.</p>
+          <h1 style={pageTitleStyle}>Config Library</h1>
+          <p style={pageDescriptionStyle}>Define reusable configurations your SDK can fetch. These are the building blocks used in rollouts and experiments.</p>
         </div>
         <button onClick={onCreateNew} style={{ ...primaryButtonStyle, flexShrink: 0 }}>
           <PlusIcon />
-          New Schema
+          + New Config
         </button>
       </div>
 
@@ -4906,12 +4912,12 @@ function DevRemoteConfigList({ schemas, onCreateNew, onViewSchema }) {
           <input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search by schema name or key…"
+            placeholder="Search by config name or key..."
             style={{ ...inputStyle, paddingLeft: 36, background: WHITE }}
           />
         </div>
         <div style={{ fontSize: 13, color: TEXT_MUTED, whiteSpace: "nowrap" }}>
-          {filtered.length} schema{filtered.length !== 1 ? "s" : ""}
+          {filtered.length} config{filtered.length !== 1 ? "s" : ""}
         </div>
       </div>
 
@@ -4929,7 +4935,7 @@ function DevRemoteConfigList({ schemas, onCreateNew, onViewSchema }) {
             {filtered.length === 0 ? (
               <tr>
                 <td colSpan={7} style={{ padding: 40, textAlign: "center", color: TEXT_MUTED, fontSize: 13 }}>
-                  No schemas match your search.
+                  No configs match your search.
                 </td>
               </tr>
             ) : filtered.map((schema, idx) => (
@@ -5089,8 +5095,8 @@ ${params.slice(0, 3).map((p) => `const ${p.key || "param"} = config.get('${p.key
           Back
         </button>
         <div>
-          <h1 style={pageTitleStyle}>{isEdit ? "Edit Schema" : "New Schema"}</h1>
-          <p style={pageDescriptionStyle}>{isEdit ? `Editing ${schema.name}` : "Define a reusable parameter schema for your remote configurations."}</p>
+          <h1 style={pageTitleStyle}>{isEdit ? "Edit Config" : "New Config"}</h1>
+          <p style={pageDescriptionStyle}>{isEdit ? `Editing ${schema.name}` : "Define the keys and default values your SDK will fetch."}</p>
         </div>
       </div>
 
@@ -5255,7 +5261,7 @@ ${params.slice(0, 3).map((p) => `const ${p.key || "param"} = config.get('${p.key
         <button onClick={onBack} style={secondaryButtonStyle}>Cancel</button>
         <button onClick={handleSave} style={{ ...primaryButtonStyle }}>
           <CheckIcon />
-          {isEdit ? "Save Changes" : "Save Schema"}
+          {isEdit ? "Save Changes" : "Publish Config"}
         </button>
       </div>
     </div>
@@ -5895,10 +5901,10 @@ export default function App() {
               {experienceHovered && (
                 <div style={{ position: "absolute", left: "100%", top: 0, marginLeft: 12, width: 180, padding: 8, borderRadius: 12, background: WHITE, border: `1px solid ${BORDER}`, boxShadow: SHADOW, zIndex: 40 }}>
                   {[
-                    { key: "remote_config", label: "Remote Configuration", action: goToRemoteConfigList },
+                    { key: "remote_config", label: "Feature Rollouts", action: goToRemoteConfigList },
                     {
                       key: "ab_testing",
-                      label: "A/B Test",
+                      label: "A/B Tests",
                       action: () => {
                         setActiveMenu("ab_testing");
                         setAbView("list");
@@ -5948,7 +5954,7 @@ export default function App() {
               {devHovered && (
                 <div style={{ position: "absolute", left: "100%", top: 0, marginLeft: 12, width: 180, padding: 8, borderRadius: 12, background: WHITE, border: `1px solid ${BORDER}`, boxShadow: SHADOW, zIndex: 40 }}>
                   {[
-                    { key: "dev_remote_config", label: "Remote Configuration", action: goToDevSchemaList },
+                    { key: "dev_remote_config", label: "Config Library", action: goToDevSchemaList },
                   ].map((item) => (
                     <button
                       key={item.key}
