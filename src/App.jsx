@@ -4378,17 +4378,10 @@ function DevRemoteConfigList({ schemas, onCreateNew, onViewSchema }) {
                   <div style={{ fontSize: 13, fontWeight: 600, color: TEXT }}>{schema.name}</div>
                   <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 4 }}>
                     <code style={{ fontSize: 11, color: "#4F46E5", background: "#EEF2FF", border: "1px solid #C7D2FB", borderRadius: 5, padding: "1px 6px", fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace" }}>{schema.key}</code>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); handleCopyKey(schema.key); }}
-                      title="Copy key"
-                      style={{ padding: 3, background: "transparent", border: "none", cursor: "pointer", color: copiedKey === schema.key ? CTA_GREEN : TEXT_MUTED, display: "flex", alignItems: "center", borderRadius: 4 }}
-                    >
-                      {copiedKey === schema.key ? <CheckIcon /> : <CopyIcon />}
-                    </button>
                   </div>
                 </td>
-                <td style={{ padding: "14px 16px", maxWidth: 280 }}>
-                  <span style={{ fontSize: 12, color: TEXT_MUTED }}>{schema.description || "—"}</span>
+                <td style={{ padding: "14px 16px", maxWidth: 260 }}>
+                  <span title={schema.description} style={{ fontSize: 12, color: TEXT_MUTED, display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{schema.description || "—"}</span>
                 </td>
                 <td style={{ padding: "14px 16px" }}>
                   <SdkChips sdks={schema.sdks} />
@@ -4406,7 +4399,7 @@ function DevRemoteConfigList({ schemas, onCreateNew, onViewSchema }) {
                     {openActionId === schema.id && (
                       <div style={{ position: "absolute", right: 0, top: "calc(100% + 4px)", width: 160, background: WHITE, border: `1px solid ${BORDER}`, borderRadius: 10, boxShadow: "0 4px 16px rgba(0,0,0,0.13)", zIndex: 200, overflow: "hidden" }}>
                         {[
-                          { icon: <EditIcon />, label: "Edit Schema", action: () => { setOpenActionId(null); onViewSchema(schema); } },
+                          { icon: <EditIcon />, label: "Edit Config", action: () => { setOpenActionId(null); onViewSchema(schema); } },
                           { icon: <CopyIcon />, label: "Duplicate", action: () => setOpenActionId(null) },
                           { icon: <TrashIcon />, label: "Delete", danger: true, action: () => setOpenActionId(null) },
                         ].map((item) => (
@@ -4446,6 +4439,7 @@ function DevRemoteConfigNew({ schema, onBack, onSave }) {
     isEdit ? schema.parameters.map((p) => ({ ...p, collapsed: false })) : []
   );
   const [activeTab, setActiveTab] = useState("iOS");
+  const [snippetCopied, setSnippetCopied] = useState(false);
   const [errors, setErrors] = useState({});
 
   const AUTO_KEY_ACTIVE = !isEdit;
@@ -4509,6 +4503,11 @@ ${params.slice(0, 3).map((p) => `const ${p.key || "param"} = config.get('${p.key
 // Fetch schema: ${displayKey || "your_schema_key"}
 const config = await Netmera.getRemoteConfig('${displayKey || "your_schema_key"}');
 ${params.slice(0, 3).map((p) => `const ${p.key || "param"} = config.get('${p.key || "param"}');`).join("\n")}`,
+    Flutter: `import 'package:netmera_flutter_sdk/netmera.dart';
+
+// Fetch schema: ${displayKey || "your_schema_key"}
+final config = await Netmera.getRemoteConfig('${displayKey || "your_schema_key"}');
+${params.slice(0, 3).map((p) => `final ${p.key || "param"} = config.get('${p.key || "param"}');`).join("\n")}`,
   };
 
   return (
@@ -4636,13 +4635,16 @@ ${params.slice(0, 3).map((p) => `const ${p.key || "param"} = config.get('${p.key
                         </div>
                         <div>
                           <label style={{ display: "block", marginBottom: 4, fontSize: 11, fontWeight: 700, color: TEXT_MUTED }}>TYPE</label>
-                          <select
-                            value={p.type}
-                            onChange={(e) => handleParamTypeChange(p.id, e.target.value)}
-                            style={{ ...inputStyle, background: WHITE, appearance: "auto", WebkitAppearance: "auto" }}
-                          >
-                            {["String", "Integer", "Boolean", "JSON"].map((t) => <option key={t} value={t}>{t}</option>)}
-                          </select>
+                          <div style={{ position: "relative" }}>
+                            <select
+                              value={p.type}
+                              onChange={(e) => handleParamTypeChange(p.id, e.target.value)}
+                              style={{ ...inputStyle, background: WHITE, appearance: "none", WebkitAppearance: "none", paddingRight: 32, cursor: "pointer" }}
+                            >
+                              {["String", "Integer", "Boolean", "JSON"].map((t) => <option key={t} value={t}>{t}</option>)}
+                            </select>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={TEXT_MUTED} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}><path d="m6 9 6 6 6-6"/></svg>
+                          </div>
                         </div>
                       </div>
                     )}
@@ -4661,7 +4663,7 @@ ${params.slice(0, 3).map((p) => `const ${p.key || "param"} = config.get('${p.key
           <div style={{ fontSize: 13, fontWeight: 700, color: TEXT, marginBottom: 4 }}>SDK Code Snippet</div>
           <div style={{ fontSize: 12, color: TEXT_MUTED, marginBottom: 16 }}>Copy this snippet into your app to fetch schema values at runtime.</div>
           <div style={{ display: "flex", gap: 4, marginBottom: 14, borderBottom: `1px solid ${BORDER}`, paddingBottom: 0 }}>
-            {["iOS", "Android", "Web", "React Native"].map((tab) => (
+            {["iOS", "Android", "Web", "React Native", "Flutter"].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -4680,11 +4682,19 @@ ${params.slice(0, 3).map((p) => `const ${p.key || "param"} = config.get('${p.key
             {codeSnippets[activeTab]}
           </pre>
           <button
-            onClick={() => { try { navigator.clipboard.writeText(codeSnippets[activeTab]); } catch (_) {} }}
-            style={{ ...secondaryButtonStyle, marginTop: 10, padding: "7px 12px", fontSize: 12 }}
+            onClick={() => {
+              try { navigator.clipboard.writeText(codeSnippets[activeTab]); } catch (_) {}
+              setSnippetCopied(true);
+              setTimeout(() => setSnippetCopied(false), 2000);
+            }}
+            style={{ ...secondaryButtonStyle, background: WHITE, marginTop: 10, padding: "7px 12px", fontSize: 12, color: snippetCopied ? "#16A34A" : TEXT }}
           >
-            <CopyIcon />
-            Copy Snippet
+            {snippetCopied ? (
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#16A34A" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+            ) : (
+              <CopyIcon />
+            )}
+            {snippetCopied ? "Copied" : "Copy Snippet"}
           </button>
         </div>
       </div>
