@@ -4272,6 +4272,34 @@ function SdkPill({ sdk }) {
 }
 
 // ─── DevRemoteConfigList ───────────────────────────────────────────────────
+function SdkChips({ sdks }) {
+  const [tooltipVisible, setTooltipVisible] = useState(false);
+  const MAX_VISIBLE = 2;
+  const visible = sdks.slice(0, MAX_VISIBLE);
+  const overflow = sdks.slice(MAX_VISIBLE);
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 4, flexWrap: "nowrap" }}>
+      {visible.map((sdk) => <SdkPill key={sdk} sdk={sdk} />)}
+      {overflow.length > 0 && (
+        <div style={{ position: "relative" }}
+          onMouseEnter={() => setTooltipVisible(true)}
+          onMouseLeave={() => setTooltipVisible(false)}
+        >
+          <span style={{ display: "inline-flex", alignItems: "center", padding: "2px 8px", borderRadius: 999, background: "#F3F4F6", color: "#6B7280", fontSize: 11, fontWeight: 600, cursor: "default", border: "1px solid #E5E7EB" }}>
+            +{overflow.length}
+          </span>
+          {tooltipVisible && (
+            <div style={{ position: "absolute", bottom: "calc(100% + 6px)", left: "50%", transform: "translateX(-50%)", background: "#1F2937", color: WHITE, fontSize: 11, fontWeight: 500, padding: "6px 10px", borderRadius: 7, whiteSpace: "nowrap", zIndex: 300, boxShadow: "0 4px 12px rgba(0,0,0,0.2)", pointerEvents: "none" }}>
+              {overflow.join(", ")}
+              <div style={{ position: "absolute", top: "100%", left: "50%", transform: "translateX(-50%)", width: 0, height: 0, borderLeft: "4px solid transparent", borderRight: "4px solid transparent", borderTop: "4px solid #1F2937" }} />
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function DevRemoteConfigList({ schemas, onCreateNew, onViewSchema }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [copiedKey, setCopiedKey] = useState(null);
@@ -4304,13 +4332,12 @@ function DevRemoteConfigList({ schemas, onCreateNew, onViewSchema }) {
           <p style={pageDescriptionStyle}>Define reusable configurations your SDK can fetch. These are the building blocks used in rollouts and experiments.</p>
         </div>
         <button onClick={onCreateNew} style={{ ...primaryButtonStyle, flexShrink: 0 }}>
-          <PlusIcon />
-          + New Config
+          New Config
         </button>
       </div>
 
-      {/* Search + count */}
-      <div style={{ marginBottom: 16, display: "flex", alignItems: "center", gap: 12 }}>
+      {/* Search */}
+      <div style={{ marginBottom: 16 }}>
         <div style={{ position: "relative", flex: 1, maxWidth: 320 }}>
           <span style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", color: TEXT_MUTED, pointerEvents: "none" }}><SearchIcon /></span>
           <input
@@ -4320,9 +4347,6 @@ function DevRemoteConfigList({ schemas, onCreateNew, onViewSchema }) {
             style={{ ...inputStyle, paddingLeft: 36, background: WHITE }}
           />
         </div>
-        <div style={{ fontSize: 13, color: TEXT_MUTED, whiteSpace: "nowrap" }}>
-          {filtered.length} config{filtered.length !== 1 ? "s" : ""}
-        </div>
       </div>
 
       {/* Table */}
@@ -4330,7 +4354,7 @@ function DevRemoteConfigList({ schemas, onCreateNew, onViewSchema }) {
         <table style={{ width: "100%", borderCollapse: "collapse", display: "table", borderRadius: 14, overflow: "hidden" }}>
           <thead>
             <tr style={{ borderBottom: `1px solid ${BORDER}`, background: SOFT }}>
-              {["Name", "Key", "Parameters", "SDKs", "Created", "Last Updated", ""].map((h) => (
+              {["Name", "Description", "SDKs", "Created", "Last Updated", ""].map((h) => (
                 <th key={h} style={{ padding: "11px 16px", textAlign: "left", fontSize: 11, fontWeight: 700, color: TEXT_MUTED, letterSpacing: 0.5, whiteSpace: "nowrap" }}>{h}</th>
               ))}
             </tr>
@@ -4338,7 +4362,7 @@ function DevRemoteConfigList({ schemas, onCreateNew, onViewSchema }) {
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={7} style={{ padding: 40, textAlign: "center", color: TEXT_MUTED, fontSize: 13 }}>
+                <td colSpan={6} style={{ padding: 40, textAlign: "center", color: TEXT_MUTED, fontSize: 13 }}>
                   No configs match your search.
                 </td>
               </tr>
@@ -4352,28 +4376,22 @@ function DevRemoteConfigList({ schemas, onCreateNew, onViewSchema }) {
               >
                 <td style={{ padding: "14px 16px" }}>
                   <div style={{ fontSize: 13, fontWeight: 600, color: TEXT }}>{schema.name}</div>
-                  {schema.description && <div style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 2 }}>{schema.description}</div>}
-                </td>
-                <td style={{ padding: "14px 16px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <code style={{ fontSize: 12, color: "#4F46E5", background: "#EEF2FF", border: "1px solid #C7D2FB", borderRadius: 5, padding: "2px 7px", fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace" }}>{schema.key}</code>
+                  <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 4 }}>
+                    <code style={{ fontSize: 11, color: "#4F46E5", background: "#EEF2FF", border: "1px solid #C7D2FB", borderRadius: 5, padding: "1px 6px", fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace" }}>{schema.key}</code>
                     <button
                       onClick={(e) => { e.stopPropagation(); handleCopyKey(schema.key); }}
                       title="Copy key"
-                      style={{ padding: 4, background: "transparent", border: "none", cursor: "pointer", color: copiedKey === schema.key ? CTA_GREEN : TEXT_MUTED, display: "flex", alignItems: "center", borderRadius: 5 }}
+                      style={{ padding: 3, background: "transparent", border: "none", cursor: "pointer", color: copiedKey === schema.key ? CTA_GREEN : TEXT_MUTED, display: "flex", alignItems: "center", borderRadius: 4 }}
                     >
                       {copiedKey === schema.key ? <CheckIcon /> : <CopyIcon />}
                     </button>
                   </div>
                 </td>
-                <td style={{ padding: "14px 16px" }}>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: TEXT }}>{schema.parameters.length}</span>
-                  <span style={{ fontSize: 12, color: TEXT_MUTED, marginLeft: 4 }}>param{schema.parameters.length !== 1 ? "s" : ""}</span>
+                <td style={{ padding: "14px 16px", maxWidth: 280 }}>
+                  <span style={{ fontSize: 12, color: TEXT_MUTED }}>{schema.description || "—"}</span>
                 </td>
                 <td style={{ padding: "14px 16px" }}>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-                    {schema.sdks.map((sdk) => <SdkPill key={sdk} sdk={sdk} />)}
-                  </div>
+                  <SdkChips sdks={schema.sdks} />
                 </td>
                 <td style={{ padding: "14px 16px", fontSize: 12, color: TEXT_MUTED, whiteSpace: "nowrap" }}>{schema.created}</td>
                 <td style={{ padding: "14px 16px", fontSize: 12, color: TEXT_MUTED, whiteSpace: "nowrap" }}>{schema.updated}</td>
