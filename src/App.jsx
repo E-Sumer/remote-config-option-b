@@ -537,7 +537,7 @@ const mockSchemas = [
     created: formatDateOffset(18),
     updated: formatDateOffset(3),
     createdBy: "Emre Sumer",
-
+    status: "Active",
   },
   {
     id: "s2",
@@ -556,6 +556,7 @@ const mockSchemas = [
     created: formatDateOffset(55),
     updated: formatDateOffset(10),
     createdBy: "Burak Alparslan",
+    status: "Draft",
   },
   {
     id: "s3",
@@ -571,6 +572,7 @@ const mockSchemas = [
     created: formatDateOffset(32),
     updated: formatDateOffset(7),
     createdBy: "Ecemnaz Canbaz",
+    status: "Active",
   },
   {
     id: "s4",
@@ -588,6 +590,7 @@ const mockSchemas = [
     created: formatDateOffset(72),
     updated: formatDateOffset(14),
     createdBy: "Ahmet Seyyar",
+    status: "Draft",
   },
 ];
 
@@ -4275,6 +4278,16 @@ function SdkPill({ sdk }) {
   );
 }
 
+function SchemaStatusBadge({ status }) {
+  const isDraft = status === "Draft" || !status;
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "3px 9px", borderRadius: 999, fontSize: 11, fontWeight: 600, background: isDraft ? "#F3F4F6" : "#ECFDF5", color: isDraft ? "#6B7280" : "#059669", border: `1px solid ${isDraft ? "#E5E7EB" : "#A7F3D0"}` }}>
+      <span style={{ width: 6, height: 6, borderRadius: "50%", background: isDraft ? "#9CA3AF" : "#10B981", flexShrink: 0 }} />
+      {isDraft ? "Draft" : "Active"}
+    </span>
+  );
+}
+
 // ─── DevRemoteConfigList ───────────────────────────────────────────────────
 function DescriptionCell({ text }) {
   const [visible, setVisible] = useState(false);
@@ -4462,7 +4475,7 @@ function DevRemoteConfigList({ schemas, onCreateNew, onViewSchema }) {
         <table style={{ width: "100%", borderCollapse: "collapse", display: "table", borderRadius: 14, overflow: "visible" }}>
           <thead>
             <tr style={{ borderBottom: `1px solid ${BORDER}`, background: SOFT }}>
-              {["Name", "Description", "Created", "Last Updated", "Creator User", "Actions"].map((h) => (
+              {["Name", "Description", "Status", "Created", "Last Updated", "Creator User", "Actions"].map((h) => (
                 <th key={h} style={{ padding: "11px 16px", textAlign: h === "Actions" ? "center" : "left", fontSize: 11, fontWeight: 700, color: TEXT_MUTED, letterSpacing: 0.5, whiteSpace: "nowrap" }}>{h}</th>
               ))}
             </tr>
@@ -4470,7 +4483,7 @@ function DevRemoteConfigList({ schemas, onCreateNew, onViewSchema }) {
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={6} style={{ padding: 40, textAlign: "center", color: TEXT_MUTED, fontSize: 13 }}>
+                <td colSpan={7} style={{ padding: 40, textAlign: "center", color: TEXT_MUTED, fontSize: 13 }}>
                   No configs match your search.
                 </td>
               </tr>
@@ -4491,11 +4504,14 @@ function DevRemoteConfigList({ schemas, onCreateNew, onViewSchema }) {
                 <td style={{ padding: "14px 16px", maxWidth: 260 }}>
                   <DescriptionCell text={schema.description} />
                 </td>
+                <td style={{ padding: "14px 16px" }}>
+                  <SchemaStatusBadge status={schema.status} />
+                </td>
                 <td style={{ padding: "14px 16px", fontSize: 12, color: TEXT_MUTED, whiteSpace: "nowrap" }}>{schema.created}</td>
                 <td style={{ padding: "14px 16px", fontSize: 12, color: TEXT_MUTED, whiteSpace: "nowrap" }}>{schema.updated}</td>
                 <td style={{ padding: "14px 16px", fontSize: 12, color: TEXT_MUTED, whiteSpace: "nowrap" }}>{schema.createdBy || "—"}</td>
-                <td style={{ padding: "14px 16px" }} onClick={(e) => e.stopPropagation()}>
-                  <div style={{ position: "relative" }}>
+                <td style={{ padding: "14px 16px", textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
+                  <div style={{ position: "relative", display: "inline-block" }}>
                     <button
                       onClick={(e) => { e.stopPropagation(); setOpenActionId(openActionId === schema.id ? null : schema.id); }}
                       style={{ padding: 6, background: "transparent", border: "none", cursor: "pointer", color: TEXT_MUTED, borderRadius: 6, display: "flex", alignItems: "center" }}
@@ -4503,17 +4519,18 @@ function DevRemoteConfigList({ schemas, onCreateNew, onViewSchema }) {
                       <MoreIcon />
                     </button>
                     {openActionId === schema.id && (
-                      <div style={{ position: "absolute", right: 0, top: "calc(100% + 4px)", width: 160, background: WHITE, border: `1px solid ${BORDER}`, borderRadius: 10, boxShadow: "0 4px 16px rgba(0,0,0,0.13)", zIndex: 200, overflow: "hidden" }}>
+                      <div style={{ position: "absolute", right: 0, top: "calc(100% + 4px)", width: 180, background: WHITE, border: `1px solid ${BORDER}`, borderRadius: 10, boxShadow: "0 4px 16px rgba(0,0,0,0.13)", zIndex: 200, overflow: "hidden" }}>
                         {[
-                          { icon: <EditIcon />, label: "Edit", action: () => { setOpenActionId(null); onViewSchema(schema); } },
+                          { icon: <EditIcon />, label: "Edit", disabled: schema.status === "Active", action: () => { setOpenActionId(null); onViewSchema(schema); } },
                           { icon: <CopyIcon />, label: "Duplicate", action: () => setOpenActionId(null) },
                           { icon: <TrashIcon />, label: "Delete", danger: true, action: () => setOpenActionId(null) },
                         ].map((item) => (
                           <button
                             key={item.label}
-                            onClick={item.action}
-                            style={{ width: "100%", display: "flex", alignItems: "center", gap: 9, padding: "10px 12px", border: "none", background: "transparent", color: item.danger ? "#EF4444" : TEXT, fontSize: 13, cursor: "pointer", textAlign: "left" }}
-                            onMouseEnter={(e) => { e.currentTarget.style.background = item.danger ? "#FEF2F2" : SOFT; }}
+                            onClick={item.disabled ? undefined : item.action}
+                            disabled={item.disabled}
+                            style={{ width: "100%", display: "flex", alignItems: "center", gap: 9, padding: "10px 12px", border: "none", background: "transparent", color: item.disabled ? "#D1D5DB" : item.danger ? "#EF4444" : TEXT, fontSize: 13, cursor: item.disabled ? "not-allowed" : "pointer", textAlign: "left", opacity: item.disabled ? 0.6 : 1 }}
+                            onMouseEnter={(e) => { if (!item.disabled) e.currentTarget.style.background = item.danger ? "#FEF2F2" : SOFT; }}
                             onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
                           >
                             {item.icon}
@@ -4576,7 +4593,7 @@ function CustomSelect({ value, onChange, options }) {
 }
 
 // ─── DevRemoteConfigNew ────────────────────────────────────────────────────
-function DevRemoteConfigNew({ schema, onBack, onSave }) {
+function DevRemoteConfigNew({ schema, onBack, onSave, experiments = [], configs = [] }) {
   const isEdit = Boolean(schema);
 
   const [name, setName] = useState(isEdit ? schema.name : "");
@@ -4590,10 +4607,7 @@ function DevRemoteConfigNew({ schema, onBack, onSave }) {
   const [snippetCopied, setSnippetCopied] = useState(false);
   const [errors, setErrors] = useState({});
 
-  const AUTO_KEY_ACTIVE = !isEdit;
-  const derivedKey = name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
-
-  const displayKey = AUTO_KEY_ACTIVE ? (name.trim() ? derivedKey : "") : key;
+  const displayKey = key;
 
   const addParam = () => {
     setParams((prev) => [...prev, { id: `sp_new_${Date.now()}`, key: "", type: "String", defaultValue: "", collapsed: false }]);
@@ -4613,11 +4627,12 @@ function DevRemoteConfigNew({ schema, onBack, onSave }) {
 
   const [paramErrors, setParamErrors] = useState({});
 
-  const validate = () => {
+  const validate = (asDraft = false) => {
     const e = {};
     if (!name.trim()) e.name = "Config name is required.";
-    if (!displayKey) e.key = "Key is required.";
+    if (!key.trim()) e.key = "Key is required.";
     setErrors(e);
+    if (asDraft) { setParamErrors({}); return Object.keys(e).length === 0; }
     const pe = {};
     params.forEach((p) => {
       const f = {};
@@ -4631,8 +4646,20 @@ function DevRemoteConfigNew({ schema, onBack, onSave }) {
 
   const handleSave = () => {
     if (!validate()) return;
-    if (onSave) onSave({ name, key: displayKey, description, sdks, parameters: params });
+    if (onSave) onSave({ name, key, description, sdks, parameters: params, status: "Active" });
   };
+
+  const handleSaveAsDraft = () => {
+    if (!validate(true)) return;
+    if (onSave) onSave({ name, key, description, sdks, parameters: params, status: "Draft" });
+  };
+
+  // Check if this config is used in any experience
+  const schemaKey = isEdit ? schema.key : key.trim();
+  const linkedRollouts = configs.filter((c) => c.key === schemaKey && !c.archived);
+  const linkedExperiments = experiments.filter((e) => !e.archived && e.linkedConfigKey === schemaKey);
+  const isUsedInExperience = linkedRollouts.length > 0 || linkedExperiments.length > 0;
+  const isActive = isEdit && schema.status === "Active";
 
   const codeSnippets = {
     iOS: `import NetmeraSDK
@@ -4680,12 +4707,28 @@ ${params.slice(0, 3).map((p) => `final ${p.key || "param"} = config.get('${p.key
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 18, flex: 1, paddingBottom: 90 }}>
+        {/* Experience usage warning — Ant Design default style */}
+        {isEdit && isUsedInExperience && (
+          <div style={{ display: "flex", gap: 10, padding: "12px 16px", background: "#E6F4FF", border: "1px solid #91CAFF", borderRadius: 8 }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="#1677FF" style={{ flexShrink: 0, marginTop: 1 }}><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm0 15a1 1 0 110-2 1 1 0 010 2zm1-4a1 1 0 01-2 0V8a1 1 0 012 0v5z"/></svg>
+            <div style={{ fontSize: 13, color: "#0958D9", lineHeight: 1.6 }}>
+              <span style={{ fontWeight: 600 }}>This config is in use.</span>{" "}
+              It is currently linked to {linkedRollouts.length > 0 ? `${linkedRollouts.length} rollout${linkedRollouts.length > 1 ? "s" : ""}` : ""}{linkedRollouts.length > 0 && linkedExperiments.length > 0 ? " and " : ""}{linkedExperiments.length > 0 ? `${linkedExperiments.length} A/B test${linkedExperiments.length > 1 ? "s" : ""}` : ""}. Changes will affect live experiences. Only Draft configs can be freely edited.
+            </div>
+          </div>
+        )}
+
         {/* Basic Info */}
         <div style={{ ...cardStyle, padding: 24 }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: TEXT, marginBottom: 18 }}>Basic Information</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             <div>
-              <label style={{ display: "block", marginBottom: 6, fontSize: 12, fontWeight: 700, color: TEXT_MUTED }}>CONFIG NAME *</label>
+              <label style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6, fontSize: 12, fontWeight: 700, color: TEXT_MUTED }}>
+                CONFIG NAME *
+                <span title="A human-readable name for this configuration. Used for display purposes only — the SDK Key is what your app code references." style={{ display: "inline-flex", alignItems: "center", cursor: "help", color: "#9CA3AF" }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+                </span>
+              </label>
               <input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -4698,17 +4741,14 @@ ${params.slice(0, 3).map((p) => `final ${p.key || "param"} = config.get('${p.key
               <label style={{ display: "block", marginBottom: 6, fontSize: 12, fontWeight: 700, color: TEXT_MUTED }}>KEY (SDK IDENTIFIER)</label>
               <div style={{ position: "relative" }}>
                 <input
-                  value={displayKey}
-                  readOnly={AUTO_KEY_ACTIVE}
-                  onChange={(e) => !AUTO_KEY_ACTIVE && setKey(e.target.value)}
-                  placeholder="auto-generated from name"
-                  style={{ ...inputStyle, background: AUTO_KEY_ACTIVE ? "#F9FAFB" : WHITE, color: displayKey ? "#4F46E5" : TEXT_MUTED, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", fontSize: 12, borderColor: errors.key ? "#EF4444" : BORDER }}
+                  value={key}
+                  onChange={(e) => setKey(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "_"))}
+                  placeholder="e.g. product_page_layout"
+                  style={{ ...inputStyle, background: WHITE, color: key ? "#4F46E5" : TEXT_MUTED, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", fontSize: 12, borderColor: errors.key ? "#EF4444" : BORDER }}
                 />
-                {AUTO_KEY_ACTIVE && displayKey && (
-                  <span style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", fontSize: 11, color: TEXT_MUTED }}>auto</span>
-                )}
               </div>
               {errors.key && <div style={{ marginTop: 5, fontSize: 12, color: "#EF4444" }}>{errors.key}</div>}
+              <div style={{ marginTop: 5, fontSize: 11, color: TEXT_MUTED }}>Use lowercase letters, numbers, and underscores only. This is the key your SDK uses to fetch this config.</div>
             </div>
             <div>
               <label style={{ display: "block", marginBottom: 6, fontSize: 12, fontWeight: 700, color: TEXT_MUTED }}>DESCRIPTION</label>
@@ -4869,6 +4909,7 @@ ${params.slice(0, 3).map((p) => `final ${p.key || "param"} = config.get('${p.key
         <button onClick={onBack} style={{ ...secondaryButtonStyle, background: WHITE }}>Back</button>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <button onClick={onBack} style={{ ...secondaryButtonStyle, background: WHITE }}>Cancel</button>
+          <button onClick={handleSaveAsDraft} style={{ ...secondaryButtonStyle, background: WHITE }}>Save as Draft</button>
           <button onClick={handleSave} style={{ ...primaryButtonStyle }}>
             {isEdit ? "Save Changes" : "Publish Config"}
           </button>
@@ -5087,10 +5128,10 @@ export default function App() {
     if (selectedSchema) {
       setSchemas((prev) => prev.map((s) => s.id === selectedSchema.id ? { ...s, ...data, updated: formatToday() } : s));
     } else {
-      const newSchema = { id: `s_${Date.now()}`, ...data, created: formatToday(), updated: formatToday() };
+      const newSchema = { id: `s_${Date.now()}`, ...data, created: formatToday(), updated: formatToday(), createdBy: "Emre Sumer" };
       setSchemas((prev) => [newSchema, ...prev]);
     }
-    setToast({ type: "success", message: selectedSchema ? "Schema updated." : "Schema created." });
+    setToast({ type: "success", message: selectedSchema ? "Schema updated." : (data.status === "Draft" ? "Config saved as draft." : "Config published.") });
     goToDevSchemaList();
   };
 
@@ -5430,6 +5471,8 @@ export default function App() {
             schema={selectedSchema}
             onBack={goToDevSchemaList}
             onSave={handleSaveSchema}
+            experiments={experiments}
+            configs={configs}
           />
         );
       }
