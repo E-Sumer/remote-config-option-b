@@ -536,6 +536,7 @@ const mockSchemas = [
     ],
     created: formatDateOffset(18),
     updated: formatDateOffset(3),
+    createdBy: "Emre Sumer",
   },
   {
     id: "s2",
@@ -553,6 +554,7 @@ const mockSchemas = [
     ],
     created: formatDateOffset(55),
     updated: formatDateOffset(10),
+    createdBy: "Ayşe Kaya",
   },
   {
     id: "s3",
@@ -567,6 +569,7 @@ const mockSchemas = [
     ],
     created: formatDateOffset(32),
     updated: formatDateOffset(7),
+    createdBy: "Mehmet Demir",
   },
   {
     id: "s4",
@@ -583,6 +586,7 @@ const mockSchemas = [
     ],
     created: formatDateOffset(72),
     updated: formatDateOffset(14),
+    createdBy: "Emre Sumer",
   },
 ];
 
@@ -4281,9 +4285,9 @@ function DescriptionCell({ text }) {
       onMouseLeave={() => setVisible(false)}>
       <span style={{ fontSize: 12, color: TEXT_MUTED, display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{text}</span>
       {visible && (
-        <div style={{ position: "absolute", bottom: "calc(100% + 6px)", left: 0, background: "#1F2937", color: "#FFFFFF", fontSize: 11, fontWeight: 500, padding: "6px 10px", borderRadius: 7, whiteSpace: "nowrap", zIndex: 300, boxShadow: "0 4px 12px rgba(0,0,0,0.2)", pointerEvents: "none", maxWidth: 320 }}>
+        <div style={{ position: "absolute", bottom: "calc(100% + 8px)", left: "50%", transform: "translateX(-50%)", background: "#1F2937", color: "#FFFFFF", fontSize: 12, fontWeight: 500, padding: "10px 14px", borderRadius: 8, whiteSpace: "normal", wordBreak: "break-word", zIndex: 300, boxShadow: "0 4px 16px rgba(0,0,0,0.25)", pointerEvents: "none", width: 280, lineHeight: 1.5 }}>
           {text}
-          <div style={{ position: "absolute", top: "100%", left: 16, width: 0, height: 0, borderLeft: "4px solid transparent", borderRight: "4px solid transparent", borderTop: "4px solid #1F2937" }} />
+          <div style={{ position: "absolute", top: "100%", left: "50%", transform: "translateX(-50%)", width: 0, height: 0, borderLeft: "6px solid transparent", borderRight: "6px solid transparent", borderTop: "6px solid #1F2937" }} />
         </div>
       )}
     </div>
@@ -4375,7 +4379,7 @@ function DevRemoteConfigList({ schemas, onCreateNew, onViewSchema }) {
         <table style={{ width: "100%", borderCollapse: "collapse", display: "table", borderRadius: 14, overflow: "hidden" }}>
           <thead>
             <tr style={{ borderBottom: `1px solid ${BORDER}`, background: SOFT }}>
-              {["Name", "Description", "SDKs", "Created", "Last Updated", ""].map((h) => (
+              {["Name", "Description", "Created", "Last Updated", "Creator User", ""].map((h) => (
                 <th key={h} style={{ padding: "11px 16px", textAlign: "left", fontSize: 11, fontWeight: 700, color: TEXT_MUTED, letterSpacing: 0.5, whiteSpace: "nowrap" }}>{h}</th>
               ))}
             </tr>
@@ -4404,11 +4408,9 @@ function DevRemoteConfigList({ schemas, onCreateNew, onViewSchema }) {
                 <td style={{ padding: "14px 16px", maxWidth: 260 }}>
                   <DescriptionCell text={schema.description} />
                 </td>
-                <td style={{ padding: "14px 16px" }}>
-                  <SdkChips sdks={schema.sdks} />
-                </td>
                 <td style={{ padding: "14px 16px", fontSize: 12, color: TEXT_MUTED, whiteSpace: "nowrap" }}>{schema.created}</td>
                 <td style={{ padding: "14px 16px", fontSize: 12, color: TEXT_MUTED, whiteSpace: "nowrap" }}>{schema.updated}</td>
+                <td style={{ padding: "14px 16px", fontSize: 12, color: TEXT_MUTED, whiteSpace: "nowrap" }}>{schema.createdBy || "—"}</td>
                 <td style={{ padding: "14px 16px" }} onClick={(e) => e.stopPropagation()}>
                   <div style={{ position: "relative" }}>
                     <button
