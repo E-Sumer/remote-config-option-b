@@ -808,18 +808,10 @@ function StatusBadge({ status }) {
 }
 
 function ConfigStatusBadge({ status }) {
-  const palette = {
-    Active: { bg: "#DBEAFE", color: "#1D4ED8", dot: "#3B82F6" },
-    Live: { bg: "#DBEAFE", color: "#1D4ED8", dot: "#3B82F6" },
-    Draft: { bg: "#F3F4F6", color: "#6B7280", dot: "#9CA3AF" },
-    Stopped: { bg: "#F3F4F6", color: "#6B7280", dot: "#9CA3AF" },
-    Archived: { bg: "#F3F4F6", color: "#6B7280", dot: "#9CA3AF" },
-    "Rolled Out": { bg: "#DCFCE7", color: "#166534", dot: "#22C55E" },
-    Paused: { bg: "#FEF3C7", color: "#92400E", dot: "#F59E0B" },
-    Running: { bg: "#DCFCE7", color: "#166534", dot: "#22C55E", pulse: true },
-    Completed: { bg: "#DBEAFE", color: "#1D4ED8", dot: "#3B82F6" },
-  };
-  const current = palette[status] || palette.Draft;
+  const isActive = status === "Live" || status === "Active" || status === "Rolled Out";
+  const styles = isActive
+    ? { bg: "#DCFCE7", color: "#166534", dot: "#22C55E" }
+    : { bg: "#F3F4F6", color: "#6B7280", dot: "#9CA3AF" };
   return (
     <span style={{
       display: "inline-flex",
@@ -829,13 +821,13 @@ function ConfigStatusBadge({ status }) {
       minWidth: 56,
       padding: "4px 10px",
       borderRadius: 999,
-      background: current.bg,
-      color: current.color,
+      background: styles.bg,
+      color: styles.color,
       fontSize: 11,
       fontWeight: 600,
     }}>
-      <span className={current.pulse ? "status-dot-pulse" : undefined} style={{ width: 6, height: 6, borderRadius: "50%", background: current.dot }} />
-      {status === "Live" ? "Active" : status === "Stopped" ? "Archived" : status}
+      <span style={{ width: 6, height: 6, borderRadius: "50%", background: styles.dot }} />
+      {isActive ? "Active" : "Draft"}
     </span>
   );
 }
@@ -1007,7 +999,6 @@ function RemoteConfigurationList({
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedRows, setSelectedRows] = useState(new Set());
 
   const customStart = parseInputDate(customStartDate);
   const customEnd = parseInputDate(customEndDate);
@@ -1180,11 +1171,6 @@ function RemoteConfigurationList({
     </div>
   );
 
-  const hasActiveFilter = activeDateFilter !== "30D" || searchQuery.trim() !== "";
-  const allChecked = pagedConfigs.length > 0 && pagedConfigs.every((c) => selectedRows.has(c.id));
-  const someChecked = selectedRows.size > 0;
-  const toggleRow = (id) => setSelectedRows((prev) => { const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); return next; });
-  const toggleAll = () => { if (allChecked) setSelectedRows(new Set()); else setSelectedRows(new Set(pagedConfigs.map((c) => c.id))); };
 
   return (
     <div>
@@ -1229,13 +1215,6 @@ function RemoteConfigurationList({
             </button>
           );
         })}
-        {hasActiveFilter && (
-          <button onClick={() => { setActiveDateFilter("30D"); setLastPresetFilter("30D"); setSearchQuery(""); setCustomStartDate(""); setCustomEndDate(""); }}
-            style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 999, background: "#EFF6FF", color: "#3B82F6", border: "1px solid #BFDBFE", fontSize: 11, fontWeight: 600, cursor: "pointer", height: 28 }}>
-            Active filters
-            <svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
-          </button>
-        )}
         {isCustomPickerOpen && (
           <div
             onClick={(event) => event.stopPropagation()}
@@ -1257,20 +1236,6 @@ function RemoteConfigurationList({
         )}
       </div>
 
-      {/* Bulk action toolbar */}
-      {someChecked && (
-        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", borderRadius: 10, background: "#EFF6FF", border: "1px solid #BFDBFE", marginBottom: 12 }}>
-          <span style={{ fontSize: 13, fontWeight: 600, color: "#1D4ED8" }}>{selectedRows.size} selected</span>
-          <div style={{ width: 1, height: 16, background: "#BFDBFE" }} />
-          {["Duplicate", "Archive", "Export"].map((label) => (
-            <button key={label} onClick={() => console.log(label, [...selectedRows])}
-              style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 7, border: "1px solid #BFDBFE", background: WHITE, color: "#1D4ED8", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
-              {label}
-            </button>
-          ))}
-          <button onClick={() => setSelectedRows(new Set())} style={{ marginLeft: "auto", padding: "4px 10px", borderRadius: 7, border: "none", background: "transparent", color: TEXT_MUTED, fontSize: 12, cursor: "pointer" }}>Clear</button>
-        </div>
-      )}
 
       {configs.length === 0 ? (
         <EmptyState title="No rollouts yet" description="Create your first rollout to start delivering configuration changes." ctaLabel="+ New Rollout" onClick={onCreate} />
@@ -1287,18 +1252,15 @@ function RemoteConfigurationList({
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, borderRadius: 12, overflow: "hidden", display: "table" }}>
               <thead>
                 <tr style={{ background: WHITE }}>
-                  <th style={{ padding: "14px 12px 14px 18px", width: 36, borderBottom: `1px solid ${BORDER}` }}>
-                    <input type="checkbox" checked={allChecked} onChange={toggleAll} style={{ cursor: "pointer", width: 15, height: 15 }} />
-                  </th>
                   {[
                     { key: "status", label: "Status", sortable: true },
                     { key: "name", label: "Rollout Name", sortable: true },
                     { key: "created", label: "Create Date", sortable: true },
                     { key: "updated", label: "Update Date", sortable: true },
                     { key: "creator", label: "Creator", sortable: true },
-                    { key: "actions", label: "", sortable: false },
+                    { key: "actions", label: "Actions", sortable: false },
                   ].map((col) => (
-                    <th key={col.key} style={{ padding: "14px 16px 14px 0", textAlign: "left", fontSize: 11, fontWeight: 600, color: TEXT_MUTED, borderBottom: `1px solid ${BORDER}`, whiteSpace: "nowrap" }}>
+                    <th key={col.key} style={{ padding: "14px 18px", textAlign: col.key === "actions" ? "center" : "left", fontSize: 11, fontWeight: 600, color: TEXT_MUTED, borderBottom: `1px solid ${BORDER}`, whiteSpace: "nowrap" }}>
                       {col.sortable ? (
                         <button onClick={() => handleSort(col.key)} style={{ border: "none", background: "transparent", padding: 0, margin: 0, color: "inherit", fontSize: "inherit", fontWeight: "inherit", cursor: "pointer", display: "inline-flex", alignItems: "center" }}>
                           {col.label}<SortIndicator active={sortBy === col.key} direction={sortDir} />
@@ -1309,54 +1271,37 @@ function RemoteConfigurationList({
                 </tr>
               </thead>
               <tbody>
-                {pagedConfigs.map((config) => {
-                  const isDraft = config.status === "Draft";
-                  return (
-                    <tr key={config.id} onClick={() => onRowClick(config)} style={{ borderBottom: `1px solid ${BORDER}`, cursor: "pointer" }}
-                      onMouseEnter={(e) => { e.currentTarget.style.background = "#F9FAFB"; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}>
-                      <td style={{ padding: "14px 12px 14px 18px", width: 36 }} onClick={(e) => e.stopPropagation()}>
-                        <input type="checkbox" checked={selectedRows.has(config.id)} onChange={() => toggleRow(config.id)} style={{ cursor: "pointer", width: 15, height: 15 }} />
-                      </td>
-                      <td style={{ padding: "14px 16px 14px 0" }}><ConfigStatusBadge status={config.status} /></td>
-                      <td style={{ padding: "14px 16px 14px 0", maxWidth: 280 }}>
-                        <div style={{ fontSize: 13, fontWeight: 600, color: TEXT }}>{config.name}</div>
-                        {config.description && <div style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 260 }}>{config.description}</div>}
-                      </td>
-                      <td style={{ padding: "14px 16px 14px 0", whiteSpace: "nowrap" }}>
-                        <span title={relativeDateLabel(config.created)} style={{ fontSize: 13, color: TEXT }}>{formatPrettyDate(config.created)}</span>
-                      </td>
-                      <td style={{ padding: "14px 16px 14px 0", whiteSpace: "nowrap" }}>
-                        <span title={relativeDateLabel(config.updated)} style={{ fontSize: 13, color: TEXT }}>{formatPrettyDate(config.updated)}</span>
-                      </td>
-                      <td style={{ padding: "14px 16px 14px 0" }}>
-                        <span style={{ fontSize: 13, color: TEXT, display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 140 }} title={config.creator}>{config.creator}</span>
-                      </td>
-                      <td style={{ padding: "10px 18px 10px 0", whiteSpace: "nowrap" }} onClick={(e) => e.stopPropagation()}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 6, justifyContent: "flex-end" }}>
-                          {isDraft && (
-                            <button title="Publish rollout" onClick={() => onEdit(config)}
-                              style={{ padding: "4px 10px", borderRadius: 6, border: "1px solid #22C55E", background: "#F0FDF4", color: "#15803D", fontSize: 11, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}>
-                              Publish
-                            </button>
-                          )}
-                          <button title="Edit rollout" onClick={() => onEdit(config)}
-                            style={{ width: 28, height: 28, borderRadius: 7, border: `1px solid ${BORDER}`, background: WHITE, color: TEXT_MUTED, display: "inline-flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
-                            onMouseEnter={(e) => { e.currentTarget.style.background = "#F3F4F6"; e.currentTarget.style.color = TEXT; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.background = WHITE; e.currentTarget.style.color = TEXT_MUTED; }}>
-                            <EditIcon />
-                          </button>
-                          <button title="View rollout" onClick={() => onRowClick(config)}
-                            style={{ width: 28, height: 28, borderRadius: 7, border: `1px solid ${BORDER}`, background: WHITE, color: TEXT_MUTED, display: "inline-flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
-                            onMouseEnter={(e) => { e.currentTarget.style.background = "#F3F4F6"; e.currentTarget.style.color = TEXT; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.background = WHITE; e.currentTarget.style.color = TEXT_MUTED; }}>
-                            <ChevronRightIcon />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
+                {pagedConfigs.map((config) => (
+                  <tr key={config.id} onClick={() => onRowClick(config)} style={{ borderBottom: `1px solid ${BORDER}`, cursor: "pointer" }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = "#F9FAFB"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}>
+                    <td style={{ padding: "14px 18px" }}><ConfigStatusBadge status={config.status} /></td>
+                    <td style={{ padding: "14px 18px", maxWidth: 280 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: TEXT }}>{config.name}</div>
+                      {config.description && <div style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 260 }}>{config.description}</div>}
+                    </td>
+                    <td style={{ padding: "14px 18px", whiteSpace: "nowrap" }}>
+                      <span title={relativeDateLabel(config.created)} style={{ fontSize: 13, color: TEXT }}>{formatPrettyDate(config.created)}</span>
+                    </td>
+                    <td style={{ padding: "14px 18px", whiteSpace: "nowrap" }}>
+                      <span title={relativeDateLabel(config.updated)} style={{ fontSize: 13, color: TEXT }}>{formatPrettyDate(config.updated)}</span>
+                    </td>
+                    <td style={{ padding: "14px 18px" }}>
+                      <span style={{ fontSize: 13, color: TEXT, display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 140 }} title={config.creator}>{config.creator}</span>
+                    </td>
+                    <td style={{ padding: "10px 18px", width: 88, textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
+                      <RemoteConfigActionMenu
+                        config={config}
+                        isOpen={openActionId === config.id}
+                        onToggle={(id) => setOpenActionId(openActionId === id ? null : id)}
+                        onEdit={onEdit}
+                        onClone={onClone}
+                        onRemove={onRemove}
+                        loadingAction={actionLoading?.id === config.id ? actionLoading.type : null}
+                      />
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
@@ -2649,9 +2594,6 @@ function RemoteConfigurationForm({
 }
 
 function RemoteConfigurationDetail({ config, experiments, onBack, onEdit, onOpenExperiment }) {
-  const [configTab, setConfigTab] = useState("configuration");
-  const [keysExpanded, setKeysExpanded] = useState(true);
-  const [versionExpanded, setVersionExpanded] = useState(true);
   const [copiedKey, setCopiedKey] = useState(false);
 
   const linkedExperiments = experiments.filter((e) => !e.archived && e.linkedConfigKey === config.key);
@@ -2659,78 +2601,13 @@ function RemoteConfigurationDetail({ config, experiments, onBack, onEdit, onOpen
   const rolloutPct = config.rollout ?? 100;
   const displayTitle = config.name;
 
-  const toEventLabel = (key) => key ? key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) : "—";
-
   const handleCopyKey = () => {
     try { navigator.clipboard.writeText(config.key); } catch (_) {}
     setCopiedKey(true);
     setTimeout(() => setCopiedKey(false), 1800);
   };
 
-  // Campaign banner logic
-  const hasLinkedCampaign = linkedExperiments.length > 0;
-  const campaignName = linkedExperiments[0]?.name || "Spring Onboarding Campaign";
-  const showAmberBanner = config.status === "Live" && hasLinkedCampaign;
-  const showNeutralBanner = config.status !== "Live" && hasLinkedCampaign;
-
-  // Tab style helper
-  const tabStyle = (key) => ({
-    display: "inline-flex", alignItems: "center", gap: 7,
-    padding: "9px 16px", borderRadius: 9, fontSize: 13, fontWeight: 600, cursor: "pointer",
-    border: configTab === key ? "1px solid #3B82F6" : `1px solid ${BORDER}`,
-    background: configTab === key ? "#3B82F6" : WHITE,
-    color: configTab === key ? WHITE : TEXT_MUTED,
-    outline: "none",
-  });
-
   const ghostButtonStyle = { ...secondaryButtonStyle, background: WHITE, border: "1px solid #D1D5DB", color: "#374151" };
-
-  // Status-aware primary CTA
-  const primaryCTA = (() => {
-    if (config.status === "Draft") return { label: "Publish Rollout", bg: "#16A34A", hoverBg: "#15803D" };
-    if (config.status === "Live") return { label: "Pause Rollout", bg: "#D97706", hoverBg: "#B45309" };
-    return { label: "Re-activate Rollout", bg: "#2563EB", hoverBg: "#1D4ED8" };
-  })();
-
-  // Version History sidebar — rendered in both tabs
-  const versionHistorySidebar = (
-    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-      <div style={{ ...cardStyle, padding: 0, overflow: "hidden" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px", cursor: "pointer", borderBottom: versionExpanded ? `1px solid ${BORDER}` : "none" }} onClick={() => setVersionExpanded((v) => !v)}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke={TEXT_MUTED} strokeWidth="1.4"/><path d="M8 5v3.5l2.5 1.5" stroke={TEXT_MUTED} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
-            <span style={{ fontSize: 13, fontWeight: 700, color: TEXT }}>Version History</span>
-            <span style={{ background: "#EFF6FF", color: "#3B82F6", borderRadius: 999, fontSize: 11, fontWeight: 700, padding: "1px 7px" }}>1</span>
-          </div>
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style={{ transform: versionExpanded ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}><path d="M4 6l4 4 4-4" stroke={TEXT_MUTED} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>
-        </div>
-        {versionExpanded && (
-          <div style={{ padding: "14px 16px", display: "flex", flexDirection: "column", gap: 12 }}>
-            <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
-              <div style={{ flexShrink: 0, marginTop: 2 }}>
-                <div style={{ width: 12, height: 12, borderRadius: "50%", background: "#3B82F6", border: "2.5px solid #BFDBFE" }} />
-              </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 4, flexWrap: "wrap" }}>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: TEXT }}>v{Number(config.version || 1).toFixed(1)} (Current)</span>
-                  <ConfigStatusBadge status={config.status} />
-                </div>
-                <div style={{ fontSize: 11, color: TEXT_MUTED, marginBottom: 8 }}>{formatPrettyDate(config.created) || "—"} · {config.creator || "John Smith"}</div>
-                <div style={{ display: "flex", gap: 6 }}>
-                  <button style={{ fontSize: 11, padding: "4px 9px", borderRadius: 6, border: "1px solid #E5E7EB", background: WHITE, color: "#374151", cursor: "pointer", fontWeight: 500 }}>Compare</button>
-                  <button style={{ fontSize: 11, padding: "4px 9px", borderRadius: 6, border: "1px solid #E5E7EB", background: WHITE, color: "#374151", cursor: "pointer", fontWeight: 500 }}>Copy link</button>
-                  <button style={{ fontSize: 11, padding: "4px 9px", borderRadius: 6, border: "1px solid #E5E7EB", background: WHITE, color: "#374151", cursor: "pointer", fontWeight: 500 }}>Restore</button>
-                </div>
-              </div>
-            </div>
-            <div style={{ fontSize: 11, color: "#9CA3AF", padding: "8px 0 0", borderTop: `1px dashed #E5E7EB`, textAlign: "center" }}>
-              Only 1 version exists. Previous versions appear here after edits.
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
 
   return (
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100%" }}>
@@ -2743,29 +2620,6 @@ function RemoteConfigurationDetail({ config, experiments, onBack, onEdit, onOpen
         <span style={{ color: "#D1D5DB" }}>›</span>
         <span style={{ color: "#3B82F6", fontWeight: 500 }}>{displayTitle}</span>
       </div>
-
-      {/* ── Campaign banners ── */}
-      {showAmberBanner && (
-        <div style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "12px 16px", borderRadius: 10, border: "1px solid #FCD34D", background: "#FFFBEB", marginBottom: 18 }}>
-          <span style={{ fontSize: 16, flexShrink: 0 }}>⚠️</span>
-          <div style={{ flex: 1 }}>
-            <span style={{ fontSize: 13, fontWeight: 700, color: "#92400E" }}>Used in active campaign "{campaignName}" — </span>
-            <span style={{ fontSize: 13, color: "#B45309" }}>Changes to this rollout may impact a live campaign. Review before modifying.</span>
-            <button onClick={() => {}} style={{ marginLeft: 12, fontSize: 12, fontWeight: 600, color: "#92400E", background: "transparent", border: "none", cursor: "pointer", textDecoration: "underline", padding: 0 }}>View campaign →</button>
-          </div>
-        </div>
-      )}
-      {showNeutralBanner && (
-        <div style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "11px 16px", borderRadius: 10, border: "1px solid #E5E7EB", background: "#F9FAFB", marginBottom: 18 }}>
-          <svg width="15" height="15" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0, marginTop: 1, color: "#9CA3AF" }}>
-            <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.4"/>
-            <path d="M8 7v4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
-            <circle cx="8" cy="5" r="0.75" fill="currentColor"/>
-          </svg>
-          <span style={{ fontSize: 13, color: "#6B7280" }}>This rollout is referenced by campaign "{campaignName}". </span>
-          <button onClick={() => {}} style={{ marginLeft: 4, fontSize: 12, fontWeight: 600, color: "#6B7280", background: "transparent", border: "none", cursor: "pointer", textDecoration: "underline", padding: 0 }}>View campaign →</button>
-        </div>
-      )}
 
       {/* ── Page title section ── */}
       <div style={{ marginBottom: 20 }}>
@@ -2798,28 +2652,8 @@ function RemoteConfigurationDetail({ config, experiments, onBack, onEdit, onOpen
         </div>
       </div>
 
-      {/* ── Tab navigation ── */}
-      <div style={{ display: "flex", gap: 8, marginBottom: 22 }}>
-        <button onClick={() => setConfigTab("configuration")} style={tabStyle("configuration")}>
-          <svg width="14" height="14" viewBox="0 0 18 18" fill="none">
-            <path d="M9 11.5A2.5 2.5 0 1 0 9 6.5a2.5 2.5 0 0 0 0 5Z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
-            <path d="M14.7 11a1 1 0 0 0 .2 1.1l.04.04a1.5 1.5 0 1 1-2.12 2.12l-.04-.04a1 1 0 0 0-1.1-.2 1 1 0 0 0-.6.91V15a1.5 1.5 0 1 1-3 0v-.07a1 1 0 0 0-.65-.91 1 1 0 0 0-1.1.2l-.04.04a1.5 1.5 0 1 1-2.12-2.12l.04-.04A1 1 0 0 0 4.4 11a1 1 0 0 0-.91-.6H3a1.5 1.5 0 1 1 0-3h.07a1 1 0 0 0 .91-.65 1 1 0 0 0-.2-1.1l-.04-.04A1.5 1.5 0 1 1 5.86 3.5l.04.04A1 1 0 0 0 7 3.74a1 1 0 0 0 .6-.91V3a1.5 1.5 0 1 1 3 0v.07a1 1 0 0 0 .6.91 1 1 0 0 0 1.1-.2l.04-.04a1.5 1.5 0 1 1 2.12 2.12l-.04.04A1 1 0 0 0 14.26 7a1 1 0 0 0 .91.6H15a1.5 1.5 0 1 1 0 3h-.07a1 1 0 0 0-.91.6l-.02-.16Z" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-          Configuration
-        </button>
-        <button onClick={() => setConfigTab("report")} style={tabStyle("report")}>
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-            <rect x="2" y="1.5" width="12" height="13" rx="2" stroke="currentColor" strokeWidth="1.5"/>
-            <path d="M5 5.5h6M5 8h6M5 10.5h4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
-          </svg>
-          Details
-        </button>
-      </div>
-
-      {/* ══ CONFIGURATION TAB ══ */}
-      {configTab === "configuration" && (
-        <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 300px", gap: 18, flex: 1 }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+      {/* ── Content ── */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 18, flex: 1 }}>
 
             {/* Overview card — grouped sections */}
             <div style={{ ...cardStyle, padding: 22 }}>
@@ -2926,149 +2760,13 @@ function RemoteConfigurationDetail({ config, experiments, onBack, onEdit, onOpen
               )}
             </div>
           </div>
-          {/* Right sidebar — Version History always visible */}
-          {versionHistorySidebar}
-        </div>
-      )}
-
-      {/* ══ DETAILS TAB ══ */}
-      {configTab === "report" && (
-        <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 300px", gap: 18, flex: 1 }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-
-            {/* Rollout Adoption metrics */}
-            <div style={{ ...cardStyle, padding: 22 }}>
-              <h3 style={{ margin: "0 0 14px", fontSize: 15, fontWeight: 700, color: TEXT }}>Rollout Adoption</h3>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 14, marginBottom: 14 }}>
-                    {[
-                      { label: "Users Receiving Config", value: config.status === "Live" ? "47,210" : "—", sub: config.status === "Live" ? "of ~50,000 target" : "Config is not live", green: config.status === "Live" },
-                      { label: "Fetch Success Rate", value: config.status === "Live" ? "99.7%" : "—", sub: config.status === "Live" ? "Last 24 hours" : "No data yet", green: config.status === "Live" },
-                    ].map((stat) => (
-                      <div key={stat.label} style={{ padding: "14px 16px", borderRadius: 10, border: `1px solid ${BORDER}`, background: SOFT }}>
-                        <div style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 6 }}>{stat.label}</div>
-                        <div style={{ fontSize: 22, fontWeight: 700, color: stat.green ? "#15803D" : TEXT_MUTED }}>{stat.value}</div>
-                        <div style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 3 }}>{stat.sub}</div>
-                      </div>
-                    ))}
-                  </div>
-                  {/* Coverage vs target progress */}
-                  <div style={{ padding: "14px 16px", borderRadius: 10, border: `1px solid ${BORDER}`, background: SOFT, marginBottom: 14 }}>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 10 }}>Rollout Coverage vs. Target</div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                      <div style={{ flex: 1, height: 8, borderRadius: 999, background: "#E5E7EB", overflow: "hidden" }}>
-                        <div style={{ width: config.status === "Live" ? "94.4%" : "0%", height: "100%", borderRadius: 999, background: "#22C55E" }} />
-                      </div>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: TEXT, minWidth: 44 }}>{config.status === "Live" ? "94.4%" : "0%"}</span>
-                    </div>
-                    <div style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 5 }}>47,210 reached / 50,000 target</div>
-                  </div>
-                  {/* Adoption sparkline */}
-                  <div style={{ padding: "14px 16px", borderRadius: 10, border: `1px solid ${BORDER}`, background: SOFT }}>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 10 }}>Adoption Over Time</div>
-                    {config.status === "Live" ? (
-                      <svg width="100%" height="52" viewBox="0 0 300 52" preserveAspectRatio="none">
-                        <defs>
-                          <linearGradient id="sparkGrad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#3B82F6" stopOpacity="0.25"/>
-                            <stop offset="100%" stopColor="#3B82F6" stopOpacity="0.02"/>
-                          </linearGradient>
-                        </defs>
-                        <path d="M0 48 C40 44 60 36 90 26 S140 14 180 10 S250 5 300 4" stroke="#3B82F6" strokeWidth="2" fill="none" strokeLinecap="round"/>
-                        <path d="M0 48 C40 44 60 36 90 26 S140 14 180 10 S250 5 300 4 L300 52 L0 52Z" fill="url(#sparkGrad)"/>
-                      </svg>
-                    ) : (
-                      <div style={{ fontSize: 12, color: TEXT_MUTED, textAlign: "center", padding: "12px 0" }}>No data — configuration is not live yet.</div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Rollout Health card */}
-                <div style={{ ...cardStyle, padding: 22 }}>
-                  <h3 style={{ margin: "0 0 16px", fontSize: 15, fontWeight: 700, color: TEXT }}>Rollout Health</h3>
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12 }}>
-                    {[
-                      { label: "Current Value", value: String(config.parameters?.[0]?.value ?? "true"), mono: true },
-                      { label: "Target Segment", value: "All Users" },
-                      { label: "Rollout Percentage", value: `${rolloutPct}%` },
-                      { label: "Last Value Change", value: config.updated || "—" },
-                      { label: "Platforms", value: "iOS · Android · Web" },
-                      { label: "Environment", value: "Production" },
-                    ].map((item) => (
-                      <div key={item.label} style={{ padding: "12px 14px", borderRadius: 10, border: `1px solid ${BORDER}`, background: SOFT }}>
-                        <div style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 5 }}>{item.label}</div>
-                        <div style={{ fontSize: 13, color: TEXT, fontWeight: 500, fontFamily: item.mono ? "ui-monospace, SFMono-Regular, Menlo, monospace" : "inherit", wordBreak: "break-all" }}>{item.value}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Rollout Timeline */}
-                <div style={{ ...cardStyle, padding: 22 }}>
-                  <h3 style={{ margin: "0 0 18px", fontSize: 15, fontWeight: 700, color: TEXT }}>Rollout Timeline</h3>
-                  {[
-                    { label: "Created", date: config.created || "—", desc: `Created by ${config.creator || "unknown"}`, color: "#9CA3AF" },
-                    { label: "First Deployed", date: config.updated || "—", desc: `Rolled out to ${rolloutPct}% of users`, color: "#3B82F6" },
-                    { label: "Current", date: "Now", desc: `${rolloutPct}% rollout · ${config.status}`, color: config.status === "Live" ? "#22C55E" : "#9CA3AF", isCurrent: true },
-                  ].map((event, i, arr) => (
-                    <div key={event.label} style={{ display: "flex", gap: 14 }}>
-                      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flexShrink: 0 }}>
-                        <div style={{ width: 12, height: 12, borderRadius: "50%", background: event.color, marginTop: 3, flexShrink: 0, border: event.isCurrent ? `3px solid ${event.color}40` : "none", boxSizing: "content-box" }} />
-                        {i < arr.length - 1 && <div style={{ width: 2, flex: 1, background: "#E5E7EB", minHeight: 28 }} />}
-                      </div>
-                      <div style={{ paddingBottom: i < arr.length - 1 ? 20 : 0 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>
-                          <span style={{ fontSize: 13, fontWeight: 700, color: TEXT }}>{event.label}</span>
-                          <span style={{ fontSize: 11, color: TEXT_MUTED }}>{event.date}</span>
-                        </div>
-                        <div style={{ fontSize: 12, color: TEXT_MUTED }}>{event.desc}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Linked Experiments — only shown if present for Rollout type */}
-                {linkedExperiments.length > 0 && (
-                  <div style={{ ...cardStyle, padding: 22 }}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-                      <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: TEXT }}>Linked Experiments</h3>
-                      <span style={{ background: "#EFF6FF", color: "#3B82F6", borderRadius: 999, fontSize: 11, fontWeight: 700, padding: "2px 9px" }}>{linkedExperiments.length}</span>
-                    </div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                      {linkedExperiments.map((experiment) => (
-                        <button key={experiment.id} onClick={() => onOpenExperiment(experiment)} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", padding: "14px 16px", borderRadius: 10, border: `1px solid ${BORDER}`, background: SOFT, cursor: "pointer", textAlign: "left" }} onMouseEnter={(e) => { e.currentTarget.style.background = "#F0F4FF"; e.currentTarget.style.borderColor = "#BFDBFE"; }} onMouseLeave={(e) => { e.currentTarget.style.background = SOFT; e.currentTarget.style.borderColor = BORDER; }}>
-                          <span style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-                            <span style={{ fontSize: 14, fontWeight: 700, color: TEXT }}>{experiment.name}</span>
-                            <span style={{ fontSize: 12, color: TEXT_MUTED }}>{experiment.hypothesis}</span>
-                          </span>
-                          <span style={{ display: "inline-flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
-                            <StatusBadge status={experiment.status} />
-                            <span style={{ color: TEXT_MUTED }}><ChevronRightIcon /></span>
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-          </div>
-          {/* Right sidebar — Version History always visible */}
-          {versionHistorySidebar}
-        </div>
-      )}
 
       {/* ── Sticky footer ── */}
       <div style={{ position: "sticky", bottom: 0, marginTop: 24, padding: "14px 0", background: WHITE, borderTop: "2px solid #E5E7EB", boxShadow: "0 -4px 16px rgba(0,0,0,0.06)", display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 10, zIndex: 40 }}>
-        <button onClick={() => console.log("Duplicate Rollout", config.key)} style={ghostButtonStyle}>Duplicate Rollout</button>
-        <button onClick={() => onEdit(config)} style={{ ...ghostButtonStyle, display: "inline-flex", alignItems: "center", gap: 7 }}>
+        <button onClick={onBack} style={ghostButtonStyle}>Back</button>
+        <button onClick={() => onEdit(config)} style={{ ...primaryButtonStyle, display: "inline-flex", alignItems: "center", gap: 7 }}>
           <EditIcon />
           Edit
-        </button>
-        <button
-          style={{ ...primaryButtonStyle, background: primaryCTA.bg, display: "inline-flex", alignItems: "center", gap: 7 }}
-          onClick={() => console.log(primaryCTA.label, config.key)}
-          onMouseEnter={(e) => { e.currentTarget.style.background = primaryCTA.hoverBg; }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = primaryCTA.bg; }}
-        >
-          {primaryCTA.label}
         </button>
       </div>
     </div>
