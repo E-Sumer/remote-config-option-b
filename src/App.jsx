@@ -4427,6 +4427,48 @@ function DevRemoteConfigList({ schemas, onCreateNew, onViewSchema }) {
   );
 }
 
+// ─── CustomSelect ─────────────────────────────────────────────────────────
+function CustomSelect({ value, onChange, options }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div style={{ position: "relative" }}>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", borderRadius: 8, border: `1px solid ${BORDER_DARK}`, background: WHITE, color: TEXT, fontSize: 13, cursor: "pointer", textAlign: "left", fontFamily: "inherit" }}
+      >
+        {value}
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={TEXT_MUTED} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+          style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.18s", flexShrink: 0 }}>
+          <path d="m6 9 6 6 6-6"/>
+        </svg>
+      </button>
+      {open && (
+        <>
+          <div style={{ position: "fixed", inset: 0, zIndex: 299 }} onClick={() => setOpen(false)} />
+          <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, background: WHITE, border: `1px solid ${BORDER}`, borderRadius: 10, boxShadow: "0 4px 20px rgba(0,0,0,0.13)", zIndex: 300, overflow: "hidden" }}>
+            {options.map((opt) => (
+              <button
+                key={opt}
+                type="button"
+                onClick={() => { onChange(opt); setOpen(false); }}
+                style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "11px 16px", border: "none", background: opt === value ? SOFT : "transparent", color: TEXT, fontSize: 14, cursor: "pointer", textAlign: "left", fontFamily: "inherit" }}
+                onMouseEnter={(e) => { if (opt !== value) e.currentTarget.style.background = SOFT; }}
+                onMouseLeave={(e) => { if (opt !== value) e.currentTarget.style.background = "transparent"; }}
+              >
+                {opt}
+                {opt === value && (
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={TEXT} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                )}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 // ─── DevRemoteConfigNew ────────────────────────────────────────────────────
 function DevRemoteConfigNew({ schema, onBack, onSave }) {
   const isEdit = Boolean(schema);
@@ -4635,16 +4677,11 @@ ${params.slice(0, 3).map((p) => `final ${p.key || "param"} = config.get('${p.key
                         </div>
                         <div>
                           <label style={{ display: "block", marginBottom: 4, fontSize: 11, fontWeight: 700, color: TEXT_MUTED }}>TYPE</label>
-                          <div style={{ position: "relative" }}>
-                            <select
-                              value={p.type}
-                              onChange={(e) => handleParamTypeChange(p.id, e.target.value)}
-                              style={{ ...inputStyle, background: WHITE, appearance: "none", WebkitAppearance: "none", paddingRight: 32, cursor: "pointer" }}
-                            >
-                              {["String", "Integer", "Boolean", "JSON"].map((t) => <option key={t} value={t}>{t}</option>)}
-                            </select>
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={TEXT_MUTED} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}><path d="m6 9 6 6 6-6"/></svg>
-                          </div>
+                          <CustomSelect
+                            value={p.type}
+                            onChange={(newType) => handleParamTypeChange(p.id, newType)}
+                            options={["String", "Integer", "Boolean", "JSON"]}
+                          />
                         </div>
                       </div>
                     )}
