@@ -1031,12 +1031,12 @@ function RemoteConfigurationList({
       // Search filter
       if (trimmedSearch && !config.name.toLowerCase().includes(trimmedSearch)) return false;
 
-      const updatedDate = parseDisplayDate(config.updated);
-      const diffInDays = Math.floor((today - updatedDate) / (1000 * 60 * 60 * 24));
+      const createdDate = parseDisplayDate(config.created);
+      const diffInDays = Math.floor((today - createdDate) / (1000 * 60 * 60 * 24));
 
       if (activeDateFilter === "Custom") {
         if (customStart && customEnd) {
-          return isWithinRange(updatedDate, customStart, customEnd);
+          return isWithinRange(createdDate, customStart, customEnd);
         }
 
         return true;
@@ -1201,7 +1201,6 @@ function RemoteConfigurationList({
           {searchQuery && <button onClick={() => setSearchQuery("")} style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", border: "none", background: "transparent", cursor: "pointer", color: "#9CA3AF", padding: 2, fontSize: 14, display: "flex", alignItems: "center" }}>×</button>}
         </div>
         <div style={{ width: 1, height: 22, background: "#E5E7EB", flexShrink: 0 }} />
-        <span style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 600, whiteSpace: "nowrap" }}>Update Date:</span>
         <button
           onClick={(event) => { event.stopPropagation(); setActiveDateFilter("Custom"); setIsCustomPickerOpen((c) => !c); }}
           style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "5px 10px", height: 34, borderRadius: 8, border: `1px solid ${activeDateFilter === "Custom" ? "#3B82F6" : "#E5E7EB"}`, background: activeDateFilter === "Custom" ? "#EFF6FF" : WHITE, color: activeDateFilter === "Custom" ? "#1D4ED8" : TEXT_MUTED, fontSize: 11, fontWeight: 500, cursor: "pointer", whiteSpace: "nowrap" }}
@@ -4421,7 +4420,6 @@ function DevRemoteConfigList({ schemas, onCreateNew, onViewSchema }) {
           {searchQuery && <button onClick={() => setSearchQuery("")} style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", border: "none", background: "transparent", cursor: "pointer", color: "#9CA3AF", padding: 2, fontSize: 14, display: "flex", alignItems: "center" }}>×</button>}
         </div>
         <div style={{ width: 1, height: 22, background: "#E5E7EB", flexShrink: 0 }} />
-        <span style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 600, whiteSpace: "nowrap" }}>Update Date:</span>
         <button
           onClick={(e) => { e.stopPropagation(); setRcActiveDateFilter("Custom"); setRcPickerOpen((c) => !c); }}
           style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "5px 10px", height: 34, borderRadius: 8, border: `1px solid ${rcActiveDateFilter === "Custom" ? "#3B82F6" : "#E5E7EB"}`, background: rcActiveDateFilter === "Custom" ? "#EFF6FF" : WHITE, color: rcActiveDateFilter === "Custom" ? "#1D4ED8" : TEXT_MUTED, fontSize: 11, fontWeight: 500, cursor: "pointer", whiteSpace: "nowrap" }}
@@ -5640,7 +5638,7 @@ export default function App() {
                       }}
                     >
                       <span style={{ color: TEXT_MUTED }}><LinkIcon /></span>
-                      <span style={{ flex: 1 }}>{item.label}</span>
+                      <span style={{ flex: 1, whiteSpace: "nowrap" }}>{item.label}</span>
                       <span style={{ color: TEXT_MUTED }}><HeartIcon /></span>
                     </button>
                   ))}
