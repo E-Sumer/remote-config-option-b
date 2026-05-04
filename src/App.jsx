@@ -4314,9 +4314,9 @@ function DisabledMenuItemWithTooltip({ item }) {
         {item.label}
       </button>
       {item.disabled && hovered && (
-        <div style={{ position: "absolute", bottom: "calc(100% + 6px)", left: "50%", transform: "translateX(-50%)", background: "#1F2937", color: "#FFFFFF", fontSize: 11, fontWeight: 500, padding: "6px 10px", borderRadius: 7, whiteSpace: "nowrap", zIndex: 400, boxShadow: "0 4px 12px rgba(0,0,0,0.2)", pointerEvents: "none" }}>
+        <div style={{ position: "absolute", top: "50%", right: "calc(100% + 8px)", transform: "translateY(-50%)", background: "#1F2937", color: "#FFFFFF", fontSize: 11, fontWeight: 500, padding: "6px 10px", borderRadius: 7, whiteSpace: "nowrap", zIndex: 400, boxShadow: "0 4px 12px rgba(0,0,0,0.2)", pointerEvents: "none" }}>
           Active configurations cannot be edited.
-          <div style={{ position: "absolute", top: "100%", left: "50%", transform: "translateX(-50%)", width: 0, height: 0, borderLeft: "4px solid transparent", borderRight: "4px solid transparent", borderTop: "4px solid #1F2937" }} />
+          <div style={{ position: "absolute", top: "50%", left: "100%", transform: "translateY(-50%)", width: 0, height: 0, borderTop: "4px solid transparent", borderBottom: "4px solid transparent", borderLeft: "4px solid #1F2937" }} />
         </div>
       )}
     </div>
@@ -4564,7 +4564,7 @@ function DevRemoteConfigList({ schemas, onCreateNew, onViewSchema }) {
                       <MoreIcon />
                     </button>
                     {openActionId === schema.id && (
-                      <div style={{ position: "absolute", right: 0, top: "calc(100% + 4px)", width: 180, background: WHITE, border: `1px solid ${BORDER}`, borderRadius: 10, boxShadow: "0 4px 16px rgba(0,0,0,0.13)", zIndex: 200, overflow: "hidden" }}>
+                      <div style={{ position: "absolute", right: 0, top: "calc(100% + 4px)", width: 180, background: WHITE, border: `1px solid ${BORDER}`, borderRadius: 10, boxShadow: "0 4px 16px rgba(0,0,0,0.13)", zIndex: 200, overflow: "visible" }}>
                         {[
                           { icon: <EditIcon />, label: "Edit", disabled: schema.status === "Active", action: () => { setOpenActionId(null); onViewSchema(schema); } },
                           { icon: <CopyIcon />, label: "Duplicate", action: () => setOpenActionId(null) },
