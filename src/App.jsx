@@ -4505,12 +4505,22 @@ function DevRemoteConfigNew({ schema, onBack, onSave }) {
 
   const removeParam = (id) => setParams((prev) => prev.filter((p) => p.id !== id));
 
+  const [paramErrors, setParamErrors] = useState({});
+
   const validate = () => {
     const e = {};
-    if (!name.trim()) e.name = "Schema name is required.";
+    if (!name.trim()) e.name = "Config name is required.";
     if (!displayKey) e.key = "Key is required.";
     setErrors(e);
-    return Object.keys(e).length === 0;
+    const pe = {};
+    params.forEach((p) => {
+      const f = {};
+      if (!p.key.trim()) f.key = true;
+      if (p.type !== "Boolean" && !String(p.defaultValue).trim()) f.defaultValue = true;
+      if (Object.keys(f).length > 0) pe[p.id] = f;
+    });
+    setParamErrors(pe);
+    return Object.keys(e).length === 0 && Object.keys(pe).length === 0;
   };
 
   const handleSave = () => {
@@ -4554,10 +4564,13 @@ ${params.slice(0, 3).map((p) => `final ${p.key || "param"} = config.get('${p.key
 
   return (
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100%" }}>
-      {/* Page header — no Back button here */}
-      <div style={{ marginBottom: 24 }}>
-        <h1 style={pageTitleStyle}>{isEdit ? "Edit Config" : "New Config"}</h1>
-        <p style={pageDescriptionStyle}>{isEdit ? `Editing ${schema.name}` : "Define the keys and default values your SDK will fetch."}</p>
+      {/* Page header */}
+      <div style={{ marginBottom: 24, display: "flex", alignItems: "flex-start", gap: 14 }}>
+        <div style={{ width: 5, height: 52, borderRadius: 999, background: "#3B82F6", marginTop: 2, flexShrink: 0 }} />
+        <div>
+          <h1 style={pageTitleStyle}>{isEdit ? "Edit Config" : "New Config"}</h1>
+          <p style={pageDescriptionStyle}>{isEdit ? `Editing ${schema.name}` : "Define the keys and default values your SDK will fetch."}</p>
+        </div>
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 18, flex: 1, paddingBottom: 90 }}>
@@ -4566,7 +4579,7 @@ ${params.slice(0, 3).map((p) => `final ${p.key || "param"} = config.get('${p.key
           <div style={{ fontSize: 13, fontWeight: 700, color: TEXT, marginBottom: 18 }}>Basic Information</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             <div>
-              <label style={{ display: "block", marginBottom: 6, fontSize: 12, fontWeight: 700, color: TEXT_MUTED }}>SCHEMA NAME *</label>
+              <label style={{ display: "block", marginBottom: 6, fontSize: 12, fontWeight: 700, color: TEXT_MUTED }}>CONFIG NAME *</label>
               <input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -4597,7 +4610,7 @@ ${params.slice(0, 3).map((p) => `final ${p.key || "param"} = config.get('${p.key
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 rows={3}
-                placeholder="What does this schema control?"
+                placeholder="What does this config control?"
                 style={{ ...inputStyle, resize: "vertical", background: WHITE }}
               />
             </div>
@@ -4653,26 +4666,35 @@ ${params.slice(0, 3).map((p) => `final ${p.key || "param"} = config.get('${p.key
                       <div style={{ display: "grid", gridTemplateColumns: "1fr 140px", gap: 10 }}>
                         <div>
                           <label style={{ display: "block", marginBottom: 4, fontSize: 11, fontWeight: 700, color: TEXT_MUTED }}>KEY</label>
-                          <input value={p.key} onChange={(e) => updateParam(p.id, "key", e.target.value)} placeholder="e.g. hero_title" style={{ ...inputStyle, background: WHITE, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", fontSize: 12 }} />
+                          <input
+                            value={p.key}
+                            onChange={(e) => { updateParam(p.id, "key", e.target.value); setParamErrors((prev) => ({ ...prev, [p.id]: { ...prev[p.id], key: false } })); }}
+                            placeholder="e.g. hero_title"
+                            style={{ ...inputStyle, background: WHITE, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", fontSize: 12, borderColor: paramErrors[p.id]?.key ? "#EF4444" : BORDER }}
+                          />
+                          {paramErrors[p.id]?.key && <div style={{ marginTop: 4, fontSize: 11, color: "#EF4444" }}>Key is required.</div>}
                           <div style={{ marginTop: 10 }}>
                             <label style={{ display: "block", marginBottom: 4, fontSize: 11, fontWeight: 700, color: TEXT_MUTED }}>DEFAULT VALUE</label>
                             {p.type === "Boolean" ? (
-                              <select
-                                value={p.defaultValue}
-                                onChange={(e) => updateParam(p.id, "defaultValue", e.target.value)}
-                                style={{ ...inputStyle, background: WHITE, appearance: "auto", WebkitAppearance: "auto" }}
-                              >
-                                <option value="true">TRUE</option>
-                                <option value="false">FALSE</option>
-                              </select>
+                              <CustomSelect
+                                value={p.defaultValue === "true" ? "TRUE" : "FALSE"}
+                                onChange={(v) => updateParam(p.id, "defaultValue", v === "TRUE" ? "true" : "false")}
+                                options={["TRUE", "FALSE"]}
+                              />
                             ) : (
                               <input
                                 value={p.defaultValue}
-                                onChange={(e) => updateParam(p.id, "defaultValue", e.target.value)}
-                                placeholder={p.type === "JSON" ? '{"key":"value"}' : "e.g. 42, hello"}
-                                style={{ ...inputStyle, background: WHITE, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", fontSize: 12 }}
+                                onChange={(e) => {
+                                  const val = p.type === "Integer" ? e.target.value.replace(/[^0-9\-]/g, "") : e.target.value;
+                                  updateParam(p.id, "defaultValue", val);
+                                  setParamErrors((prev) => ({ ...prev, [p.id]: { ...prev[p.id], defaultValue: false } }));
+                                }}
+                                inputMode={p.type === "Integer" ? "numeric" : undefined}
+                                placeholder={p.type === "JSON" ? '{"key":"value"}' : p.type === "Integer" ? "e.g. 42" : "e.g. hello"}
+                                style={{ ...inputStyle, background: WHITE, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", fontSize: 12, borderColor: paramErrors[p.id]?.defaultValue ? "#EF4444" : BORDER }}
                               />
                             )}
+                            {paramErrors[p.id]?.defaultValue && <div style={{ marginTop: 4, fontSize: 11, color: "#EF4444" }}>Default value is required.</div>}
                           </div>
                         </div>
                         <div>
