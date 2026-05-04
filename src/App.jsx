@@ -4272,6 +4272,24 @@ function SdkPill({ sdk }) {
 }
 
 // ─── DevRemoteConfigList ───────────────────────────────────────────────────
+function DescriptionCell({ text }) {
+  const [visible, setVisible] = useState(false);
+  if (!text) return <span style={{ fontSize: 12, color: TEXT_MUTED }}>—</span>;
+  return (
+    <div style={{ position: "relative" }}
+      onMouseEnter={() => setVisible(true)}
+      onMouseLeave={() => setVisible(false)}>
+      <span style={{ fontSize: 12, color: TEXT_MUTED, display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{text}</span>
+      {visible && (
+        <div style={{ position: "absolute", bottom: "calc(100% + 6px)", left: 0, background: "#1F2937", color: "#FFFFFF", fontSize: 11, fontWeight: 500, padding: "6px 10px", borderRadius: 7, whiteSpace: "nowrap", zIndex: 300, boxShadow: "0 4px 12px rgba(0,0,0,0.2)", pointerEvents: "none", maxWidth: 320 }}>
+          {text}
+          <div style={{ position: "absolute", top: "100%", left: 16, width: 0, height: 0, borderLeft: "4px solid transparent", borderRight: "4px solid transparent", borderTop: "4px solid #1F2937" }} />
+        </div>
+      )}
+    </div>
+  );
+}
+
 function SdkChips({ sdks }) {
   const [tooltipVisible, setTooltipVisible] = useState(false);
   const MAX_VISIBLE = 2;
@@ -4327,12 +4345,15 @@ function DevRemoteConfigList({ schemas, onCreateNew, onViewSchema }) {
     <div>
       {/* Header */}
       <div style={{ marginBottom: 24, display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16 }}>
-        <div>
-          <h1 style={pageTitleStyle}>Config Library</h1>
-          <p style={pageDescriptionStyle}>Define reusable configurations your SDK can fetch. These are the building blocks used in rollouts and experiments.</p>
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
+          <div style={{ width: 5, height: 52, borderRadius: 999, background: "#3B82F6", marginTop: 2, flexShrink: 0 }} />
+          <div>
+            <h1 style={pageTitleStyle}>Config Library</h1>
+            <p style={pageDescriptionStyle}>Define reusable configurations your SDK can fetch. These are the building blocks used in rollouts and experiments.</p>
+          </div>
         </div>
         <button onClick={onCreateNew} style={{ ...primaryButtonStyle, flexShrink: 0 }}>
-          New Config
+          + New Config
         </button>
       </div>
 
@@ -4381,7 +4402,7 @@ function DevRemoteConfigList({ schemas, onCreateNew, onViewSchema }) {
                   </div>
                 </td>
                 <td style={{ padding: "14px 16px", maxWidth: 260 }}>
-                  <span title={schema.description} style={{ fontSize: 12, color: TEXT_MUTED, display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{schema.description || "—"}</span>
+                  <DescriptionCell text={schema.description} />
                 </td>
                 <td style={{ padding: "14px 16px" }}>
                   <SdkChips sdks={schema.sdks} />
@@ -4399,7 +4420,7 @@ function DevRemoteConfigList({ schemas, onCreateNew, onViewSchema }) {
                     {openActionId === schema.id && (
                       <div style={{ position: "absolute", right: 0, top: "calc(100% + 4px)", width: 160, background: WHITE, border: `1px solid ${BORDER}`, borderRadius: 10, boxShadow: "0 4px 16px rgba(0,0,0,0.13)", zIndex: 200, overflow: "hidden" }}>
                         {[
-                          { icon: <EditIcon />, label: "Edit Config", action: () => { setOpenActionId(null); onViewSchema(schema); } },
+                          { icon: <EditIcon />, label: "Edit", action: () => { setOpenActionId(null); onViewSchema(schema); } },
                           { icon: <CopyIcon />, label: "Duplicate", action: () => setOpenActionId(null) },
                           { icon: <TrashIcon />, label: "Delete", danger: true, action: () => setOpenActionId(null) },
                         ].map((item) => (
