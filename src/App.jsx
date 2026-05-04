@@ -4441,8 +4441,10 @@ function DevRemoteConfigNew({ schema, onBack, onSave }) {
   const [name, setName] = useState(isEdit ? schema.name : "");
   const [key, setKey] = useState(isEdit ? schema.key : "");
   const [description, setDescription] = useState(isEdit ? (schema.description || "") : "");
-  const [sdks, setSdks] = useState(isEdit ? schema.sdks : []);
-  const [params, setParams] = useState(isEdit ? schema.parameters : []);
+  const [sdks] = useState(isEdit ? schema.sdks : []);
+  const [params, setParams] = useState(
+    isEdit ? schema.parameters.map((p) => ({ ...p, collapsed: false })) : []
+  );
   const [activeTab, setActiveTab] = useState("iOS");
   const [errors, setErrors] = useState({});
 
@@ -4451,12 +4453,8 @@ function DevRemoteConfigNew({ schema, onBack, onSave }) {
 
   const displayKey = AUTO_KEY_ACTIVE ? (name.trim() ? derivedKey : "") : key;
 
-  const SDK_OPTIONS = ["iOS", "Android", "Web", "React Native"];
-
-  const toggleSdk = (sdk) => setSdks((prev) => prev.includes(sdk) ? prev.filter((s) => s !== sdk) : [...prev, sdk]);
-
   const addParam = () => {
-    setParams((prev) => [...prev, { id: `sp_new_${Date.now()}`, key: "", type: "String", description: "", defaultValue: "" }]);
+    setParams((prev) => [...prev, { id: `sp_new_${Date.now()}`, key: "", type: "String", description: "", defaultValue: "", collapsed: false }]);
   };
 
   const updateParam = (id, field, value) => {
@@ -4469,7 +4467,6 @@ function DevRemoteConfigNew({ schema, onBack, onSave }) {
     const e = {};
     if (!name.trim()) e.name = "Schema name is required.";
     if (!displayKey) e.key = "Key is required.";
-    if (sdks.length === 0) e.sdks = "Select at least one target SDK.";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -4510,16 +4507,10 @@ ${params.slice(0, 3).map((p) => `const ${p.key || "param"} = config.get('${p.key
 
   return (
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100%" }}>
-      {/* Page header */}
-      <div style={{ marginBottom: 24, display: "flex", alignItems: "center", gap: 14 }}>
-        <button onClick={onBack} style={{ ...secondaryButtonStyle, padding: "9px 14px" }}>
-          <ChevronRightIcon style={{ transform: "rotate(180deg)" }} />
-          Back
-        </button>
-        <div>
-          <h1 style={pageTitleStyle}>{isEdit ? "Edit Config" : "New Config"}</h1>
-          <p style={pageDescriptionStyle}>{isEdit ? `Editing ${schema.name}` : "Define the keys and default values your SDK will fetch."}</p>
-        </div>
+      {/* Page header — no Back button here */}
+      <div style={{ marginBottom: 24 }}>
+        <h1 style={pageTitleStyle}>{isEdit ? "Edit Config" : "New Config"}</h1>
+        <p style={pageDescriptionStyle}>{isEdit ? `Editing ${schema.name}` : "Define the keys and default values your SDK will fetch."}</p>
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 18, flex: 1, paddingBottom: 90 }}>
@@ -4563,86 +4554,88 @@ ${params.slice(0, 3).map((p) => `const ${p.key || "param"} = config.get('${p.key
                 style={{ ...inputStyle, resize: "vertical", background: WHITE }}
               />
             </div>
-            <div>
-              <label style={{ display: "block", marginBottom: 8, fontSize: 12, fontWeight: 700, color: TEXT_MUTED }}>TARGET SDKs *</label>
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                {SDK_OPTIONS.map((sdk) => {
-                  const selected = sdks.includes(sdk);
-                  return (
-                    <button
-                      key={sdk}
-                      type="button"
-                      onClick={() => toggleSdk(sdk)}
-                      style={{
-                        padding: "7px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer", border: "1px solid",
-                        background: selected ? "#EEF3FF" : WHITE,
-                        color: selected ? "#4E5FE2" : TEXT_MUTED,
-                        borderColor: selected ? "#C7D2FB" : BORDER,
-                        transition: "all 0.12s",
-                      }}
-                    >
-                      {selected && <span style={{ marginRight: 5 }}>✓</span>}{sdk}
-                    </button>
-                  );
-                })}
-              </div>
-              {errors.sdks && <div style={{ marginTop: 6, fontSize: 12, color: "#EF4444" }}>{errors.sdks}</div>}
-            </div>
           </div>
         </div>
 
-        {/* Parameters */}
+        {/* Parameters — experience-style */}
         <div style={{ ...cardStyle, padding: 24 }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
-            <div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: TEXT }}>Parameters</div>
-              <div style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 2 }}>Define the keys, types and default values for this schema.</div>
-            </div>
-            <button onClick={addParam} style={{ ...secondaryButtonStyle, padding: "8px 14px", fontSize: 12 }}>
-              <PlusIcon />
-              Add Parameter
-            </button>
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: TEXT }}>Parameters</div>
+            <div style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 2 }}>Define the keys, types and default values for this schema.</div>
           </div>
-          {params.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "32px 16px", borderRadius: 10, border: `1.5px dashed ${BORDER}`, color: TEXT_MUTED, fontSize: 13 }}>
-              No parameters yet — click <strong>Add Parameter</strong> to get started.
-            </div>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              {params.map((p, idx) => (
-                <div key={p.id} style={{ padding: 16, borderRadius: 10, border: `1px solid ${BORDER}`, background: SOFT }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: TEXT_MUTED }}>PARAMETER {idx + 1}</span>
-                    <button onClick={() => removeParam(p.id)} style={{ padding: 5, background: "transparent", border: "none", cursor: "pointer", color: "#EF4444", borderRadius: 5, display: "flex" }}>
-                      <TrashIcon />
-                    </button>
+          <div style={{ border: `1px dashed ${BORDER_DARK}`, borderRadius: 16, padding: 18, background: SOFT }}>
+            {params.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "20px 12px" }}>
+                <div style={{ color: TEXT_MUTED, marginBottom: 18, fontSize: 26 }}>&lt;/&gt;</div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: TEXT, marginBottom: 8 }}>No parameters added yet</div>
+                <div style={{ fontSize: 13, color: TEXT_MUTED, marginBottom: 18 }}>Add your first parameter to define your configuration structure.</div>
+                <button onClick={addParam} style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "10px 20px", border: "none", borderRadius: 8, background: "#3B82F6", color: WHITE, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
+                  + Add Parameter
+                </button>
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {params.map((p, idx) => (
+                  <div key={p.id} style={{ background: WHITE, borderRadius: 12, border: `1px solid ${BORDER}`, padding: 16 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: p.collapsed ? 0 : 14 }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: TEXT }}>{p.key || `Parameter ${idx + 1}`}</div>
+                        <div style={{ marginTop: 2, fontSize: 12, color: TEXT_MUTED }}>{p.type}</div>
+                      </div>
+                      <button
+                        onClick={() => updateParam(p.id, "collapsed", !p.collapsed)}
+                        style={{ background: "none", border: "none", color: "#9CA3AF", cursor: "pointer", padding: 4, display: "flex", alignItems: "center", borderRadius: 4 }}
+                        onMouseEnter={(e) => { e.currentTarget.style.color = "#374151"; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.color = "#9CA3AF"; }}
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                          style={{ transform: p.collapsed ? "rotate(-90deg)" : "rotate(0deg)", transition: "transform 0.2s" }}>
+                          <path d="m6 9 6 6 6-6"/>
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => removeParam(p.id)}
+                        style={{ background: "none", border: "none", color: "#9CA3AF", cursor: "pointer", padding: 4, display: "flex", alignItems: "center", borderRadius: 4 }}
+                        onMouseEnter={(e) => { e.currentTarget.style.color = "#DC2626"; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.color = "#9CA3AF"; }}
+                      >
+                        <TrashIcon />
+                      </button>
+                    </div>
+                    {!p.collapsed && (
+                      <div>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 140px", gap: 10, marginBottom: 10 }}>
+                          <div>
+                            <label style={{ display: "block", marginBottom: 4, fontSize: 11, fontWeight: 700, color: TEXT_MUTED }}>KEY</label>
+                            <input value={p.key} onChange={(e) => updateParam(p.id, "key", e.target.value)} placeholder="e.g. hero_title" style={{ ...inputStyle, background: WHITE, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", fontSize: 12 }} />
+                          </div>
+                          <div>
+                            <label style={{ display: "block", marginBottom: 4, fontSize: 11, fontWeight: 700, color: TEXT_MUTED }}>TYPE</label>
+                            <select value={p.type} onChange={(e) => updateParam(p.id, "type", e.target.value)} style={{ ...inputStyle, background: WHITE }}>
+                              {["String", "Integer", "Boolean", "Float", "JSON"].map((t) => <option key={t} value={t}>{t}</option>)}
+                            </select>
+                          </div>
+                        </div>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                          <div>
+                            <label style={{ display: "block", marginBottom: 4, fontSize: 11, fontWeight: 700, color: TEXT_MUTED }}>DESCRIPTION</label>
+                            <input value={p.description} onChange={(e) => updateParam(p.id, "description", e.target.value)} placeholder="What does this parameter control?" style={{ ...inputStyle, background: WHITE }} />
+                          </div>
+                          <div>
+                            <label style={{ display: "block", marginBottom: 4, fontSize: 11, fontWeight: 700, color: TEXT_MUTED }}>DEFAULT VALUE</label>
+                            <input value={p.defaultValue} onChange={(e) => updateParam(p.id, "defaultValue", e.target.value)} placeholder="e.g. true, 42, hello" style={{ ...inputStyle, background: WHITE, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", fontSize: 12 }} />
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 140px", gap: 10, marginBottom: 10 }}>
-                    <div>
-                      <label style={{ display: "block", marginBottom: 4, fontSize: 11, fontWeight: 700, color: TEXT_MUTED }}>KEY</label>
-                      <input value={p.key} onChange={(e) => updateParam(p.id, "key", e.target.value)} placeholder="e.g. hero_title" style={{ ...inputStyle, background: WHITE, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", fontSize: 12 }} />
-                    </div>
-                    <div>
-                      <label style={{ display: "block", marginBottom: 4, fontSize: 11, fontWeight: 700, color: TEXT_MUTED }}>TYPE</label>
-                      <select value={p.type} onChange={(e) => updateParam(p.id, "type", e.target.value)} style={{ ...inputStyle, background: WHITE }}>
-                        {["String", "Integer", "Boolean", "Float", "JSON"].map((t) => <option key={t} value={t}>{t}</option>)}
-                      </select>
-                    </div>
-                  </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                    <div>
-                      <label style={{ display: "block", marginBottom: 4, fontSize: 11, fontWeight: 700, color: TEXT_MUTED }}>DESCRIPTION</label>
-                      <input value={p.description} onChange={(e) => updateParam(p.id, "description", e.target.value)} placeholder="What does this parameter control?" style={{ ...inputStyle, background: WHITE }} />
-                    </div>
-                    <div>
-                      <label style={{ display: "block", marginBottom: 4, fontSize: 11, fontWeight: 700, color: TEXT_MUTED }}>DEFAULT VALUE</label>
-                      <input value={p.defaultValue} onChange={(e) => updateParam(p.id, "defaultValue", e.target.value)} placeholder="e.g. true, 42, hello" style={{ ...inputStyle, background: WHITE, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", fontSize: 12 }} />
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+                ))}
+                <button onClick={addParam} style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "10px 20px", border: "none", borderRadius: 8, background: "#3B82F6", color: WHITE, fontSize: 14, fontWeight: 600, cursor: "pointer", alignSelf: "flex-start" }}>
+                  + Add Parameter
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* SDK Code Snippet */}
@@ -4679,12 +4672,14 @@ ${params.slice(0, 3).map((p) => `const ${p.key || "param"} = config.get('${p.key
       </div>
 
       {/* Sticky footer */}
-      <div style={{ position: "sticky", bottom: 0, background: WHITE, borderTop: `1px solid ${BORDER}`, padding: "14px 0", marginLeft: -28, marginRight: -28, paddingLeft: 28, paddingRight: 28, display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 10 }}>
-        <button onClick={onBack} style={secondaryButtonStyle}>Cancel</button>
-        <button onClick={handleSave} style={{ ...primaryButtonStyle }}>
-          <CheckIcon />
-          {isEdit ? "Save Changes" : "Publish Config"}
-        </button>
+      <div style={{ position: "sticky", bottom: 0, background: WHITE, borderTop: `1px solid ${BORDER}`, padding: "14px 0", marginLeft: -28, marginRight: -28, paddingLeft: 28, paddingRight: 28, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <button onClick={onBack} style={{ ...secondaryButtonStyle, background: WHITE }}>Back</button>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <button onClick={onBack} style={{ ...secondaryButtonStyle, background: WHITE }}>Cancel</button>
+          <button onClick={handleSave} style={{ ...primaryButtonStyle }}>
+            {isEdit ? "Save Changes" : "Publish Config"}
+          </button>
+        </div>
       </div>
     </div>
   );
