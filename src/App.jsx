@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 
 const BLACK = "#111827";
 const PRIMARY = "#030213";
@@ -5340,6 +5341,10 @@ function BrowseSchemasModal({ schemas, onClose, onUseSchema }) {
 }
 
 export default function App() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const isNavigatingRef = useRef(false);
+
   const [activeMenu, setActiveMenu] = useState("remote_config");
   const [remoteConfigView, setRemoteConfigView] = useState("list");
   const [abView, setAbView] = useState("list");
@@ -5372,23 +5377,101 @@ export default function App() {
     return () => window.clearTimeout(timeout);
   }, [toast]);
 
+  const initStateFromPath = (path, currentConfigs, currentExperiments, currentSchemas) => {
+    if (path === "/" || path === "") {
+      navigate("/experiences/feature_rollouts", { replace: true });
+      return;
+    }
+    if (path.startsWith("/experiences/feature_rollouts")) {
+      setActiveMenu("remote_config");
+      const newMatch = path === "/experiences/feature_rollouts/new";
+      const editMatch = path.match(/^\/experiences\/feature_rollouts\/(\d+)\/edit$/);
+      const detailMatch = path.match(/^\/experiences\/feature_rollouts\/(\d+)$/);
+      if (newMatch) {
+        setRemoteConfigView("create");
+        setEditingConfig(null);
+      } else if (editMatch) {
+        const id = parseInt(editMatch[1], 10);
+        const config = currentConfigs.find((c) => c.id === id);
+        if (config) { setEditingConfig(config); setRemoteConfigView("edit"); }
+        else { setRemoteConfigView("list"); }
+      } else if (detailMatch) {
+        const id = parseInt(detailMatch[1], 10);
+        const config = currentConfigs.find((c) => c.id === id);
+        if (config) { setSelectedConfigReport(config); setRemoteConfigView("detail"); }
+        else { setRemoteConfigView("list"); }
+      } else {
+        setRemoteConfigView("list");
+        setEditingConfig(null);
+        setSelectedConfigReport(null);
+      }
+    } else if (path.startsWith("/experiences/ab_tests")) {
+      setActiveMenu("ab_testing");
+      const newMatch = path === "/experiences/ab_tests/new";
+      const detailMatch = path.match(/^\/experiences\/ab_tests\/(\d+)$/);
+      if (newMatch) {
+        setAbView("create");
+      } else if (detailMatch) {
+        const id = parseInt(detailMatch[1], 10);
+        const exp = currentExperiments.find((e) => e.id === id);
+        if (exp) { setSelectedExperimentReport(exp); setAbView("detail"); }
+        else { setAbView("list"); }
+      } else {
+        setAbView("list");
+        setSelectedExperimentReport(null);
+      }
+    } else if (path.startsWith("/config_library")) {
+      setActiveMenu("dev_remote_config");
+      const newMatch = path === "/config_library/new";
+      const editMatch = path.match(/^\/config_library\/([^/]+)\/edit$/);
+      const detailMatch = path.match(/^\/config_library\/([^/]+)$/);
+      if (newMatch) {
+        setDevSchemaView("new");
+        setSelectedSchema(null);
+      } else if (editMatch || detailMatch) {
+        const id = (editMatch || detailMatch)[1];
+        const schema = currentSchemas.find((s) => s.id === id);
+        if (schema) { setSelectedSchema(schema); setDevSchemaView("new"); }
+        else { setDevSchemaView("list"); }
+      } else {
+        setDevSchemaView("list");
+        setSelectedSchema(null);
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (isNavigatingRef.current) {
+      isNavigatingRef.current = false;
+      return;
+    }
+    initStateFromPath(location.pathname, configs, experiments, schemas);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname]);
+
   const goToRemoteConfigList = () => {
+    isNavigatingRef.current = true;
     setActiveMenu("remote_config");
     setRemoteConfigView("list");
     setEditingConfig(null);
     setSelectedConfigReport(null);
+    navigate("/experiences/feature_rollouts");
   };
 
   const goToDevSchemaList = () => {
+    isNavigatingRef.current = true;
     setActiveMenu("dev_remote_config");
     setDevSchemaView("list");
     setSelectedSchema(null);
+    navigate("/config_library");
   };
 
   const goToDevSchemaNew = (schema = null) => {
+    isNavigatingRef.current = true;
     setActiveMenu("dev_remote_config");
     setDevSchemaView("new");
     setSelectedSchema(schema);
+    navigate(schema ? `/config_library/${schema.id}/edit` : "/config_library/new");
   };
 
   const handleSaveSchema = (data) => {
@@ -5403,24 +5486,46 @@ export default function App() {
   };
 
   const goToRemoteConfigCreate = () => {
+    isNavigatingRef.current = true;
     setActiveMenu("remote_config");
     setRemoteConfigView("create");
     setEditingConfig(null);
+    navigate("/experiences/feature_rollouts/new");
   };
 
   const goToRemoteConfigEdit = (config) => {
+    isNavigatingRef.current = true;
     setActiveMenu("remote_config");
     setRemoteConfigView("edit");
     setEditingConfig(config);
     setSelectedConfigReport(null);
     setOpenActionId(null);
+    navigate(`/experiences/feature_rollouts/${config.id}/edit`);
   };
 
   const goToRemoteConfigDetail = (config) => {
+    isNavigatingRef.current = true;
     setActiveMenu("remote_config");
     setRemoteConfigView("detail");
     setSelectedConfigReport(config);
     setOpenActionId(null);
+    navigate(`/experiences/feature_rollouts/${config.id}`);
+  };
+
+  const goToAbList = () => {
+    isNavigatingRef.current = true;
+    setActiveMenu("ab_testing");
+    setAbView("list");
+    setSelectedExperimentReport(null);
+    setAbPlaceholderTitle("");
+    navigate("/experiences/ab_tests");
+  };
+
+  const goToAbCreate = () => {
+    isNavigatingRef.current = true;
+    setActiveMenu("ab_testing");
+    setAbView("create");
+    navigate("/experiences/ab_tests/new");
   };
 
   const pauseConflictingConfig = (configId) => {
@@ -5521,18 +5626,22 @@ export default function App() {
   };
 
   const openExperimentPlaceholder = (title) => {
+    isNavigatingRef.current = true;
     setActiveMenu("ab_testing");
     setSelectedExperimentReport(null);
     setAbPlaceholderTitle(title);
     setAbView("placeholder");
     setOpenActionId(null);
+    navigate("/experiences/ab_tests");
   };
 
   const openExperimentReport = (experiment) => {
+    isNavigatingRef.current = true;
     setActiveMenu("ab_testing");
     setSelectedExperimentReport(experiment);
     setAbView("detail");
     setOpenActionId(null);
+    navigate(`/experiences/ab_tests/${experiment.id}`);
   };
 
   const updateExperiment = (experimentId, updater) => {
@@ -5772,7 +5881,7 @@ export default function App() {
           configs={configs}
           experiments={experiments}
           schemas={schemas}
-          onBack={() => setAbView("list")}
+          onBack={goToAbList}
           onOpenRemoteConfigCreate={goToRemoteConfigCreate}
           onSaveDraft={saveNewExperimentDraft}
           onLaunchExperiment={launchNewExperiment}
@@ -5785,10 +5894,7 @@ export default function App() {
         <ExperimentDetail
           experiment={selectedExperimentReport}
           linkedConfig={configs.find((config) => config.key === selectedExperimentReport.linkedConfigKey) || null}
-          onBack={() => {
-            setAbView("list");
-            setSelectedExperimentReport(null);
-          }}
+          onBack={goToAbList}
           onOpenRemoteConfig={openRemoteConfigFromExperiment}
         />
       );
@@ -5798,11 +5904,7 @@ export default function App() {
       return (
         <ComingSoonPlaceholder
           title={abPlaceholderTitle || "Experiment Report"}
-          onBack={() => {
-            setAbView("list");
-            setAbPlaceholderTitle("");
-            setSelectedExperimentReport(null);
-          }}
+          onBack={goToAbList}
         />
       );
     }
@@ -5813,7 +5915,7 @@ export default function App() {
         configs={configs}
         openActionId={openActionId}
         setOpenActionId={setOpenActionId}
-        onCreateNew={() => setAbView("create")}
+        onCreateNew={goToAbCreate}
         onOpenReport={openExperimentReport}
         onOpenEditor={(experiment) => openExperimentPlaceholder(`${experiment.name} Editor`)}
         onOpenRemoteConfig={openRemoteConfigFromExperiment}
@@ -5905,10 +6007,7 @@ export default function App() {
                     {
                       key: "ab_testing",
                       label: "A/B Tests",
-                      action: () => {
-                        setActiveMenu("ab_testing");
-                        setAbView("list");
-                      },
+                      action: goToAbList,
                     },
                   ].map((item) => (
                     <button
