@@ -4278,6 +4278,51 @@ function SdkPill({ sdk }) {
   );
 }
 
+function ConfigNameInfoIcon() {
+  const [visible, setVisible] = useState(false);
+  return (
+    <div style={{ position: "relative", display: "inline-flex", alignItems: "center" }}
+      onMouseEnter={() => setVisible(true)}
+      onMouseLeave={() => setVisible(false)}
+    >
+      <span style={{ display: "inline-flex", alignItems: "center", cursor: "help", color: "#9CA3AF" }}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+      </span>
+      {visible && (
+        <div style={{ position: "absolute", bottom: "calc(100% + 8px)", left: "50%", transform: "translateX(-50%)", background: "#1F2937", color: "#FFFFFF", fontSize: 12, fontWeight: 500, padding: "10px 14px", borderRadius: 8, whiteSpace: "normal", wordBreak: "break-word", zIndex: 400, boxShadow: "0 4px 16px rgba(0,0,0,0.25)", pointerEvents: "none", width: 260, lineHeight: 1.5 }}>
+          A human-readable name for this configuration. Used for display purposes only — the SDK Key is what your app code references.
+          <div style={{ position: "absolute", top: "100%", left: "50%", transform: "translateX(-50%)", width: 0, height: 0, borderLeft: "6px solid transparent", borderRight: "6px solid transparent", borderTop: "6px solid #1F2937" }} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DisabledMenuItemWithTooltip({ item }) {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <div style={{ position: "relative" }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => { setHovered(false); }}
+    >
+      <button
+        onClick={item.disabled ? undefined : item.action}
+        disabled={item.disabled}
+        style={{ width: "100%", display: "flex", alignItems: "center", gap: 9, padding: "10px 12px", border: "none", background: hovered && !item.disabled ? (item.danger ? "#FEF2F2" : "#F3F4F6") : "transparent", color: item.disabled ? "#D1D5DB" : item.danger ? "#EF4444" : "#111827", fontSize: 13, cursor: item.disabled ? "not-allowed" : "pointer", textAlign: "left", opacity: item.disabled ? 0.6 : 1 }}
+      >
+        {item.icon}
+        {item.label}
+      </button>
+      {item.disabled && hovered && (
+        <div style={{ position: "absolute", bottom: "calc(100% + 6px)", left: "50%", transform: "translateX(-50%)", background: "#1F2937", color: "#FFFFFF", fontSize: 11, fontWeight: 500, padding: "6px 10px", borderRadius: 7, whiteSpace: "nowrap", zIndex: 400, boxShadow: "0 4px 12px rgba(0,0,0,0.2)", pointerEvents: "none" }}>
+          Active configurations cannot be edited.
+          <div style={{ position: "absolute", top: "100%", left: "50%", transform: "translateX(-50%)", width: 0, height: 0, borderLeft: "4px solid transparent", borderRight: "4px solid transparent", borderTop: "4px solid #1F2937" }} />
+        </div>
+      )}
+    </div>
+  );
+}
+
 function SchemaStatusBadge({ status }) {
   const isDraft = status === "Draft" || !status;
   return (
@@ -4475,7 +4520,7 @@ function DevRemoteConfigList({ schemas, onCreateNew, onViewSchema }) {
         <table style={{ width: "100%", borderCollapse: "collapse", display: "table", borderRadius: 14, overflow: "visible" }}>
           <thead>
             <tr style={{ borderBottom: `1px solid ${BORDER}`, background: SOFT }}>
-              {["Name", "Description", "Status", "Created", "Last Updated", "Creator User", "Actions"].map((h) => (
+              {["Status", "Name", "Description", "Created", "Last Updated", "Creator User", "Actions"].map((h) => (
                 <th key={h} style={{ padding: "11px 16px", textAlign: h === "Actions" ? "center" : "left", fontSize: 11, fontWeight: 700, color: TEXT_MUTED, letterSpacing: 0.5, whiteSpace: "nowrap" }}>{h}</th>
               ))}
             </tr>
@@ -4496,6 +4541,9 @@ function DevRemoteConfigList({ schemas, onCreateNew, onViewSchema }) {
                 onClick={() => onViewSchema(schema)}
               >
                 <td style={{ padding: "14px 16px" }}>
+                  <SchemaStatusBadge status={schema.status} />
+                </td>
+                <td style={{ padding: "14px 16px" }}>
                   <div style={{ fontSize: 13, fontWeight: 600, color: TEXT }}>{schema.name}</div>
                   <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 4 }}>
                     <code style={{ fontSize: 11, color: "#4F46E5", background: "#EEF2FF", border: "1px solid #C7D2FB", borderRadius: 5, padding: "1px 6px", fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace" }}>{schema.key}</code>
@@ -4503,9 +4551,6 @@ function DevRemoteConfigList({ schemas, onCreateNew, onViewSchema }) {
                 </td>
                 <td style={{ padding: "14px 16px", maxWidth: 260 }}>
                   <DescriptionCell text={schema.description} />
-                </td>
-                <td style={{ padding: "14px 16px" }}>
-                  <SchemaStatusBadge status={schema.status} />
                 </td>
                 <td style={{ padding: "14px 16px", fontSize: 12, color: TEXT_MUTED, whiteSpace: "nowrap" }}>{schema.created}</td>
                 <td style={{ padding: "14px 16px", fontSize: 12, color: TEXT_MUTED, whiteSpace: "nowrap" }}>{schema.updated}</td>
@@ -4525,17 +4570,7 @@ function DevRemoteConfigList({ schemas, onCreateNew, onViewSchema }) {
                           { icon: <CopyIcon />, label: "Duplicate", action: () => setOpenActionId(null) },
                           { icon: <TrashIcon />, label: "Delete", danger: true, action: () => setOpenActionId(null) },
                         ].map((item) => (
-                          <button
-                            key={item.label}
-                            onClick={item.disabled ? undefined : item.action}
-                            disabled={item.disabled}
-                            style={{ width: "100%", display: "flex", alignItems: "center", gap: 9, padding: "10px 12px", border: "none", background: "transparent", color: item.disabled ? "#D1D5DB" : item.danger ? "#EF4444" : TEXT, fontSize: 13, cursor: item.disabled ? "not-allowed" : "pointer", textAlign: "left", opacity: item.disabled ? 0.6 : 1 }}
-                            onMouseEnter={(e) => { if (!item.disabled) e.currentTarget.style.background = item.danger ? "#FEF2F2" : SOFT; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
-                          >
-                            {item.icon}
-                            {item.label}
-                          </button>
+                          <DisabledMenuItemWithTooltip key={item.label} item={item} />
                         ))}
                       </div>
                     )}
@@ -4725,9 +4760,7 @@ ${params.slice(0, 3).map((p) => `final ${p.key || "param"} = config.get('${p.key
             <div>
               <label style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6, fontSize: 12, fontWeight: 700, color: TEXT_MUTED }}>
                 CONFIG NAME *
-                <span title="A human-readable name for this configuration. Used for display purposes only — the SDK Key is what your app code references." style={{ display: "inline-flex", alignItems: "center", cursor: "help", color: "#9CA3AF" }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
-                </span>
+                <ConfigNameInfoIcon />
               </label>
               <input
                 value={name}
