@@ -537,6 +537,7 @@ const mockSchemas = [
     created: formatDateOffset(18),
     updated: formatDateOffset(3),
     createdBy: "Emre Sumer",
+
   },
   {
     id: "s2",
@@ -554,7 +555,7 @@ const mockSchemas = [
     ],
     created: formatDateOffset(55),
     updated: formatDateOffset(10),
-    createdBy: "Ayşe Kaya",
+    createdBy: "Burak Alparslan",
   },
   {
     id: "s3",
@@ -569,7 +570,7 @@ const mockSchemas = [
     ],
     created: formatDateOffset(32),
     updated: formatDateOffset(7),
-    createdBy: "Mehmet Demir",
+    createdBy: "Ecemnaz Canbaz",
   },
   {
     id: "s4",
@@ -586,7 +587,7 @@ const mockSchemas = [
     ],
     created: formatDateOffset(72),
     updated: formatDateOffset(14),
-    createdBy: "Emre Sumer",
+    createdBy: "Ahmet Seyyar",
   },
 ];
 
@@ -4327,6 +4328,56 @@ function DevRemoteConfigList({ schemas, onCreateNew, onViewSchema }) {
   const [copiedKey, setCopiedKey] = useState(null);
   const [openActionId, setOpenActionId] = useState(null);
 
+  // Date filter state
+  const rcDateFilters = ["Today", "Yesterday", "7D", "30D", "3M", "6M", "12M"];
+  const [rcActiveDateFilter, setRcActiveDateFilter] = useState("30D");
+  const [rcLastPresetFilter, setRcLastPresetFilter] = useState("30D");
+  const [rcCustomStartDate, setRcCustomStartDate] = useState("");
+  const [rcCustomEndDate, setRcCustomEndDate] = useState("");
+  const [rcPickerOpen, setRcPickerOpen] = useState(false);
+  const [rcPickerMonth, setRcPickerMonth] = useState(startOfDay(new Date()));
+  const rcCustomStart = parseInputDate(rcCustomStartDate);
+  const rcCustomEnd = parseInputDate(rcCustomEndDate);
+
+  const handleRcCalendarClick = (date) => {
+    const clicked = startOfDay(date);
+    if (!rcCustomStart || (rcCustomStart && rcCustomEnd)) {
+      setRcCustomStartDate(toInputDate(formatDisplayDate(clicked)));
+      setRcCustomEndDate("");
+    } else if (clicked < rcCustomStart) {
+      setRcCustomStartDate(toInputDate(formatDisplayDate(clicked)));
+      setRcCustomEndDate(toInputDate(formatDisplayDate(rcCustomStart)));
+    } else {
+      setRcCustomEndDate(toInputDate(formatDisplayDate(clicked)));
+    }
+    setRcActiveDateFilter("Custom");
+  };
+
+  const renderRcCalendar = (monthDate) => (
+    <div style={{ flex: 1, minWidth: 0 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+        <div style={{ fontSize: 16, fontWeight: 600, color: PRIMARY }}>{getMonthLabel(monthDate)}</div>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 6, fontSize: 11, color: TEXT_MUTED, marginBottom: 8 }}>
+        {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((d) => <div key={d} style={{ textAlign: "center", padding: "4px 0" }}>{d}</div>)}
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 6 }}>
+        {getCalendarDays(monthDate).map((date) => {
+          const isOutside = date.getMonth() !== monthDate.getMonth();
+          const isStart = isSameDay(date, rcCustomStart);
+          const isEnd = isSameDay(date, rcCustomEnd);
+          const inRange = isWithinRange(date, rcCustomStart, rcCustomEnd);
+          return (
+            <button key={date.toISOString()} onClick={(e) => { e.stopPropagation(); handleRcCalendarClick(date); }}
+              style={{ height: 32, borderRadius: 8, border: "none", background: isStart || isEnd ? "#EAF1FF" : inRange ? "#F4F8FF" : "transparent", color: isOutside ? "#C7CDD9" : TEXT, fontSize: 13, cursor: "pointer" }}>
+              {date.getDate()}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+
   const filtered = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return schemas;
@@ -4340,7 +4391,7 @@ function DevRemoteConfigList({ schemas, onCreateNew, onViewSchema }) {
   };
 
   useEffect(() => {
-    const handler = () => setOpenActionId(null);
+    const handler = () => { setOpenActionId(null); setRcPickerOpen(false); };
     window.addEventListener("click", handler);
     return () => window.removeEventListener("click", handler);
   }, []);
@@ -4361,26 +4412,60 @@ function DevRemoteConfigList({ schemas, onCreateNew, onViewSchema }) {
         </button>
       </div>
 
-      {/* Search */}
-      <div style={{ marginBottom: 16 }}>
-        <div style={{ position: "relative", flex: 1, maxWidth: 320 }}>
-          <span style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", color: TEXT_MUTED, pointerEvents: "none" }}><SearchIcon /></span>
-          <input
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search by config name or key..."
-            style={{ ...inputStyle, paddingLeft: 36, background: WHITE }}
-          />
+      {/* Filter bar */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, flexWrap: "wrap", position: "relative" }}>
+        <div style={{ position: "relative", flex: "0 0 250px" }}>
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "#9CA3AF", pointerEvents: "none" }}><circle cx="6.5" cy="6.5" r="4.5" stroke="currentColor" strokeWidth="1.5"/><path d="M10 10L14 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+          <input type="text" placeholder="Search by config name or key..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+            style={{ ...inputStyle, width: "100%", background: WHITE, border: `1px solid ${BORDER}`, paddingLeft: 30, paddingRight: searchQuery ? 28 : 10, fontSize: 12, boxSizing: "border-box", height: 34 }} />
+          {searchQuery && <button onClick={() => setSearchQuery("")} style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", border: "none", background: "transparent", cursor: "pointer", color: "#9CA3AF", padding: 2, fontSize: 14, display: "flex", alignItems: "center" }}>×</button>}
         </div>
+        <div style={{ width: 1, height: 22, background: "#E5E7EB", flexShrink: 0 }} />
+        <span style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: 600, whiteSpace: "nowrap" }}>Update Date:</span>
+        <button
+          onClick={(e) => { e.stopPropagation(); setRcActiveDateFilter("Custom"); setRcPickerOpen((c) => !c); }}
+          style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "5px 10px", height: 34, borderRadius: 8, border: `1px solid ${rcActiveDateFilter === "Custom" ? "#3B82F6" : "#E5E7EB"}`, background: rcActiveDateFilter === "Custom" ? "#EFF6FF" : WHITE, color: rcActiveDateFilter === "Custom" ? "#1D4ED8" : TEXT_MUTED, fontSize: 11, fontWeight: 500, cursor: "pointer", whiteSpace: "nowrap" }}
+        >
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="11" rx="2" stroke="currentColor" strokeWidth="1.4"/><path d="M5 1v3M11 1v3M2 7h12" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>
+          {rcActiveDateFilter === "Custom" && rcCustomStartDate && rcCustomEndDate
+            ? `${formatPrettyDate(formatDisplayDate(parseInputDate(rcCustomStartDate)))} → ${formatPrettyDate(formatDisplayDate(parseInputDate(rcCustomEndDate)))}`
+            : "Custom range"}
+        </button>
+        {rcDateFilters.map((filter) => {
+          const active = rcActiveDateFilter === filter;
+          return (
+            <button key={filter} onClick={() => { setRcLastPresetFilter(filter); setRcActiveDateFilter(filter); setRcPickerOpen(false); setRcCustomStartDate(""); setRcCustomEndDate(""); }}
+              style={{ padding: "5px 10px", height: 34, borderRadius: 8, border: `1px solid ${active ? "#3B82F6" : "#E5E7EB"}`, background: active ? "#3B82F6" : WHITE, color: active ? WHITE : TEXT_MUTED, fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
+              {filter}
+            </button>
+          );
+        })}
+        {rcPickerOpen && (
+          <div onClick={(e) => e.stopPropagation()} style={{ position: "absolute", top: 42, left: 0, width: 640, background: WHITE, border: `1px solid ${BORDER}`, borderRadius: 18, boxShadow: "0 18px 40px rgba(23,30,50,0.14)", padding: 16, zIndex: 300 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+              <input type="date" value={rcCustomStartDate} onChange={(e) => { setRcCustomStartDate(e.target.value); setRcActiveDateFilter("Custom"); }} style={{ ...inputStyle, width: 150, padding: "10px 12px" }} />
+              <span style={{ color: TEXT_MUTED }}>→</span>
+              <input type="date" value={rcCustomEndDate} onChange={(e) => { setRcCustomEndDate(e.target.value); setRcActiveDateFilter("Custom"); }} style={{ ...inputStyle, width: 150, padding: "10px 12px" }} />
+              <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
+                <button onClick={() => setRcPickerMonth((c) => addMonths(c, -1))} style={{ ...secondaryButtonStyle, padding: "7px 10px" }}>←</button>
+                <button onClick={() => setRcPickerMonth((c) => addMonths(c, 1))} style={{ ...secondaryButtonStyle, padding: "7px 10px" }}>→</button>
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 16 }}>
+              {renderRcCalendar(rcPickerMonth)}
+              {renderRcCalendar(addMonths(rcPickerMonth, 1))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Table */}
       <div style={{ ...cardStyle, overflow: "visible" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", display: "table", borderRadius: 14, overflow: "hidden" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", display: "table", borderRadius: 14, overflow: "visible" }}>
           <thead>
             <tr style={{ borderBottom: `1px solid ${BORDER}`, background: SOFT }}>
-              {["Name", "Description", "Created", "Last Updated", "Creator User", ""].map((h) => (
-                <th key={h} style={{ padding: "11px 16px", textAlign: "left", fontSize: 11, fontWeight: 700, color: TEXT_MUTED, letterSpacing: 0.5, whiteSpace: "nowrap" }}>{h}</th>
+              {["Name", "Description", "Created", "Last Updated", "Creator User", "Actions"].map((h) => (
+                <th key={h} style={{ padding: "11px 16px", textAlign: h === "Actions" ? "center" : "left", fontSize: 11, fontWeight: 700, color: TEXT_MUTED, letterSpacing: 0.5, whiteSpace: "nowrap" }}>{h}</th>
               ))}
             </tr>
           </thead>
