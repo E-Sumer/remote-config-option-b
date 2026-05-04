@@ -4454,7 +4454,13 @@ function DevRemoteConfigNew({ schema, onBack, onSave }) {
   const displayKey = AUTO_KEY_ACTIVE ? (name.trim() ? derivedKey : "") : key;
 
   const addParam = () => {
-    setParams((prev) => [...prev, { id: `sp_new_${Date.now()}`, key: "", type: "String", description: "", defaultValue: "", collapsed: false }]);
+    setParams((prev) => [...prev, { id: `sp_new_${Date.now()}`, key: "", type: "String", defaultValue: "", collapsed: false }]);
+  };
+
+  const defaultValueForType = (type) => type === "JSON" ? '{"key":"value"}' : type === "Boolean" ? "true" : "";
+
+  const handleParamTypeChange = (id, newType) => {
+    setParams((prev) => prev.map((p) => p.id === id ? { ...p, type: newType, defaultValue: defaultValueForType(newType) } : p));
   };
 
   const updateParam = (id, field, value) => {
@@ -4603,28 +4609,40 @@ ${params.slice(0, 3).map((p) => `const ${p.key || "param"} = config.get('${p.key
                       </button>
                     </div>
                     {!p.collapsed && (
-                      <div>
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 140px", gap: 10, marginBottom: 10 }}>
-                          <div>
-                            <label style={{ display: "block", marginBottom: 4, fontSize: 11, fontWeight: 700, color: TEXT_MUTED }}>KEY</label>
-                            <input value={p.key} onChange={(e) => updateParam(p.id, "key", e.target.value)} placeholder="e.g. hero_title" style={{ ...inputStyle, background: WHITE, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", fontSize: 12 }} />
-                          </div>
-                          <div>
-                            <label style={{ display: "block", marginBottom: 4, fontSize: 11, fontWeight: 700, color: TEXT_MUTED }}>TYPE</label>
-                            <select value={p.type} onChange={(e) => updateParam(p.id, "type", e.target.value)} style={{ ...inputStyle, background: WHITE }}>
-                              {["String", "Integer", "Boolean", "Float", "JSON"].map((t) => <option key={t} value={t}>{t}</option>)}
-                            </select>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 140px", gap: 10 }}>
+                        <div>
+                          <label style={{ display: "block", marginBottom: 4, fontSize: 11, fontWeight: 700, color: TEXT_MUTED }}>KEY</label>
+                          <input value={p.key} onChange={(e) => updateParam(p.id, "key", e.target.value)} placeholder="e.g. hero_title" style={{ ...inputStyle, background: WHITE, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", fontSize: 12 }} />
+                          <div style={{ marginTop: 10 }}>
+                            <label style={{ display: "block", marginBottom: 4, fontSize: 11, fontWeight: 700, color: TEXT_MUTED }}>DEFAULT VALUE</label>
+                            {p.type === "Boolean" ? (
+                              <select
+                                value={p.defaultValue}
+                                onChange={(e) => updateParam(p.id, "defaultValue", e.target.value)}
+                                style={{ ...inputStyle, background: WHITE, appearance: "auto", WebkitAppearance: "auto" }}
+                              >
+                                <option value="true">TRUE</option>
+                                <option value="false">FALSE</option>
+                              </select>
+                            ) : (
+                              <input
+                                value={p.defaultValue}
+                                onChange={(e) => updateParam(p.id, "defaultValue", e.target.value)}
+                                placeholder={p.type === "JSON" ? '{"key":"value"}' : "e.g. 42, hello"}
+                                style={{ ...inputStyle, background: WHITE, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", fontSize: 12 }}
+                              />
+                            )}
                           </div>
                         </div>
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                          <div>
-                            <label style={{ display: "block", marginBottom: 4, fontSize: 11, fontWeight: 700, color: TEXT_MUTED }}>DESCRIPTION</label>
-                            <input value={p.description} onChange={(e) => updateParam(p.id, "description", e.target.value)} placeholder="What does this parameter control?" style={{ ...inputStyle, background: WHITE }} />
-                          </div>
-                          <div>
-                            <label style={{ display: "block", marginBottom: 4, fontSize: 11, fontWeight: 700, color: TEXT_MUTED }}>DEFAULT VALUE</label>
-                            <input value={p.defaultValue} onChange={(e) => updateParam(p.id, "defaultValue", e.target.value)} placeholder="e.g. true, 42, hello" style={{ ...inputStyle, background: WHITE, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", fontSize: 12 }} />
-                          </div>
+                        <div>
+                          <label style={{ display: "block", marginBottom: 4, fontSize: 11, fontWeight: 700, color: TEXT_MUTED }}>TYPE</label>
+                          <select
+                            value={p.type}
+                            onChange={(e) => handleParamTypeChange(p.id, e.target.value)}
+                            style={{ ...inputStyle, background: WHITE, appearance: "auto", WebkitAppearance: "auto" }}
+                          >
+                            {["String", "Integer", "Boolean", "JSON"].map((t) => <option key={t} value={t}>{t}</option>)}
+                          </select>
                         </div>
                       </div>
                     )}
