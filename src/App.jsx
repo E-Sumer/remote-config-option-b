@@ -1384,82 +1384,21 @@ function RemoteConfigurationForm({
     const nextErrors = {};
     const trimmedName = form.name.trim();
     const trimmedKey = form.key.trim();
-    const duplicateName = existingConfigs.find((config) => config.name.toLowerCase() === trimmedName.toLowerCase() && config.id !== form.id);
-    const duplicateParamKeys = new Set();
-    const paramKeyMap = new Map();
+    const duplicateName = existingConfigs.find(
+      (config) => config.name.toLowerCase() === trimmedName.toLowerCase() && config.id !== form.id,
+    );
 
     if (!trimmedName) {
-      nextErrors.name = "Configuration name is required.";
+      nextErrors.name = "Rollout name is required.";
     } else if (duplicateName) {
-      nextErrors.name = "A configuration with this name already exists.";
+      nextErrors.name = "A rollout with this name already exists.";
     }
 
     if (!trimmedKey) {
-      nextErrors.key = "Configuration key is required.";
-    } else if (!/^[a-z0-9_]+$/.test(trimmedKey)) {
-      nextErrors.key = "Key may only contain lowercase letters, numbers, and underscores.";
-    }
-
-    if (!form.description.trim()) {
-      nextErrors.description = "Description is required.";
-    }
-
-    const parameterErrors = {};
-    form.parameters.forEach((parameter) => {
-      const parameterKey = parameter.key.trim();
-      if (parameterKey) {
-        if (paramKeyMap.has(parameterKey)) {
-          duplicateParamKeys.add(parameterKey);
-          duplicateParamKeys.add(paramKeyMap.get(parameterKey));
-        } else {
-          paramKeyMap.set(parameterKey, parameter.id);
-        }
-      }
-    });
-
-    form.parameters.forEach((parameter) => {
-      const entryErrors = {};
-      const parameterKey = parameter.key.trim();
-
-      if (!parameterKey) {
-        entryErrors.key = "Parameter key is required.";
-      } else if (!/^[a-z0-9_]+$/.test(parameterKey)) {
-        entryErrors.key = "Key may only contain lowercase letters, numbers, and underscores.";
-      } else if (duplicateParamKeys.has(parameter.key) || duplicateParamKeys.has(parameter.id)) {
-        entryErrors.key = "This key already exists in this configuration.";
-      }
-
-      if (parameter.type === "JSON") {
-        try {
-          JSON.parse(String(parameter.value || "{}"));
-        } catch {
-          entryErrors.value = "Value must be valid JSON.";
-        }
-      }
-
-      if ((parameter.type === "String" || parameter.type === "Number") && String(parameter.value).trim() === "") {
-        entryErrors.value = "Value is required.";
-      }
-
-      if (Object.keys(entryErrors).length > 0) {
-        parameterErrors[parameter.id] = entryErrors;
-      }
-    });
-
-    if (Object.keys(parameterErrors).length > 0) {
-      nextErrors.parameters = parameterErrors;
+      nextErrors.key = "Please select a config from the library.";
     }
 
     setErrors(nextErrors);
-
-    const liveConflict = existingConfigs.find(
-      (config) => config.status === "Live" && config.key === trimmedKey && config.id !== form.id,
-    );
-
-    if (!nextErrors.key && liveConflict) {
-      setConflictConfig(liveConflict);
-      return false;
-    }
 
     const isValid = Object.keys(nextErrors).length === 0;
     if (!isValid) {
