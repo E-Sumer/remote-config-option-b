@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { App as AntApp, Button, Alert, Tag, message as antdMessage } from "antd";
 
 const BLACK = "#111827";
 const PRIMARY = "#030213";
@@ -4464,12 +4465,9 @@ function DevRemoteConfigList({ schemas, onCreateNew, onViewSchema }) {
             <p style={pageDescriptionStyle}>Define reusable configurations your SDK can fetch. These are the building blocks used in rollouts and experiments.</p>
           </div>
         </div>
-        <button onClick={onCreateNew}
-          style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 15px", height: 32, borderRadius: 6, border: "none", background: "#3B82F6", color: WHITE, fontSize: 14, fontWeight: 500, cursor: "pointer", flexShrink: 0, boxShadow: "0 2px 0 rgba(5,145,255,0.1)", transition: "all 0.2s" }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = "#2563EB"; }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = "#3B82F6"; }}>
+        <Button type="primary" onClick={onCreateNew} style={{ flexShrink: 0 }}>
           + New Config
-        </button>
+        </Button>
       </div>
 
       {/* Filter bar */}
@@ -4666,21 +4664,18 @@ function DevRemoteConfigDetail({ schema, onBack, onDuplicate }) {
           <h1 style={pageTitleStyle}>{schema.name}</h1>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 4 }}>
             <span style={{ fontSize: 13, color: TEXT_MUTED }}>{schema.key}</span>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "2px 8px", borderRadius: 4, background: "#f6ffed", border: "1px solid #b7eb8f", color: "#52c41a", fontSize: 12, fontWeight: 600 }}>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="#52c41a"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm-1 15l-4-4 1.414-1.414L11 14.172l6.586-6.586L19 9l-8 8z"/></svg>
-              ACTIVE
-            </span>
+            <Tag color="success">ACTIVE</Tag>
           </div>
         </div>
       </div>
 
       {/* Ant Design info alert */}
-      <div style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "12px 16px", background: "#e6f4ff", border: "1px solid #91caff", borderRadius: 6, marginBottom: 20 }}>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="#1677FF" style={{ flexShrink: 0, marginTop: 1 }}><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm0 15a1 1 0 110-2 1 1 0 010 2zm1-4a1 1 0 01-2 0V8a1 1 0 012 0v5z"/></svg>
-        <div style={{ fontSize: 13, color: "#0958D9", lineHeight: 1.6 }}>
-          This config is currently active and cannot be edited. To make changes, duplicate this config to create a new Draft.
-        </div>
-      </div>
+      <Alert
+        type="info"
+        showIcon
+        message="This config is currently active and cannot be edited. To make changes, duplicate this config to create a new Draft."
+        style={{ marginBottom: 20 }}
+      />
 
       <div style={{ display: "flex", flexDirection: "column", gap: 18, flex: 1, paddingBottom: 90 }}>
         {/* Basic Info — read-only */}
@@ -4759,22 +4754,14 @@ function DevRemoteConfigDetail({ schema, onBack, onDuplicate }) {
         </div>
       </div>
 
-      {/* Sticky footer — Ant Design button styles */}
+      {/* Sticky footer */}
       <div style={{ position: "sticky", bottom: 0, background: WHITE, borderTop: `1px solid ${BORDER}`, padding: "14px 0", marginLeft: -28, marginRight: -28, paddingLeft: 28, paddingRight: 28, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <button onClick={onBack}
-          style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 15px", height: 32, borderRadius: 6, border: "1px solid #d9d9d9", background: WHITE, color: "#374151", fontSize: 14, fontWeight: 500, cursor: "pointer", transition: "all 0.2s" }}
-          onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#3B82F6"; e.currentTarget.style.color = "#3B82F6"; }}
-          onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#d9d9d9"; e.currentTarget.style.color = "#374151"; }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+        <Button onClick={onBack} icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>}>
           Back
-        </button>
-        <button onClick={onDuplicate}
-          style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 15px", height: 32, borderRadius: 6, border: "none", background: "#3B82F6", color: WHITE, fontSize: 14, fontWeight: 500, cursor: "pointer", boxShadow: "0 2px 0 rgba(5,145,255,0.1)", transition: "all 0.2s" }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = "#2563EB"; }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = "#3B82F6"; }}>
-          <CopyIcon />
+        </Button>
+        <Button type="primary" onClick={onDuplicate} icon={<CopyIcon />}>
           Duplicate as Draft
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -4893,7 +4880,7 @@ ${params.slice(0, 3).map((p) => `final ${p.key || "param"} = config.get('${p.key
           {isEdit ? (
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 4 }}>
               <span style={{ fontSize: 13, color: TEXT_MUTED }}>{schema.name}</span>
-              <span style={{ display: "inline-flex", alignItems: "center", padding: "2px 8px", borderRadius: 4, background: "#F3F4F6", border: "1px solid #d9d9d9", color: "#595959", fontSize: 12, fontWeight: 600, letterSpacing: 0.3 }}>DRAFT</span>
+              <Tag>DRAFT</Tag>
             </div>
           ) : (
             <p style={pageDescriptionStyle}>Define the keys and default values your SDK will fetch.</p>
@@ -4902,15 +4889,18 @@ ${params.slice(0, 3).map((p) => `final ${p.key || "param"} = config.get('${p.key
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 18, flex: 1, paddingBottom: 90 }}>
-        {/* Experience usage warning — Ant Design default style */}
+        {/* Experience usage warning */}
         {isEdit && isUsedInExperience && (
-          <div style={{ display: "flex", gap: 10, padding: "12px 16px", background: "#E6F4FF", border: "1px solid #91CAFF", borderRadius: 8 }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="#1677FF" style={{ flexShrink: 0, marginTop: 1 }}><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm0 15a1 1 0 110-2 1 1 0 010 2zm1-4a1 1 0 01-2 0V8a1 1 0 012 0v5z"/></svg>
-            <div style={{ fontSize: 13, color: "#0958D9", lineHeight: 1.6 }}>
-              <span style={{ fontWeight: 600 }}>This config is in use.</span>{" "}
-              It is currently linked to {linkedRollouts.length > 0 ? `${linkedRollouts.length} rollout${linkedRollouts.length > 1 ? "s" : ""}` : ""}{linkedRollouts.length > 0 && linkedExperiments.length > 0 ? " and " : ""}{linkedExperiments.length > 0 ? `${linkedExperiments.length} A/B test${linkedExperiments.length > 1 ? "s" : ""}` : ""}. Changes will affect live experiences. Only Draft configs can be freely edited.
-            </div>
-          </div>
+          <Alert
+            type="info"
+            showIcon
+            message={
+              <span>
+                <strong>This config is in use.</strong>{" "}
+                It is currently linked to {linkedRollouts.length > 0 ? `${linkedRollouts.length} rollout${linkedRollouts.length > 1 ? "s" : ""}` : ""}{linkedRollouts.length > 0 && linkedExperiments.length > 0 ? " and " : ""}{linkedExperiments.length > 0 ? `${linkedExperiments.length} A/B test${linkedExperiments.length > 1 ? "s" : ""}` : ""}. Changes will affect live experiences. Only Draft configs can be freely edited.
+              </span>
+            }
+          />
         )}
 
         {/* Basic Info */}
@@ -5097,28 +5087,14 @@ ${params.slice(0, 3).map((p) => `final ${p.key || "param"} = config.get('${p.key
         </div>
       </div>
 
-      {/* Sticky footer — Ant Design button styles */}
+      {/* Sticky footer */}
       <div style={{ position: "sticky", bottom: 0, background: WHITE, borderTop: `1px solid ${BORDER}`, padding: "14px 0", marginLeft: -28, marginRight: -28, paddingLeft: 28, paddingRight: 28, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <button onClick={onBack}
-          style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 15px", height: 32, borderRadius: 6, border: "1px solid #d9d9d9", background: WHITE, color: "#374151", fontSize: 14, fontWeight: 500, cursor: "pointer", transition: "all 0.2s" }}
-          onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#3B82F6"; e.currentTarget.style.color = "#3B82F6"; }}
-          onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#d9d9d9"; e.currentTarget.style.color = "#374151"; }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+        <Button onClick={onBack} icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>}>
           Back
-        </button>
+        </Button>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <button onClick={handleSaveAsDraft}
-            style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 15px", height: 32, borderRadius: 6, border: "1px solid #d9d9d9", background: WHITE, color: "#374151", fontSize: 14, fontWeight: 500, cursor: "pointer", transition: "all 0.2s" }}
-            onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#3B82F6"; e.currentTarget.style.color = "#3B82F6"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#d9d9d9"; e.currentTarget.style.color = "#374151"; }}>
-            Save as Draft
-          </button>
-          <button onClick={handleSave}
-            style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 15px", height: 32, borderRadius: 6, border: "none", background: "#3B82F6", color: WHITE, fontSize: 14, fontWeight: 500, cursor: "pointer", boxShadow: "0 2px 0 rgba(5,145,255,0.1)", transition: "all 0.2s" }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = "#2563EB"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = "#3B82F6"; }}>
-            Publish Config
-          </button>
+          <Button onClick={handleSaveAsDraft}>Save as Draft</Button>
+          <Button type="primary" onClick={handleSave}>Publish Config</Button>
         </div>
       </div>
     </div>
@@ -5200,6 +5176,7 @@ export default function App() {
   const navigate = useNavigate();
   const location = useLocation();
   const isNavigatingRef = useRef(false);
+  const { message: antMessage } = AntApp.useApp();
 
   const [activeMenu, setActiveMenu] = useState("remote_config");
   const [remoteConfigView, setRemoteConfigView] = useState("list");
@@ -5360,18 +5337,25 @@ export default function App() {
       };
       return [duplicate, ...prev];
     });
-    setToast({ type: "success", message: "Config duplicated as Draft." });
+    antMessage.success("Config duplicated as Draft.");
     goToDevSchemaList();
   };
 
   const handleSaveSchema = (data) => {
+    // Unique key check
+    const keyConflict = schemas.some((s) => s.key === data.key && (!selectedSchema || s.id !== selectedSchema.id));
+    if (keyConflict) {
+      antMessage.error(`A config with key "${data.key}" already exists. Please use a unique key.`);
+      return;
+    }
     if (selectedSchema) {
       setSchemas((prev) => prev.map((s) => s.id === selectedSchema.id ? { ...s, ...data, updated: formatToday() } : s));
     } else {
       const newSchema = { id: `s_${Date.now()}`, ...data, created: formatToday(), updated: formatToday(), createdBy: "Emre Sumer" };
       setSchemas((prev) => [newSchema, ...prev]);
     }
-    setToast({ type: "success", message: selectedSchema ? "Schema updated." : (data.status === "Draft" ? "Config saved as draft." : "Config published.") });
+    const msg = selectedSchema ? "Config updated." : (data.status === "Draft" ? "Config saved as draft." : "Config published.");
+    antMessage.success(msg);
     goToDevSchemaList();
   };
 
