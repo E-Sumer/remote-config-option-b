@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { App as AntApp, Button, Alert, Tag, message as antdMessage } from "antd";
+import { App as AntApp, Button, Alert, Tag, message as antdMessage, DatePicker } from "antd";
+import dayjs from "dayjs";
 
 const BLACK = "#111827";
 const PRIMARY = "#030213";
@@ -229,7 +230,7 @@ const initialExperiments = [
     id: 1,
     name: "Welcome message test",
     status: "RUNNING",
-    linkedConfigKey: "welcome_message_v2",
+    linkedConfigKey: "product_page_layout",
     hypothesis: "Personalized greeting increases engagement.",
     metric: "session_duration",
     lift: "+12%",
@@ -241,7 +242,7 @@ const initialExperiments = [
     id: 2,
     name: "CTA button color test",
     status: "RUNNING",
-    linkedConfigKey: "cta_button_config",
+    linkedConfigKey: "cart_checkout_config",
     hypothesis: "Green CTA converts better than blue.",
     metric: "purchase_completed",
     lift: "-3%",
@@ -253,7 +254,7 @@ const initialExperiments = [
     id: 3,
     name: "Promo banner placement",
     status: "winner_declared",
-    linkedConfigKey: "promo_banner_enabled",
+    linkedConfigKey: "search_results_display",
     hypothesis: "Top banner drives more clicks than bottom.",
     metric: "banner_click",
     lift: "+23%",
@@ -274,7 +275,7 @@ const initialExperiments = [
     trafficSplit: { control: 50, variant_b: 50 },
     targeting: "All Users",
     randomizationUnit: "User ID",
-    linkedConfigMeta: { name: "Promo Banner Enabled", key: "promo_banner_enabled", controlValue: false, variantBValue: true },
+    linkedConfigMeta: { name: "Search Results Display", key: "search_results_display", controlValue: false, variantBValue: true },
     variants: [
       { id: "control", label: "Control", conversionRate: 0.032, users: 31675, conversions: 1014, isWinner: false },
       { id: "variant_b", label: "Variant B", conversionRate: 0.039, users: 31675, conversions: 1235, uplift: 0.23, upliftAbsolute: 0.007, isWinner: true },
@@ -284,7 +285,7 @@ const initialExperiments = [
     id: 4,
     name: "Onboarding flow v3",
     status: "DRAFT",
-    linkedConfigKey: "onboarding_flow_v3",
+    linkedConfigKey: "onboarding_flow_config",
     hypothesis: "Shorter onboarding reduces drop-off.",
     metric: null,
     lift: "—",
@@ -296,7 +297,7 @@ const initialExperiments = [
     id: 5,
     name: "Search ranking weights",
     status: "PAUSED",
-    linkedConfigKey: "search_algorithm_weight",
+    linkedConfigKey: "product_page_layout",
     hypothesis: "ML-based ranking improves relevance.",
     metric: "search_result_click",
     lift: "+5%",
@@ -308,7 +309,7 @@ const initialExperiments = [
     id: 6,
     name: "Dark mode checkout",
     status: "COMPLETED",
-    linkedConfigKey: "deleted_dark_mode_config",
+    linkedConfigKey: "cart_checkout_config",
     hypothesis: "Dark mode checkout reduces abandonment.",
     metric: "checkout_completed",
     lift: "+9%",
@@ -915,7 +916,7 @@ function RemoteConfigActionMenu({ config, isOpen, onToggle, onEdit, onClone, onR
             background: WHITE,
             border: `1px solid ${BORDER}`,
             boxShadow: "0 4px 16px rgba(0,0,0,0.13)",
-            zIndex: 200,
+            zIndex: 9999,
           }}
         >
           {actionItems.map((item) => (
@@ -1132,25 +1133,24 @@ function RemoteConfigurationList({
         >
           Custom
         </button>
-        {/* Inline date range picker */}
-        <div style={{ display: "inline-flex", alignItems: "center", height: 34, border: `1px solid ${activeDateFilter === "Custom" ? "#3B82F6" : "#E5E7EB"}`, borderRadius: 8, background: WHITE, padding: "0 10px", gap: 6 }}>
-          <input
-            type="date"
-            value={customStartDate}
-            onChange={(e) => { setCustomStartDate(e.target.value); setActiveDateFilter("Custom"); }}
-            placeholder="Start date"
-            style={{ border: "none", outline: "none", fontSize: 12, color: customStartDate ? TEXT : TEXT_MUTED, background: "transparent", width: 110 }}
-          />
-          <span style={{ color: TEXT_MUTED, fontSize: 12 }}>→</span>
-          <input
-            type="date"
-            value={customEndDate}
-            onChange={(e) => { setCustomEndDate(e.target.value); setActiveDateFilter("Custom"); }}
-            placeholder="End date"
-            style={{ border: "none", outline: "none", fontSize: 12, color: customEndDate ? TEXT : TEXT_MUTED, background: "transparent", width: 110 }}
-          />
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style={{ color: TEXT_MUTED, flexShrink: 0 }}><rect x="2" y="3" width="12" height="11" rx="2" stroke="currentColor" strokeWidth="1.4"/><path d="M5 1v3M11 1v3M2 7h12" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>
-        </div>
+        {/* Date range picker */}
+        <DatePicker.RangePicker
+          placeholder={["Start date", "End date"]}
+          value={customStartDate && customEndDate ? [dayjs(customStartDate), dayjs(customEndDate)] : null}
+          onChange={(dates) => {
+            if (dates && dates[0] && dates[1]) {
+              setCustomStartDate(dates[0].format("YYYY-MM-DD"));
+              setCustomEndDate(dates[1].format("YYYY-MM-DD"));
+              setActiveDateFilter("Custom");
+            } else {
+              setCustomStartDate("");
+              setCustomEndDate("");
+            }
+          }}
+          size="small"
+          style={{ height: 34, borderRadius: 8, fontSize: 12, borderColor: activeDateFilter === "Custom" ? "#3B82F6" : "#E5E7EB" }}
+          separator={<span style={{ color: TEXT_MUTED }}>→</span>}
+        />
         {/* Preset filters */}
         {dateFilters.map((f) => {
           const isPrimary = activeDateFilter === f;
@@ -1176,7 +1176,7 @@ function RemoteConfigurationList({
       ) : (
         <>
           <div style={{ ...cardStyle, overflow: "visible" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, borderRadius: 12, overflow: "hidden", display: "table" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, borderRadius: 12, overflow: "visible", display: "table" }}>
               <thead>
                 <tr style={{ borderBottom: `1px solid ${BORDER}`, background: SOFT }}>
                   {[
@@ -1770,27 +1770,13 @@ function RemoteConfigurationForm({
         </div>
       )}
 
-      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 18 }}>
-        <span style={{ color: "#6B7280", fontSize: 13 }}>Platform</span>
-        <span style={{ color: "#D1D5DB", fontSize: 13 }}>›</span>
-        <span style={{ color: "#6B7280", fontSize: 13, cursor: "pointer" }} onClick={onCancel}>Feature Rollouts</span>
-        <span style={{ color: "#D1D5DB", fontSize: 13 }}>›</span>
-        <span style={{ color: "#3B82F6", fontWeight: 500, fontSize: 13 }}>{mode === "edit" ? "Edit" : "New Rollout"}</span>
-      </div>
-
-      <div style={{ ...cardStyle, padding: "18px 18px 12px", marginBottom: 12 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{ width: 4, alignSelf: "stretch", borderRadius: 999, background: "#3B82F6" }} />
-          <div style={{ flex: 1 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <h1 style={{ margin: 0, fontSize: 18, color: TEXT, fontWeight: 700 }}>
-                {mode === "edit" ? "Edit Feature Rollout" : "Create Feature Rollout"}
-              </h1>
-              <span style={{ padding: "2px 10px", borderRadius: 6, background: "#EFF6FF", color: "#3B82F6", fontSize: 13, fontWeight: 500 }}>
-                {versionLabel}
-              </span>
-            </div>
-            <p style={{ margin: "4px 0 0", color: TEXT_MUTED, fontSize: 13 }}>Choose a config and define who receives it.</p>
+      {/* Page header */}
+      <div style={{ marginBottom: 24, display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16 }}>
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
+          <div style={{ width: 5, alignSelf: "stretch", borderRadius: 999, background: "#3B82F6", flexShrink: 0 }} />
+          <div>
+            <h1 style={pageTitleStyle}>{mode === "edit" ? "Edit Feature Rollout" : "New Feature Rollout"}</h1>
+            <p style={pageDescriptionStyle}>Choose a config from the library and define who receives it.</p>
           </div>
         </div>
       </div>
@@ -4348,22 +4334,23 @@ function DevRemoteConfigList({ schemas, onCreateNew, onViewSchema }) {
         >
           Custom
         </button>
-        <div style={{ display: "inline-flex", alignItems: "center", height: 34, border: `1px solid ${rcActiveDateFilter === "Custom" ? "#3B82F6" : "#E5E7EB"}`, borderRadius: 8, background: WHITE, padding: "0 10px", gap: 6 }}>
-          <input
-            type="date"
-            value={rcCustomStartDate}
-            onChange={(e) => { setRcCustomStartDate(e.target.value); setRcActiveDateFilter("Custom"); }}
-            style={{ border: "none", outline: "none", fontSize: 12, color: rcCustomStartDate ? TEXT : TEXT_MUTED, background: "transparent", width: 110 }}
-          />
-          <span style={{ color: TEXT_MUTED, fontSize: 12 }}>→</span>
-          <input
-            type="date"
-            value={rcCustomEndDate}
-            onChange={(e) => { setRcCustomEndDate(e.target.value); setRcActiveDateFilter("Custom"); }}
-            style={{ border: "none", outline: "none", fontSize: 12, color: rcCustomEndDate ? TEXT : TEXT_MUTED, background: "transparent", width: 110 }}
-          />
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style={{ color: TEXT_MUTED, flexShrink: 0 }}><rect x="2" y="3" width="12" height="11" rx="2" stroke="currentColor" strokeWidth="1.4"/><path d="M5 1v3M11 1v3M2 7h12" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>
-        </div>
+        <DatePicker.RangePicker
+          placeholder={["Start date", "End date"]}
+          value={rcCustomStartDate && rcCustomEndDate ? [dayjs(rcCustomStartDate), dayjs(rcCustomEndDate)] : null}
+          onChange={(dates) => {
+            if (dates && dates[0] && dates[1]) {
+              setRcCustomStartDate(dates[0].format("YYYY-MM-DD"));
+              setRcCustomEndDate(dates[1].format("YYYY-MM-DD"));
+              setRcActiveDateFilter("Custom");
+            } else {
+              setRcCustomStartDate("");
+              setRcCustomEndDate("");
+            }
+          }}
+          size="small"
+          style={{ height: 34, borderRadius: 8, fontSize: 12, borderColor: rcActiveDateFilter === "Custom" ? "#3B82F6" : "#E5E7EB" }}
+          separator={<span style={{ color: TEXT_MUTED }}>→</span>}
+        />
         {rcDateFilters.map((f) => {
           const active = rcActiveDateFilter === f;
           return (
@@ -4424,7 +4411,7 @@ function DevRemoteConfigList({ schemas, onCreateNew, onViewSchema }) {
                       <MoreIcon />
                     </button>
                     {openActionId === schema.id && (
-                      <div style={{ position: "absolute", right: 0, top: "calc(100% + 4px)", width: 180, background: WHITE, border: `1px solid ${BORDER}`, borderRadius: 10, boxShadow: "0 4px 16px rgba(0,0,0,0.13)", zIndex: 200, overflow: "visible" }}>
+                      <div style={{ position: "absolute", right: 0, top: "calc(100% + 4px)", width: 180, background: WHITE, border: `1px solid ${BORDER}`, borderRadius: 10, boxShadow: "0 4px 16px rgba(0,0,0,0.13)", zIndex: 9999, overflow: "visible" }}>
                         {[
                           { icon: <EditIcon />, label: "Edit", disabled: schema.status === "Active", action: () => { setOpenActionId(null); onViewSchema(schema); } },
                           { icon: <CopyIcon />, label: "Duplicate", action: () => setOpenActionId(null) },
@@ -5044,7 +5031,6 @@ export default function App() {
   const [selectedExperimentReport, setSelectedExperimentReport] = useState(null);
   const [editingConfig, setEditingConfig] = useState(null);
   const [selectedConfigReport, setSelectedConfigReport] = useState(null);
-  const [configs, setConfigs] = useState(initialConfigs);
   const [experiments, setExperiments] = useState(initialExperiments);
   const [openActionId, setOpenActionId] = useState(null);
   const [experienceHovered, setExperienceHovered] = useState(false);
@@ -5052,6 +5038,22 @@ export default function App() {
   const [devSchemaView, setDevSchemaView] = useState("list");
   const [selectedSchema, setSelectedSchema] = useState(null);
   const [schemas, setSchemas] = useState(mockSchemas);
+  const configs = useMemo(() => schemas.map((s) => ({
+    id: s.id,
+    name: s.name,
+    key: s.key,
+    status: s.status === "Active" ? "Live" : "Draft",
+    type: s.parameters[0]?.type || "String",
+    creator: s.createdBy,
+    created: s.created,
+    updated: s.updated,
+    description: s.description || "",
+    parameters: s.parameters.map((p) => ({ ...p, value: p.defaultValue })),
+    rollout: 100,
+    version: 1.0,
+    deploymentType: s.status === "Active" ? "Rolled Out" : "Draft",
+    archived: false,
+  })), [schemas]);
   const [toast, setToast] = useState(null);
   const [loadingAction, setLoadingAction] = useState(null);
   const [removeModal, setRemoveModal] = useState({ open: false, config: null });
@@ -5261,10 +5263,7 @@ export default function App() {
     navigate("/experiences/ab_tests/new");
   };
 
-  const pauseConflictingConfig = (configId) => {
-    setConfigs((current) => current.map((item) => (
-      item.id === configId ? { ...item, status: "Stopped", updated: formatToday() } : item
-    )));
+  const pauseConflictingConfig = (_configId) => {
     setToast({ type: "warning", message: "Conflicting live configuration was stopped." });
   };
 
@@ -5279,14 +5278,9 @@ export default function App() {
         updated: today,
         params: form.parameters?.length || 0,
       };
-      setConfigs((current) => current.map((item) => (
-        item.id === editingConfig.id
-          ? savedConfig
-          : item
-      )));
       setEditingConfig(savedConfig);
     } else {
-      const nextId = Math.max(...configs.map((item) => item.id), 0) + 1;
+      const nextId = configs.length + 1;
       savedConfig = {
         id: nextId,
         ...form,
@@ -5295,10 +5289,6 @@ export default function App() {
         version: form.version || 1.0,
         params: form.parameters?.length || 0,
       };
-      setConfigs((current) => [
-        savedConfig,
-        ...current,
-      ]);
       setEditingConfig(savedConfig);
     }
 
@@ -5311,23 +5301,9 @@ export default function App() {
     return savedConfig;
   };
 
-  const handleCloneConfig = async (config) => {
-    setLoadingAction({ scope: "config", id: config.id, type: "clone" });
+  const handleCloneConfig = async (_config) => {
+    setLoadingAction({ scope: "config", id: _config.id, type: "clone" });
     await sleep(600);
-    const today = formatToday();
-    const nextId = Math.max(...configs.map((item) => item.id), 0) + 1;
-    setConfigs((current) => [
-      {
-        ...config,
-        id: nextId,
-        name: `${config.name} (Copy)`,
-        key: `${config.key}_copy`,
-        status: "Draft",
-        created: today,
-        updated: today,
-      },
-      ...current,
-    ]);
     setOpenActionId(null);
     setLoadingAction(null);
     setToast({ type: "success", message: "Configuration cloned successfully." });
@@ -5343,7 +5319,6 @@ export default function App() {
     if (!config) return;
     setLoadingAction({ scope: "config", id: config.id, type: "remove" });
     await sleep(650);
-    setConfigs((current) => current.filter((item) => item.id !== config.id));
     setLoadingAction(null);
     setRemoveModal({ open: false, config: null });
     setToast({ type: "success", message: "Configuration removed." });
@@ -5501,11 +5476,7 @@ export default function App() {
     const today = formatToday();
     let launchedExperiment;
 
-    if (options.publishConfig && form.linkedConfigKey) {
-      setConfigs((current) => current.map((config) => (
-        config.key === form.linkedConfigKey ? { ...config, status: "Live", updated: today } : config
-      )));
-    }
+    // configs is now derived from schemas; publishing a config is handled via schemas state
 
     if (form.id) {
       launchedExperiment = {
