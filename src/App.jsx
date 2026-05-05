@@ -2328,35 +2328,31 @@ function RemoteConfigurationDetail({ config, experiments, onBack, onEdit, onOpen
             <div style={{ ...cardStyle, padding: 22 }}>
               <h3 style={{ margin: "0 0 18px", fontSize: 15, fontWeight: 700, color: TEXT }}>Overview</h3>
 
-              {/* Rollout Coverage hero */}
-              <div style={{ marginBottom: 20, padding: "16px 20px", borderRadius: 10, background: "#EFF6FF", border: "1px solid #DBEAFE" }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: "#1D4ED8", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 8 }}>Rollout Coverage</div>
-                <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                  <div style={{ flex: 1, height: 10, borderRadius: 999, background: "#DBEAFE", overflow: "hidden" }}>
-                    <div style={{ width: `${rolloutPct}%`, height: "100%", borderRadius: 999, background: "#3B82F6" }} />
-                  </div>
-                  <span style={{ fontSize: 24, fontWeight: 800, color: "#1D4ED8", minWidth: 52, textAlign: "right" }}>{rolloutPct}%</span>
-                </div>
-                <div style={{ fontSize: 11, color: "#3B82F6", marginTop: 5 }}>of users are receiving this configuration</div>
-              </div>
-
               {/* Section: Rollout Setup */}
               <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 10 }}>Rollout Setup</div>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 14, marginBottom: 20 }}>
                 {[
-                  { label: "VALUE TYPE", value: config.type || "String", pill: true },
-                  { label: "ROLLOUT STRATEGY", value: "Percentage-Based" },
+                  {
+                    label: "ROLLOUT %",
+                    value: `${rolloutPct}%`,
+                    tooltip: "Percentage of users who will receive this configuration.",
+                  },
                   { label: "TARGET SEGMENT", value: activeSegments.length ? `${activeSegments.length} rule${activeSegments.length > 1 ? "s" : ""}` : "All Users" },
-                  { label: "ROLLOUT %", value: `${rolloutPct}%` },
-                  { label: "PLATFORMS", value: "iOS · Android · Web" },
-                  { label: "ENVIRONMENT", value: "Production" },
                 ].map((item) => (
                   <div key={item.label}>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 5 }}>{item.label}</div>
-                    {item.pill
-                      ? <span style={{ display: "inline-flex", alignItems: "center", padding: "3px 10px", borderRadius: 6, background: "#EFF6FF", color: "#1D4ED8", fontSize: 12, fontWeight: 600 }}>{item.value}</span>
-                      : <div style={{ fontSize: 13, color: TEXT, fontWeight: 500 }}>{item.value}</div>
-                    }
+                    <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 10, fontWeight: 700, color: "#6B7280", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 5 }}>
+                      {item.label}
+                      {item.tooltip && (
+                        <div style={{ position: "relative", display: "inline-flex", cursor: "default" }} onMouseEnter={(e) => { e.currentTarget.lastChild.style.visibility = "visible"; e.currentTarget.lastChild.style.opacity = "1"; }} onMouseLeave={(e) => { e.currentTarget.lastChild.style.visibility = "hidden"; e.currentTarget.lastChild.style.opacity = "0"; }}>
+                          <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6.5" stroke="#D1D5DB"/><rect x="6.5" y="6" width="1" height="4.5" rx="0.5" fill="#9CA3AF"/><rect x="6.5" y="3.5" width="1" height="1.3" rx="0.5" fill="#9CA3AF"/></svg>
+                          <div style={{ visibility: "hidden", opacity: 0, position: "absolute", bottom: "calc(100% + 8px)", left: "50%", transform: "translateX(-50%)", background: "#111827", color: WHITE, fontSize: 12, fontWeight: 400, padding: "7px 12px", borderRadius: 6, whiteSpace: "nowrap", boxShadow: "0 4px 12px rgba(0,0,0,0.15)", zIndex: 9999, transition: "opacity 0.15s, visibility 0.15s", pointerEvents: "none" }}>
+                            {item.tooltip}
+                            <span style={{ position: "absolute", top: "100%", left: "50%", transform: "translateX(-50%)", width: 0, height: 0, borderLeft: "5px solid transparent", borderRight: "5px solid transparent", borderTop: "5px solid #111827" }} />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ fontSize: 13, color: TEXT, fontWeight: 500 }}>{item.value}</div>
                   </div>
                 ))}
               </div>
@@ -2399,25 +2395,17 @@ function RemoteConfigurationDetail({ config, experiments, onBack, onEdit, onOpen
               </div>
             </div>
 
-            {/* Active Value card */}
+            {/* Values card */}
             <div style={{ ...cardStyle, padding: 22 }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-                <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: TEXT }}>Active Value</h3>
-                <span style={{ fontSize: 11, fontWeight: 600, color: "#15803D", background: "#EAFBF4", borderRadius: 6, padding: "3px 9px", border: "1px solid #BBF7D0" }}>Serving to {rolloutPct}% of users</span>
-              </div>
-              <p style={{ margin: "0 0 16px", fontSize: 13, color: TEXT_MUTED }}>The value currently deployed to your user base.</p>
+              <h3 style={{ margin: "0 0 16px", fontSize: 15, fontWeight: 700, color: TEXT }}>Values</h3>
               {config.parameters?.length ? (
                 <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                   {config.parameters.map((param) => (
                     <div key={param.key} style={{ borderRadius: 10, border: `1px solid ${BORDER}`, background: SOFT, padding: "14px 16px" }}>
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                          <code style={{ fontSize: 13, fontWeight: 700, color: TEXT, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace" }}>{param.key}</code>
-                          <span style={{ fontSize: 10, fontWeight: 600, color: "#6B7280", background: "#F3F4F6", borderRadius: 4, padding: "2px 6px", border: "1px solid #E5E7EB" }}>{param.type}</span>
-                        </div>
-                        <span style={{ fontSize: 11, fontWeight: 600, color: "#15803D", background: "#EAFBF4", borderRadius: 5, padding: "2px 9px", border: "1px solid #BBF7D0" }}>Active Value</span>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                        <code style={{ fontSize: 13, fontWeight: 700, color: TEXT, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace" }}>{param.key}</code>
+                        <span style={{ fontSize: 10, fontWeight: 600, color: "#6B7280", background: "#F3F4F6", borderRadius: 4, padding: "2px 6px", border: "1px solid #E5E7EB" }}>{param.type}</span>
                       </div>
-                      {param.description && <div style={{ fontSize: 11, color: TEXT_MUTED, marginBottom: 10 }}>{param.description}</div>}
                       <div style={{ fontSize: 12, color: TEXT, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", padding: "10px 12px", background: WHITE, borderRadius: 8, border: `1px solid ${BORDER}`, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
                         {param.type === "JSON" ? (() => { try { return JSON.stringify(JSON.parse(String(param.value)), null, 2); } catch (_) { return String(param.value); } })() : String(param.value)}
                       </div>
