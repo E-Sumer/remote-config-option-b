@@ -5881,7 +5881,7 @@ export default function App() {
               <SidebarItem
                 icon={<LinkIcon />}
                 label="Experiences"
-                active={activeMenu === "remote_config" || activeMenu === "ab_testing"}
+                active={experienceHovered}
                 trailing={
                   <span style={{ display: "inline-flex", transition: "transform 0.2s", transform: experienceHovered ? "rotate(90deg)" : "rotate(0deg)" }}>
                     <ChevronRightIcon />
@@ -5890,7 +5890,7 @@ export default function App() {
               />
 
               {experienceHovered && (
-                <div style={{ paddingLeft: 12, paddingTop: 2 }}>
+                <div style={{ position: "absolute", left: "100%", top: 0, marginLeft: 8, width: 190, padding: 8, borderRadius: 12, background: WHITE, border: `1px solid ${BORDER}`, boxShadow: SHADOW, zIndex: 40 }}>
                   {[
                     { key: "remote_config", label: "Feature Rollouts", action: goToRemoteConfigList },
                     { key: "ab_testing", label: "A/B Tests", action: goToAbList },
@@ -5903,7 +5903,7 @@ export default function App() {
                         display: "flex",
                         alignItems: "center",
                         gap: 10,
-                        padding: "8px 10px",
+                        padding: "10px 10px",
                         border: "none",
                         borderRadius: 9,
                         background: activeMenu === item.key ? PAGE_BG : "transparent",
@@ -5931,7 +5931,7 @@ export default function App() {
               <SidebarItem
                 icon={<DeveloperIcon />}
                 label="Developers"
-                active={activeMenu === "dev_remote_config"}
+                active={devHovered}
                 trailing={
                   <span style={{ display: "inline-flex", transition: "transform 0.2s", transform: devHovered ? "rotate(90deg)" : "rotate(0deg)" }}>
                     <ChevronRightIcon />
@@ -5939,7 +5939,7 @@ export default function App() {
                 }
               />
               {devHovered && (
-                <div style={{ paddingLeft: 12, paddingTop: 2 }}>
+                <div style={{ position: "absolute", left: "100%", top: 0, marginLeft: 8, width: 190, padding: 8, borderRadius: 12, background: WHITE, border: `1px solid ${BORDER}`, boxShadow: SHADOW, zIndex: 40 }}>
                   {[
                     { key: "dev_remote_config", label: "Config Library", action: goToDevSchemaList },
                   ].map((item) => (
@@ -5951,7 +5951,7 @@ export default function App() {
                         display: "flex",
                         alignItems: "center",
                         gap: 10,
-                        padding: "8px 10px",
+                        padding: "10px 10px",
                         border: "none",
                         borderRadius: 9,
                         background: activeMenu === item.key ? PAGE_BG : "transparent",
