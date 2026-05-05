@@ -2341,42 +2341,14 @@ function RemoteConfigurationDetail({ config, experiments, onBack, onEdit, onOpen
   return (
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100%" }}>
 
-      {/* ── Breadcrumb ── */}
-      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 14, fontSize: 12, color: TEXT_MUTED }}>
-        <span style={{ color: TEXT_MUTED }}>Platform</span>
-        <span style={{ color: "#D1D5DB" }}>›</span>
-        <span style={{ cursor: "pointer", color: TEXT_MUTED }} onClick={onBack}>Feature Rollouts</span>
-        <span style={{ color: "#D1D5DB" }}>›</span>
-        <span style={{ color: "#3B82F6", fontWeight: 500 }}>{displayTitle}</span>
-      </div>
-
-      {/* ── Page title section ── */}
-      <div style={{ marginBottom: 20 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 7, flexWrap: "wrap" }}>
-          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: TEXT }}>{displayTitle}</h1>
-          <ConfigStatusBadge status={config.status} />
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <code style={{ fontSize: 12, color: "#6B7280", fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", background: "#F3F4F6", padding: "2px 8px", borderRadius: 4, border: "1px solid #E5E7EB" }}>{config.key}</code>
-          <div style={{ position: "relative" }}>
-            <button
-              onClick={handleCopyKey}
-              title="Copy key"
-              style={{ border: "none", background: "transparent", cursor: "pointer", color: "#9CA3AF", padding: "3px 5px", display: "inline-flex", alignItems: "center", borderRadius: 4 }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = "#F3F4F6"; e.currentTarget.style.color = TEXT; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#9CA3AF"; }}
-            >
-              {copiedKey
-                ? <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M3 8l4 4 6-7" stroke="#22C55E" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                : <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><rect x="5" y="1.5" width="9" height="11" rx="2" stroke="currentColor" strokeWidth="1.4"/><path d="M3 4.5H2.5A1.5 1.5 0 0 0 1 6v8a1.5 1.5 0 0 0 1.5 1.5H10A1.5 1.5 0 0 0 11.5 14v-.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>
-              }
-            </button>
-            {copiedKey && (
-              <div style={{ position: "absolute", bottom: "calc(100% + 6px)", left: "50%", transform: "translateX(-50%)", background: "#1F2937", color: WHITE, fontSize: 11, fontWeight: 600, padding: "4px 9px", borderRadius: 5, whiteSpace: "nowrap", pointerEvents: "none", zIndex: 999 }}>
-                Copied!
-                <div style={{ position: "absolute", top: "100%", left: "50%", transform: "translateX(-50%)", width: 0, height: 0, borderLeft: "4px solid transparent", borderRight: "4px solid transparent", borderTop: "4px solid #1F2937" }} />
-              </div>
-            )}
+      {/* ── Page header (matches Config Library style) ── */}
+      <div style={{ marginBottom: 20, display: "flex", alignItems: "flex-start", gap: 14 }}>
+        <div style={{ width: 5, alignSelf: "stretch", borderRadius: 999, background: "#3B82F6", flexShrink: 0 }} />
+        <div>
+          <h1 style={pageTitleStyle}>{displayTitle}</h1>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 4 }}>
+            <span style={{ fontSize: 13, color: TEXT_MUTED, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace" }}>{config.key}</span>
+            <ConfigStatusBadge status={config.status} />
           </div>
         </div>
       </div>
@@ -2490,13 +2462,14 @@ function RemoteConfigurationDetail({ config, experiments, onBack, onEdit, onOpen
             </div>
           </div>
 
-      {/* ── Sticky footer ── */}
-      <div style={{ position: "sticky", bottom: 0, marginTop: 24, padding: "14px 0", background: WHITE, borderTop: "2px solid #E5E7EB", boxShadow: "0 -4px 16px rgba(0,0,0,0.06)", display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 10, zIndex: 40 }}>
-        <button onClick={onBack} style={ghostButtonStyle}>Back</button>
-        <button onClick={() => onEdit(config)} style={{ ...primaryButtonStyle, display: "inline-flex", alignItems: "center", gap: 7 }}>
-          <EditIcon />
+      {/* ── Footer (matches Config Library style) ── */}
+      <div style={{ position: "sticky", bottom: 0, background: WHITE, borderTop: `1px solid ${BORDER}`, padding: "14px 0", marginLeft: -28, marginRight: -28, paddingLeft: 28, paddingRight: 28, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <Button onClick={onBack} icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>}>
+          Back
+        </Button>
+        <Button type="primary" onClick={() => onEdit(config)} icon={<EditIcon />}>
           Edit
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -5498,7 +5471,7 @@ export default function App() {
       />
       <Toast toast={toast} />
       <div style={{ display: "flex", minHeight: "100vh", background: PAGE_BG, fontFamily: '"Inter", sans-serif' }}>
-      <aside style={{ width: 222, background: WHITE, borderRight: `1px solid ${BORDER}`, padding: "14px 0", display: "flex", flexDirection: "column" }}>
+      <aside style={{ position: "fixed", top: 0, left: 0, width: 222, height: "100vh", background: WHITE, borderRight: `1px solid ${BORDER}`, padding: "14px 0", display: "flex", flexDirection: "column", zIndex: 50 }}>
         <div style={{ padding: "0 18px 14px", borderBottom: `1px solid ${BORDER}` }}>
           <div style={{ fontSize: 20, fontWeight: 700, color: BLACK, letterSpacing: -0.5 }}>netmera</div>
         </div>
@@ -5521,7 +5494,7 @@ export default function App() {
           </div>
         </div>
 
-        <div style={{ padding: "4px 8px 0", flex: 1 }}>
+        <div style={{ padding: "4px 8px 0", flex: 1, overflowY: "auto" }}>
           <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
             <SidebarItem icon={<HeartIcon />} label="Favorites" />
             <SidebarItem icon={<DashboardIcon />} label="Dashboard" />
@@ -5646,7 +5619,7 @@ export default function App() {
         </div>
       </aside>
 
-      <main style={{ flex: 1, padding: "30px 28px 36px" }}>
+      <main style={{ flex: 1, padding: "30px 28px 36px", marginLeft: 222 }}>
         {renderMainContent()}
       </main>
       </div>
