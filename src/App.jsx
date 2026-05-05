@@ -1579,7 +1579,7 @@ function RemoteConfigurationForm({
   };
 
   const handleSaveDraft = async () => {
-    const isValid = validateStepOne() && (step === 1 || validateStepTwo());
+    const isValid = validateStepOne();
     if (!isValid) {
       pushToast("Please complete required fields before saving.", "warning");
       return;
@@ -1781,38 +1781,7 @@ function RemoteConfigurationForm({
         </div>
       </div>
 
-      <div style={{ display: "flex", alignItems: "flex-start", padding: "20px 0", marginBottom: 24 }}>
-        {/* Step 1 */}
-        <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-          {step === 2 && (
-            <div style={{ width: 20, height: 20, borderRadius: "50%", background: "#22C55E", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 2 }}>
-              <svg width="11" height="9" viewBox="0 0 11 9" fill="none"><path d="M1 4.5L4 7.5L10 1.5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
-            </div>
-          )}
-          <div>
-            <div style={{ fontSize: 16, fontWeight: 600, color: step === 1 ? "#3B82F6" : "#9CA3AF" }}>Config & Parameters</div>
-            <div style={{ fontSize: 13, color: step === 1 ? "#6B7280" : "#9CA3AF", marginTop: 2, marginLeft: 0 }}>Select a config and define its values.</div>
-          </div>
-        </div>
-        {/* Arrow separator */}
-        <div style={{ fontSize: 18, color: "#D1D5DB", margin: "1px 24px 0", flexShrink: 0 }}>→</div>
-        {/* Step 2 */}
-        <div>
-          {step === 2 ? (
-            <>
-              <div style={{ fontSize: 16, fontWeight: 700, color: "#3B82F6", borderBottom: "2px solid #3B82F6", paddingBottom: 4, display: "inline-block" }}>Targeting &amp; Rollout</div>
-              <div style={{ fontSize: 13, color: "#6B7280", marginTop: 4 }}>Choose who receives the configuration and how it rolls out.</div>
-            </>
-          ) : (
-            <>
-              <div style={{ fontSize: 16, fontWeight: 400, color: "#9CA3AF" }}>Targeting &amp; Rollout</div>
-              <div style={{ fontSize: 13, color: "#9CA3AF", marginTop: 2 }}>Choose who receives the configuration and how it rolls out.</div>
-            </>
-          )}
-        </div>
-      </div>
-
-      {step === 1 && (
+      {true && (
         <div style={{ display: "grid", gridTemplateColumns: jsonHidden ? "1fr 260px" : "minmax(0, 1fr) 460px", gap: 18 }}>
           <div style={{ ...cardStyle, padding: 18 }}>
             <h3 style={{ margin: "0 0 4px", fontSize: 15, color: TEXT }}>Basic Information</h3>
@@ -2036,7 +2005,7 @@ function RemoteConfigurationForm({
         </div>
       )}
 
-      {step === 2 && (() => {
+      {(() => {
         const customVariants = (form.variants || []).filter((v) => !v.isDefault);
         const atMax = customVariants.length >= 10;
         const variantColors = ["#3B82F6", "#22C55E", "#F59E0B", "#8B5CF6", "#EC4899", "#14B8A6", "#F97316", "#6366F1", "#84CC16", "#06B6D4"];
@@ -2046,7 +2015,7 @@ function RemoteConfigurationForm({
         const allUsersSelectedAnywhere = customVariants.some((v) => v.segments.includes("All Users"));
 
         return (
-          <div onClick={() => { setOpenSegmentMenuId(null); setOpenActionMenuKey(null); setOpenInlineEditKey(null); }}>
+          <div style={{ marginTop: 24 }} onClick={() => { setOpenSegmentMenuId(null); setOpenActionMenuKey(null); setOpenInlineEditKey(null); }}>
 
             {/* Variant cards */}
             <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 12 }}>
@@ -2478,21 +2447,16 @@ function RemoteConfigurationForm({
         );
       })()}
 
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 16 }}>
-        <button onClick={step === 1 ? showBackConfirmation : () => setStep(1)} style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "11px 18px", borderRadius: 8, background: WHITE, border: "1px solid #E5E7EB", color: "#374151", fontSize: 13, fontWeight: 500, cursor: "pointer" }}>Back</button>
+      {/* ── Sticky footer ── */}
+      <div style={{ position: "sticky", bottom: 0, marginTop: 24, padding: "14px 0", background: WHITE, borderTop: "2px solid #E5E7EB", boxShadow: "0 -4px 16px rgba(0,0,0,0.06)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, zIndex: 40 }}>
+        <Button onClick={showBackConfirmation}>Back</Button>
         <div style={{ display: "flex", gap: 10 }}>
-          <button onClick={handleSaveDraft} disabled={draftLoading} style={{ ...{ display: "inline-flex", alignItems: "center", gap: 8, padding: "11px 18px", borderRadius: 8, background: WHITE, border: "1px solid #E5E7EB", color: "#374151", fontSize: 13, fontWeight: 500, cursor: "pointer" }, minWidth: 118, justifyContent: "center" }}>
+          <Button onClick={handleSaveDraft} disabled={draftLoading} style={{ minWidth: 118 }}>
             {draftLoading ? <Spinner /> : "Save Draft"}
-          </button>
-          {step === 1 ? (
-            <button onClick={handleNext} style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "11px 18px", borderRadius: 8, background: "#3B82F6", border: "none", color: WHITE, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
-              Next <ChevronRightIcon />
-            </button>
-          ) : (
-            <button onClick={openPublishFlow} disabled={publishLoading} style={{ ...{ display: "inline-flex", alignItems: "center", gap: 8, padding: "11px 18px", borderRadius: 8, background: "#3B82F6", border: "none", color: WHITE, fontSize: 13, fontWeight: 600, cursor: "pointer" }, minWidth: 148, justifyContent: "center" }}>
-              {publishLoading ? <Spinner color="#FFFFFF" /> : "Go Live"}
-            </button>
-          )}
+          </Button>
+          <Button type="primary" onClick={openPublishFlow} disabled={publishLoading} style={{ minWidth: 100 }}>
+            {publishLoading ? <Spinner color="#FFFFFF" /> : "Go Live"}
+          </Button>
         </div>
       </div>
     </div>
