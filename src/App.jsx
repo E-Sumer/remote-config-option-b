@@ -1825,27 +1825,33 @@ function RemoteConfigurationForm({
               </div>
             </label>
             <style>{`
-              .rollout-cfg-select .ant-select-selector {
+              /* Ant Design v6 class names */
+              .rollout-cfg-select .ant-select-content {
                 border-radius: 8px !important;
                 height: 45px !important;
+                min-height: 45px !important;
                 padding-left: 14px !important;
                 padding-right: 14px !important;
                 border-color: rgba(0,0,0,0.1) !important;
                 font-size: 13px !important;
+                display: flex !important;
                 align-items: center !important;
               }
-              .rollout-cfg-select .ant-select-selection-item,
-              .rollout-cfg-select .ant-select-selection-placeholder {
-                line-height: 43px !important;
+              .rollout-cfg-select .ant-select-placeholder {
                 font-size: 13px !important;
+                line-height: 1 !important;
               }
-              .rollout-cfg-select .ant-select-arrow {
+              .rollout-cfg-select .ant-select-selection-item {
+                font-size: 13px !important;
+                line-height: 1 !important;
+              }
+              .rollout-cfg-select .ant-select-suffix {
                 transition: transform 0.2s ease !important;
               }
-              .rollout-cfg-select.ant-select-open .ant-select-arrow {
-                transform: translateY(-50%) rotate(180deg) !important;
+              .rollout-cfg-select .ant-select.ant-select-open .ant-select-suffix {
+                transform: rotate(180deg) !important;
               }
-              .rollout-cfg-select.ant-select-status-error .ant-select-selector {
+              .rollout-cfg-select .ant-select-status-error .ant-select-content {
                 border-color: #EF4444 !important;
               }
             `}</style>
