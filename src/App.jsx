@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { App as AntApp, Button, Alert, Tag, message as antdMessage, DatePicker } from "antd";
+import { App as AntApp, Button, Alert, Tag, message as antdMessage, DatePicker, Modal, Select } from "antd";
 import dayjs from "dayjs";
 
 const BLACK = "#111827";
@@ -1307,6 +1307,7 @@ function RemoteConfigurationForm({
   const [openInlineEditKey, setOpenInlineEditKey] = useState(null);
   const [inlineEditValue, setInlineEditValue] = useState("");
   const [dragHandleVariantId, setDragHandleVariantId] = useState(null);
+  const [defaultExpanded, setDefaultExpanded] = useState(false);
 
   useEffect(() => {
     setForm(buildInitialForm());
@@ -1340,6 +1341,7 @@ function RemoteConfigurationForm({
 
   const fieldInputStyle = (fieldName) => ({
     ...inputStyle,
+    background: WHITE,
     minHeight: fieldName === "description" ? 80 : undefined,
     borderColor: errors[fieldName] ? "#EF4444" : BORDER_DARK,
     boxShadow: errors[fieldName] ? "0 0 0 3px rgba(239, 68, 68, 0.12)" : "none",
@@ -1363,10 +1365,14 @@ function RemoteConfigurationForm({
       return;
     }
 
-    const shouldLeave = window.confirm("You have unsaved changes. Are you sure you want to leave?");
-    if (shouldLeave) {
-      onCancel();
-    }
+    Modal.confirm({
+      title: "Unsaved changes",
+      content: "You have unsaved changes. Are you sure you want to leave?",
+      okText: "Leave",
+      cancelText: "Stay",
+      okButtonProps: { danger: true },
+      onOk: () => onCancel(),
+    });
   };
 
   const scrollToFirstError = () => {
@@ -1696,7 +1702,7 @@ function RemoteConfigurationForm({
   };
 
   return (
-    <div>
+    <div style={{ paddingBottom: 80 }}>
       <Toast toast={toastMessage ? { type: toastType, message: toastMessage } : null} />
 
       <ConfirmModal
@@ -1800,10 +1806,9 @@ function RemoteConfigurationForm({
           </div>
           <div>
             <label style={{ display: "block", marginBottom: 8, fontSize: 12, fontWeight: 700, color: TEXT_MUTED }}>CONFIG KEY *</label>
-            <select
-              value={selectedSchemaId || ""}
-              onChange={(e) => {
-                const schemaId = e.target.value;
+            <Select
+              value={selectedSchemaId || undefined}
+              onChange={(schemaId) => {
                 setSelectedSchemaId(schemaId);
                 const schema = schemas.find((s) => s.id === schemaId);
                 if (schema) {
@@ -1818,13 +1823,11 @@ function RemoteConfigurationForm({
                   })));
                 }
               }}
-              style={{ ...fieldInputStyle("key"), cursor: "pointer" }}
-            >
-              <option value="">Select a config from library...</option>
-              {schemas.map((s) => (
-                <option key={s.id} value={s.id}>{s.name} ({s.key})</option>
-              ))}
-            </select>
+              placeholder="Select a config from library..."
+              style={{ width: "100%" }}
+              status={errors.key ? "error" : undefined}
+              options={schemas.map((s) => ({ value: s.id, label: `${s.name} (${s.key})` }))}
+            />
             {errors.key && <div style={{ marginTop: 6, fontSize: 12, color: "#EF4444" }}>{errors.key}</div>}
             {selectedSchemaId && (() => {
               const schema = schemas.find((s) => s.id === selectedSchemaId);
@@ -2036,7 +2039,7 @@ function RemoteConfigurationForm({
                               type="number" min="0" max="100"
                               value={variant.rolloutPercentage}
                               onChange={(e) => updateVariant(variant.id, (v) => ({ ...v, rolloutPercentage: Math.min(100, Math.max(0, Number(e.target.value))) }))}
-                              style={{ width: 56, padding: "6px 8px", border: "1px solid #E5E7EB", borderRadius: 6, textAlign: "center", fontSize: 14, fontWeight: 700, color: "#111827", background: WHITE, outline: "none" }}
+                              style={{ width: 72, padding: "6px 10px", border: "1px solid #E5E7EB", borderRadius: 6, textAlign: "center", fontSize: 14, fontWeight: 700, color: "#111827", background: WHITE, outline: "none" }}
                             />
                             <span style={{ fontSize: 14, color: "#6B7280" }}>%</span>
                           </div>
@@ -2240,49 +2243,71 @@ function RemoteConfigurationForm({
             </div>
 
             {/* Default Experience card */}
-            <div style={{ background: WHITE, border: "1px solid #E5E7EB", borderRadius: 8, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12 }}>
-              <svg style={{ flexShrink: 0, color: "#9CA3AF" }} width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                <path d="M8 1a3.5 3.5 0 0 0-3.5 3.5V6H3.5A1.5 1.5 0 0 0 2 7.5v6A1.5 1.5 0 0 0 3.5 15h9a1.5 1.5 0 0 0 1.5-1.5v-6A1.5 1.5 0 0 0 12.5 6h-1V4.5A3.5 3.5 0 0 0 8 1Zm-2 3.5a2 2 0 0 1 4 0V6H6V4.5ZM3.5 7h9a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-.5.5h-9a.5.5 0 0 1-.5-.5v-6a.5.5 0 0 1 .5-.5ZM8 9a1 1 0 1 0 0 2 1 1 0 0 0 0-2Z"/>
-              </svg>
-              {/* Label + info tooltip */}
-              <div style={{ display: "flex", alignItems: "center", gap: 6, flex: 1 }}>
-                <span style={{ fontSize: 14, fontWeight: 600, color: "#374151" }}>Default Experience</span>
-                {/* Info icon with hover tooltip */}
-                <div
-                  style={{ position: "relative", display: "inline-flex", cursor: "default" }}
-                  onMouseEnter={(e) => { e.currentTarget.lastChild.style.visibility = "visible"; e.currentTarget.lastChild.style.opacity = "1"; }}
-                  onMouseLeave={(e) => { e.currentTarget.lastChild.style.visibility = "hidden"; e.currentTarget.lastChild.style.opacity = "0"; }}
-                >
-                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                    <circle cx="7" cy="7" r="6.5" stroke="#D1D5DB"/>
-                    <rect x="6.5" y="6" width="1" height="4.5" rx="0.5" fill="#9CA3AF"/>
-                    <rect x="6.5" y="3.5" width="1" height="1.3" rx="0.5" fill="#9CA3AF"/>
-                  </svg>
-                  <div style={{
-                    visibility: "hidden", opacity: 0,
-                    position: "absolute", bottom: "calc(100% + 8px)", left: "50%", transform: "translateX(-50%)",
-                    background: "#111827", color: WHITE, fontSize: 12, fontWeight: 400,
-                    padding: "7px 12px", borderRadius: 6, whiteSpace: "nowrap",
-                    boxShadow: "0 4px 12px rgba(0,0,0,0.15)", zIndex: 9999,
-                    transition: "opacity 0.15s, visibility 0.15s", pointerEvents: "none",
-                  }}>
-                    All users will receive the Default until you configure a variant above.
-                    <span style={{ position: "absolute", top: "100%", left: "50%", transform: "translateX(-50%)", width: 0, height: 0, borderLeft: "5px solid transparent", borderRight: "5px solid transparent", borderTop: "5px solid #111827" }} />
+            <div style={{ background: WHITE, border: "1px solid #E5E7EB", borderRadius: 8, overflow: "hidden" }}>
+              <button
+                onClick={() => setDefaultExpanded((v) => !v)}
+                style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", background: "transparent", border: "none", cursor: "pointer", textAlign: "left" }}
+              >
+                <svg style={{ flexShrink: 0, color: "#9CA3AF" }} width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                  <path d="M8 1a3.5 3.5 0 0 0-3.5 3.5V6H3.5A1.5 1.5 0 0 0 2 7.5v6A1.5 1.5 0 0 0 3.5 15h9a1.5 1.5 0 0 0 1.5-1.5v-6A1.5 1.5 0 0 0 12.5 6h-1V4.5A3.5 3.5 0 0 0 8 1Zm-2 3.5a2 2 0 0 1 4 0V6H6V4.5ZM3.5 7h9a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-.5.5h-9a.5.5 0 0 1-.5-.5v-6a.5.5 0 0 1 .5-.5ZM8 9a1 1 0 1 0 0 2 1 1 0 0 0 0-2Z"/>
+                </svg>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, flex: 1 }}>
+                  <span style={{ fontSize: 14, fontWeight: 600, color: "#374151" }}>Default Experience</span>
+                  <div
+                    style={{ position: "relative", display: "inline-flex", cursor: "default" }}
+                    onMouseEnter={(e) => { e.stopPropagation(); e.currentTarget.lastChild.style.visibility = "visible"; e.currentTarget.lastChild.style.opacity = "1"; }}
+                    onMouseLeave={(e) => { e.currentTarget.lastChild.style.visibility = "hidden"; e.currentTarget.lastChild.style.opacity = "0"; }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                      <circle cx="7" cy="7" r="6.5" stroke="#D1D5DB"/>
+                      <rect x="6.5" y="6" width="1" height="4.5" rx="0.5" fill="#9CA3AF"/>
+                      <rect x="6.5" y="3.5" width="1" height="1.3" rx="0.5" fill="#9CA3AF"/>
+                    </svg>
+                    <div style={{ visibility: "hidden", opacity: 0, position: "absolute", bottom: "calc(100% + 8px)", left: "50%", transform: "translateX(-50%)", background: "#111827", color: WHITE, fontSize: 12, fontWeight: 400, padding: "7px 12px", borderRadius: 6, whiteSpace: "nowrap", boxShadow: "0 4px 12px rgba(0,0,0,0.15)", zIndex: 9999, transition: "opacity 0.15s, visibility 0.15s", pointerEvents: "none" }}>
+                      All users will receive the Default until you configure a variant above.
+                      <span style={{ position: "absolute", top: "100%", left: "50%", transform: "translateX(-50%)", width: 0, height: 0, borderLeft: "5px solid transparent", borderRight: "5px solid transparent", borderTop: "5px solid #111827" }} />
+                    </div>
                   </div>
                 </div>
-              </div>
-              <span style={{ padding: "3px 10px", borderRadius: 999, background: "#F3F4F6", color: "#6B7280", border: "1px solid #E5E7EB", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>ALL UNMATCHED USERS</span>
-              <span style={{ fontSize: 14, fontWeight: 600, color: "#111827", marginLeft: 12 }}>100%</span>
-              <svg style={{ color: "#9CA3AF", marginLeft: 4 }} width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
+                <span style={{ padding: "3px 10px", borderRadius: 999, background: "#F3F4F6", color: "#6B7280", border: "1px solid #E5E7EB", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>ALL UNMATCHED USERS</span>
+                <span style={{ fontSize: 14, fontWeight: 600, color: "#111827", marginLeft: 12 }}>100%</span>
+                {/* Chevron: right = collapsed, down = expanded */}
+                <svg style={{ color: "#9CA3AF", marginLeft: 4, flexShrink: 0, transition: "transform 0.2s", transform: defaultExpanded ? "rotate(90deg)" : "rotate(0deg)" }} width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path d="M6 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </button>
+              {defaultExpanded && form.parameters.length > 0 && (
+                <div style={{ borderTop: "1px solid #F3F4F6", padding: "12px 16px" }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 10 }}>DEFAULT PARAMETER VALUES</div>
+                  <div style={{ border: "1px solid #E5E7EB", borderRadius: 8, overflow: "hidden" }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", background: "#F9FAFB", borderBottom: "1px solid #E5E7EB" }}>
+                      <div style={{ fontSize: 11, fontWeight: 600, color: TEXT_MUTED, letterSpacing: "0.06em", textTransform: "uppercase", padding: "10px 14px" }}>KEY</div>
+                      <div style={{ fontSize: 11, fontWeight: 600, color: TEXT_MUTED, letterSpacing: "0.06em", textTransform: "uppercase", padding: "10px 14px" }}>DEFAULT VALUE</div>
+                    </div>
+                    {form.parameters.map((param, i) => (
+                      <div key={param.id} style={{ display: "grid", gridTemplateColumns: "1fr 2fr", borderBottom: i < form.parameters.length - 1 ? "1px solid #F3F4F6" : "none" }}>
+                        <div style={{ padding: "10px 14px" }}>
+                          <code style={{ fontSize: 12, color: "#4F46E5", background: "#EEF2FF", border: "1px solid #C7D2FB", borderRadius: 4, padding: "1px 6px" }}>{param.key}</code>
+                        </div>
+                        <div style={{ padding: "10px 14px", fontSize: 13, color: TEXT_MUTED }}>{String(param.value)}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {defaultExpanded && form.parameters.length === 0 && (
+                <div style={{ borderTop: "1px solid #F3F4F6", padding: "14px 16px", fontSize: 13, color: TEXT_MUTED }}>
+                  Select a config above to see its default values.
+                </div>
+              )}
             </div>
           </div>
         );
       })()}
 
-      {/* ── Sticky footer ── */}
-      <div style={{ position: "sticky", bottom: 0, marginTop: 24, marginLeft: -28, marginRight: -28, paddingLeft: 28, paddingRight: 28, padding: "14px 28px", background: WHITE, borderTop: "2px solid #E5E7EB", boxShadow: "0 -4px 16px rgba(0,0,0,0.06)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, zIndex: 40 }}>
+      {/* ── Fixed footer ── */}
+      <div style={{ position: "fixed", bottom: 0, left: 222, right: 0, padding: "14px 28px", background: WHITE, borderTop: "2px solid #E5E7EB", boxShadow: "0 -4px 16px rgba(0,0,0,0.06)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, zIndex: 40 }}>
         <Button onClick={showBackConfirmation}>Back</Button>
         <div style={{ display: "flex", gap: 10 }}>
           <Button onClick={handleSaveDraft} disabled={draftLoading} style={{ minWidth: 118 }}>
@@ -3088,8 +3113,14 @@ function CreateExperiment({
       onBack();
       return;
     }
-    const shouldLeave = window.confirm("You have unsaved changes. Are you sure you want to leave?");
-    if (shouldLeave) onBack();
+    Modal.confirm({
+      title: "Unsaved changes",
+      content: "You have unsaved changes. Are you sure you want to leave?",
+      okText: "Leave",
+      cancelText: "Stay",
+      okButtonProps: { danger: true },
+      onOk: () => onBack(),
+    });
   };
 
   const validate = (mode) => {
