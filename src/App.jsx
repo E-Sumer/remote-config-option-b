@@ -1829,15 +1829,6 @@ function RemoteConfigurationForm({
               options={schemas.map((s) => ({ value: s.id, label: `${s.name} (${s.key})` }))}
             />
             {errors.key && <div style={{ marginTop: 6, fontSize: 12, color: "#EF4444" }}>{errors.key}</div>}
-            {selectedSchemaId && (() => {
-              const schema = schemas.find((s) => s.id === selectedSchemaId);
-              return schema ? (
-                <div style={{ marginTop: 6, display: "flex", alignItems: "center", gap: 6 }}>
-                  <code style={{ fontSize: 11, color: "#4F46E5", background: "#EEF2FF", border: "1px solid #C7D2FB", borderRadius: 5, padding: "1px 6px" }}>{schema.key}</code>
-                  <span style={{ fontSize: 11, color: TEXT_MUTED }}>{schema.description}</span>
-                </div>
-              ) : null;
-            })()}
           </div>
         </div>
       </div>
