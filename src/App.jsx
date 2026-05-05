@@ -1260,6 +1260,7 @@ function RemoteConfigurationForm({
   mode,
   initialValue,
   existingConfigs,
+  schemas = [],
   onCancel,
   onSave,
   onPauseConflictingConfig,
@@ -1285,6 +1286,7 @@ function RemoteConfigurationForm({
 
   const [form, setForm] = useState(buildInitialForm);
   const [step, setStep] = useState(1);
+  const [selectedSchemaId, setSelectedSchemaId] = useState(initialValue?.schemaId || null);
   const [errors, setErrors] = useState({});
   const [jsonHidden, setJsonHidden] = useState(false);
   const [copyState, setCopyState] = useState("Copy");
@@ -1781,229 +1783,61 @@ function RemoteConfigurationForm({
         </div>
       </div>
 
-      {true && (
-        <div style={{ display: "grid", gridTemplateColumns: jsonHidden ? "1fr 260px" : "minmax(0, 1fr) 460px", gap: 18 }}>
-          <div style={{ ...cardStyle, padding: 18 }}>
-            <h3 style={{ margin: "0 0 4px", fontSize: 15, color: TEXT }}>Basic Information</h3>
-            <p style={{ margin: "0 0 18px", fontSize: 13, color: TEXT_MUTED }}>Name your configuration and define the key your app will use to fetch it.</p>
-
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-              <div>
-                <label style={{ display: "flex", alignItems: "center", marginBottom: 8, fontSize: 12, fontWeight: 700, color: TEXT_MUTED }}>CONFIGURATION NAME * <FieldInfoIcon /></label>
-                <input value={form.name} onChange={(event) => handleNameChange(event.target.value)} placeholder="e.g. Flight Details UI" style={fieldInputStyle("name")} />
-                {errors.name && <div style={{ marginTop: 6, fontSize: 12, color: "#EF4444" }}>{errors.name}</div>}
-              </div>
-              <div>
-                <label style={{ display: "flex", alignItems: "center", marginBottom: 8, fontSize: 12, fontWeight: 700, color: TEXT_MUTED }}>CONFIGURATION KEY * <FieldInfoIcon /></label>
-                <input
-                  value={form.key}
-                  onChange={(event) => {
-                    setKeyTouched(true);
-                    setFieldValue("key", slugifyKey(event.target.value));
-                  }}
-                  placeholder="e.g. flight_details_ui"
-                  style={fieldInputStyle("key")}
-                />
-                {errors.key && <div style={{ marginTop: 6, fontSize: 12, color: "#EF4444" }}>{errors.key}</div>}
-              </div>
-            </div>
-
-            <div style={{ marginTop: 16 }}>
-              <label style={{ display: "block", marginBottom: 8, fontSize: 12, fontWeight: 700, color: TEXT_MUTED }}>DESCRIPTION *</label>
-              <textarea
-                rows={3}
-                maxLength={500}
-                value={form.description}
-                onChange={(event) => { setFieldValue("description", event.target.value); setErrors((curr) => ({ ...curr, description: undefined })); }}
-                placeholder=""
-                style={{ ...fieldInputStyle("description"), resize: "vertical" }}
-              />
-              <div style={{ marginTop: 6, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                {errors.description ? <div style={{ fontSize: 12, color: "#EF4444" }}>{errors.description}</div> : <span />}
-                {descriptionCount > 0 && <div style={{ fontSize: 12, color: descriptionCount >= 500 ? "#EF4444" : descriptionCount >= 400 ? "#F59E0B" : TEXT_MUTED }}>{descriptionCount}/500</div>}
-              </div>
-            </div>
-
-            <div style={{ marginTop: 18 }}>
-              <h3 style={{ margin: "0 0 4px", fontSize: 15, color: TEXT }}>Configuration Parameters</h3>
-              <p style={{ margin: "0 0 14px", fontSize: 13, color: TEXT_MUTED }}>Define the parameters your application will receive.</p>
-
-              <div style={{ border: `1px dashed ${BORDER_DARK}`, borderRadius: 16, padding: 18, background: SOFT }}>
-                {form.parameters.length === 0 ? (
-                  <div style={{ textAlign: "center", padding: "20px 12px" }}>
-                    <div style={{ color: TEXT_MUTED, marginBottom: 18, fontSize: 26 }}>&lt;/&gt;</div>
-                    <div style={{ fontSize: 22, fontWeight: 700, color: TEXT, marginBottom: 8 }}>No parameters added yet</div>
-                    <div style={{ fontSize: 14, color: TEXT_MUTED, marginBottom: 18 }}>Add your first parameter to define your configuration structure.</div>
-                    <button onClick={() => setForm((current) => ({ ...current, parameters: [...current.parameters, createEmptyParameter()] }))} style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "10px 20px", border: "none", borderRadius: 8, background: "#3B82F6", color: WHITE, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
-                      + Add Parameter
-                    </button>
-                  </div>
-                ) : (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                    {form.parameters.map((parameter, index) => (
-                      <div
-                        key={parameter.id}
-                        draggable
-                        onDragStart={() => setDraggingId(parameter.id)}
-                        onDragOver={(event) => event.preventDefault()}
-                        onDrop={() => handleParameterDrop(parameter.id)}
-                        style={{ background: WHITE, borderRadius: 12, border: `1px solid ${parameterErrorFor(parameter.id, "key") || parameterErrorFor(parameter.id, "value") ? "#FCA5A5" : BORDER}`, padding: 16 }}
-                      >
-                        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: parameter.collapsed ? 0 : 16 }}>
-                          <span style={{ color: TEXT_MUTED, cursor: "grab" }}><GripIcon /></span>
-                          <div style={{ flex: 1 }}>
-                            <div style={{ fontSize: 13, fontWeight: 700, color: TEXT }}>{parameter.key || `Parameter ${index + 1}`}</div>
-                            <div style={{ marginTop: 2, fontSize: 12, color: TEXT_MUTED }}>{parameter.type}</div>
-                          </div>
-                          {/* Chevron — T&R style: plain button, no box */}
-                          <button
-                            onClick={() => updateParameter(parameter.id, (current) => ({ ...current, collapsed: !current.collapsed }))}
-                            style={{ background: "none", border: "none", color: "#9CA3AF", cursor: "pointer", padding: 4, display: "flex", alignItems: "center", borderRadius: 4, transition: "color 0.15s" }}
-                            onMouseEnter={(e) => { e.currentTarget.style.color = "#374151"; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.color = "#9CA3AF"; }}
-                          >
-                            <svg
-                              width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-                              style={{ transform: parameter.collapsed ? "rotate(-90deg)" : "rotate(0deg)", transition: "transform 0.2s" }}
-                            >
-                              <path d="m6 9 6 6 6-6"/>
-                            </svg>
-                          </button>
-                          {/* Trash — T&R style: plain button, no box, #9CA3AF → #DC2626 on hover */}
-                          <button
-                            onClick={() => setForm((current) => ({ ...current, parameters: current.parameters.filter((item) => item.id !== parameter.id) }))}
-                            style={{ background: "none", border: "none", color: "#9CA3AF", cursor: "pointer", padding: 4, display: "flex", alignItems: "center", borderRadius: 4, transition: "color 0.15s" }}
-                            onMouseEnter={(e) => { e.currentTarget.style.color = "#DC2626"; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.color = "#9CA3AF"; }}
-                          >
-                            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                              <path d="M6.5 1h3a.5.5 0 0 1 .5.5V2h3.5a.5.5 0 0 1 0 1H13v9.5a1.5 1.5 0 0 1-1.5 1.5h-7A1.5 1.5 0 0 1 3 12.5V3H2.5a.5.5 0 0 1 0-1H6V1.5a.5.5 0 0 1 .5-.5ZM4 3v9.5a.5.5 0 0 0 .5.5h7a.5.5 0 0 0 .5-.5V3H4Zm2.5 1.5a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V5a.5.5 0 0 1 .5-.5Zm3 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V5a.5.5 0 0 1 .5-.5Z"/>
-                            </svg>
-                          </button>
-                        </div>
-
-                        {!parameter.collapsed && (
-                          <div style={{ display: "grid", gridTemplateColumns: "1fr 180px", gap: 14 }}>
-                            <div>
-                              <label style={{ display: "block", marginBottom: 8, fontSize: 12, fontWeight: 700, color: TEXT_MUTED }}>Parameter Key *</label>
-                              <input value={parameter.key} onChange={(event) => updateParameter(parameter.id, (current) => ({ ...current, key: slugifyKey(event.target.value) }))} placeholder="e.g. screen_title" style={{ ...inputStyle, borderColor: parameterErrorFor(parameter.id, "key") ? "#EF4444" : BORDER_DARK }} />
-                              {parameterErrorFor(parameter.id, "key") && <div style={{ marginTop: 6, fontSize: 12, color: "#EF4444" }}>{parameterErrorFor(parameter.id, "key")}</div>}
-                            </div>
-                            <div>
-                              <label style={{ display: "block", marginBottom: 8, fontSize: 12, fontWeight: 700, color: TEXT_MUTED }}>Data Type</label>
-                              <select
-                                value={parameter.type}
-                                onChange={(event) => updateParameter(parameter.id, (current) => ({
-                                  ...current,
-                                  type: event.target.value,
-                                  value: event.target.value === "Boolean" ? true : event.target.value === "JSON" ? "{}" : "",
-                                }))}
-                                style={inputStyle}
-                              >
-                                <option>String</option>
-                                <option>Number</option>
-                                <option>Boolean</option>
-                                <option>JSON</option>
-                              </select>
-                            </div>
-                            <div style={{ gridColumn: "1 / -1" }}>
-                              <label style={{ display: "block", marginBottom: 8, fontSize: 12, fontWeight: 700, color: TEXT_MUTED }}>Description</label>
-                              <textarea rows={2} value={parameter.description} onChange={(event) => updateParameter(parameter.id, (current) => ({ ...current, description: event.target.value }))} placeholder="Optional parameter description" style={{ ...inputStyle, resize: "vertical" }} />
-                            </div>
-                            <div style={{ gridColumn: "1 / -1" }}>
-                              <label style={{ display: "block", marginBottom: 8, fontSize: 12, fontWeight: 700, color: TEXT_MUTED }}>Value *</label>
-                              {renderParameterValueInput(parameter)}
-                              {parameterErrorFor(parameter.id, "value") && <div style={{ marginTop: 6, fontSize: 12, color: "#EF4444" }}>{parameterErrorFor(parameter.id, "value")}</div>}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-
-                    <button onClick={() => setForm((current) => ({ ...current, parameters: [...current.parameters, createEmptyParameter()] }))} style={{ ...{ display: "inline-flex", alignItems: "center", gap: 8, padding: "10px 20px", border: "none", borderRadius: 8, background: "#3B82F6", color: WHITE, fontSize: 14, fontWeight: 600, cursor: "pointer" }, alignSelf: "flex-start" }}>
-                      + Add Parameter
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
+      {/* Config Selection Card */}
+      <div style={{ ...cardStyle, padding: 20, marginBottom: 0 }}>
+        <h3 style={{ margin: "0 0 4px", fontSize: 15, fontWeight: 600, color: TEXT }}>Select Configuration</h3>
+        <p style={{ margin: "0 0 16px", fontSize: 13, color: TEXT_MUTED }}>Choose a config from the library to roll out.</p>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+          <div>
+            <label style={{ display: "block", marginBottom: 8, fontSize: 12, fontWeight: 700, color: TEXT_MUTED }}>ROLLOUT NAME *</label>
+            <input
+              value={form.name}
+              onChange={(e) => handleNameChange(e.target.value)}
+              placeholder="e.g. Product Page Layout Rollout"
+              style={fieldInputStyle("name")}
+            />
+            {errors.name && <div style={{ marginTop: 6, fontSize: 12, color: "#EF4444" }}>{errors.name}</div>}
           </div>
-
-          {jsonHidden ? (
-            /* Minimized JSON panel */
-            <div style={{ alignSelf: "start", background: "#111827", borderRadius: 12, border: "1px solid #263246", padding: "14px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  {/* Stacked-lines icon */}
-                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                    <rect x="1" y="2" width="12" height="1.5" rx="0.75" fill="#6B7280"/>
-                    <rect x="1" y="5.5" width="8" height="1.5" rx="0.75" fill="#6B7280"/>
-                    <rect x="1" y="9" width="10" height="1.5" rx="0.75" fill="#6B7280"/>
-                  </svg>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: WHITE }}>JSON Output</span>
-                  <span style={{ padding: "2px 6px", borderRadius: 4, background: "rgba(255,255,255,0.12)", color: "#9CA3AF", fontSize: 10 }}>READ-ONLY</span>
+          <div>
+            <label style={{ display: "block", marginBottom: 8, fontSize: 12, fontWeight: 700, color: TEXT_MUTED }}>CONFIG KEY *</label>
+            <select
+              value={selectedSchemaId || ""}
+              onChange={(e) => {
+                const schemaId = e.target.value;
+                setSelectedSchemaId(schemaId);
+                const schema = schemas.find((s) => s.id === schemaId);
+                if (schema) {
+                  setFieldValue("key", schema.key);
+                  setFieldValue("parameters", (schema.parameters || []).map((p) => ({
+                    id: p.id,
+                    key: p.key,
+                    type: p.type,
+                    description: p.description || "",
+                    value: p.defaultValue ?? "",
+                    collapsed: false,
+                  })));
+                }
+              }}
+              style={{ ...fieldInputStyle("key"), cursor: "pointer" }}
+            >
+              <option value="">Select a config from library...</option>
+              {schemas.map((s) => (
+                <option key={s.id} value={s.id}>{s.name} ({s.key})</option>
+              ))}
+            </select>
+            {errors.key && <div style={{ marginTop: 6, fontSize: 12, color: "#EF4444" }}>{errors.key}</div>}
+            {selectedSchemaId && (() => {
+              const schema = schemas.find((s) => s.id === selectedSchemaId);
+              return schema ? (
+                <div style={{ marginTop: 6, display: "flex", alignItems: "center", gap: 6 }}>
+                  <code style={{ fontSize: 11, color: "#4F46E5", background: "#EEF2FF", border: "1px solid #C7D2FB", borderRadius: 5, padding: "1px 6px" }}>{schema.key}</code>
+                  <span style={{ fontSize: 11, color: TEXT_MUTED }}>{schema.description}</span>
                 </div>
-                <button
-                  onClick={() => setJsonHidden(false)}
-                  style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 6, background: "rgba(255,255,255,0.08)", color: "#D1D5DB", border: "1px solid rgba(255,255,255,0.15)", fontSize: 12, fontWeight: 500, cursor: "pointer", whiteSpace: "nowrap" }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.14)"; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.08)"; }}
-                >
-                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                    <path d="M1 6C1 6 3 2 6 2C9 2 11 6 11 6C11 6 9 10 6 10C3 10 1 6 1 6Z" stroke="#D1D5DB" strokeWidth="1.3"/>
-                    <circle cx="6" cy="6" r="1.5" fill="#D1D5DB"/>
-                  </svg>
-                  Show
-                </button>
-              </div>
-              <div style={{ fontSize: 11, color: "#6B7280", fontStyle: "italic" }}>Click Show to expand the JSON preview.</div>
-            </div>
-          ) : (
-            /* Full JSON panel */
-            <div style={{ ...cardStyle, padding: 0, alignSelf: "start", overflow: "hidden", background: "#111827", color: WHITE }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 16px 10px" }}>
-                <div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 0 }}>
-                    <span style={{ fontSize: 14, fontWeight: 600, color: WHITE }}>JSON Output</span>
-                    <span style={{ marginLeft: 8, padding: "2px 6px", borderRadius: 4, background: "rgba(255,255,255,0.12)", color: "#9CA3AF", fontSize: 11 }}>READ-ONLY</span>
-                  </div>
-                  <div style={{ marginTop: 6, fontSize: 12, color: "#9CA3AF" }}>This is the payload your SDK will receive.</div>
-                </div>
-                <div style={{ display: "flex", gap: 8 }}>
-                  <button
-                    onClick={() => setJsonHidden(true)}
-                    style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 6, background: "rgba(255,255,255,0.08)", color: "#D1D5DB", border: "1px solid rgba(255,255,255,0.15)", fontSize: 12, cursor: "pointer" }}
-                    onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.14)"; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.08)"; }}
-                  >
-                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                      <path d="M1 6C1 6 3 2 6 2C9 2 11 6 11 6" stroke="#D1D5DB" strokeWidth="1.3" strokeLinecap="round"/>
-                      <line x1="1" y1="10" x2="11" y2="2" stroke="#D1D5DB" strokeWidth="1.3" strokeLinecap="round"/>
-                    </svg>
-                    Hide
-                  </button>
-                  <button
-                    onClick={async () => {
-                      await navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
-                      setCopyState("Copied!");
-                    }}
-                    style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 6, background: "rgba(255,255,255,0.08)", color: "#D1D5DB", border: "1px solid rgba(255,255,255,0.15)", fontSize: 12, cursor: "pointer" }}
-                    onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.14)"; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.08)"; }}
-                  >
-                    <CopyIcon />{copyState}
-                  </button>
-                </div>
-              </div>
-              <div style={{ margin: "0 16px 16px", background: "#0B1220", borderRadius: 12, border: "1px solid #263246", minHeight: 240, display: "flex" }}>
-                <pre style={{ margin: 0, padding: "14px 16px", whiteSpace: "pre-wrap", fontSize: 13, lineHeight: 1.6, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', flex: 1, overflowX: "auto" }}>
-                  {renderJsonHighlighted(payload)}
-                </pre>
-              </div>
-            </div>
-          )}
+              ) : null;
+            })()}
+          </div>
         </div>
-      )}
+      </div>
 
       {(() => {
         const customVariants = (form.variants || []).filter((v) => !v.isDefault);
@@ -2448,7 +2282,7 @@ function RemoteConfigurationForm({
       })()}
 
       {/* ── Sticky footer ── */}
-      <div style={{ position: "sticky", bottom: 0, marginTop: 24, padding: "14px 0", background: WHITE, borderTop: "2px solid #E5E7EB", boxShadow: "0 -4px 16px rgba(0,0,0,0.06)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, zIndex: 40 }}>
+      <div style={{ position: "sticky", bottom: 0, marginTop: 24, marginLeft: -28, marginRight: -28, paddingLeft: 28, paddingRight: 28, padding: "14px 28px", background: WHITE, borderTop: "2px solid #E5E7EB", boxShadow: "0 -4px 16px rgba(0,0,0,0.06)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, zIndex: 40 }}>
         <Button onClick={showBackConfirmation}>Back</Button>
         <div style={{ display: "flex", gap: 10 }}>
           <Button onClick={handleSaveDraft} disabled={draftLoading} style={{ minWidth: 118 }}>
@@ -5519,6 +5353,7 @@ export default function App() {
             mode={remoteConfigView}
             initialValue={editingConfig}
             existingConfigs={configs}
+            schemas={schemas}
             onCancel={goToRemoteConfigList}
             onSave={handleSaveConfig}
             onPauseConflictingConfig={pauseConflictingConfig}
