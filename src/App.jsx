@@ -2333,14 +2333,14 @@ function RemoteConfigurationDetail({ config, experiments, onBack, onEdit, onOpen
               <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 14, marginBottom: 20 }}>
                 {[
                   {
-                    label: "ROLLOUT %",
+                    label: "Rollout %",
                     value: `${rolloutPct}%`,
                     tooltip: "Percentage of users who will receive this configuration.",
                   },
                   { label: "TARGET SEGMENT", value: activeSegments.length ? `${activeSegments.length} rule${activeSegments.length > 1 ? "s" : ""}` : "All Users" },
                 ].map((item) => (
                   <div key={item.label}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 10, fontWeight: 700, color: "#6B7280", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 5 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 10, fontWeight: 700, color: "#6B7280", textTransform: item.tooltip ? "none" : "uppercase", letterSpacing: item.tooltip ? "normal" : "0.07em", marginBottom: 5 }}>
                       {item.label}
                       {item.tooltip && (
                         <div style={{ position: "relative", display: "inline-flex", cursor: "default" }} onMouseEnter={(e) => { e.currentTarget.lastChild.style.visibility = "visible"; e.currentTarget.lastChild.style.opacity = "1"; }} onMouseLeave={(e) => { e.currentTarget.lastChild.style.visibility = "hidden"; e.currentTarget.lastChild.style.opacity = "0"; }}>
