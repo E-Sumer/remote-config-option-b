@@ -5882,18 +5882,18 @@ export default function App() {
                 icon={<LinkIcon />}
                 label="Experiences"
                 active={activeMenu === "remote_config" || activeMenu === "ab_testing"}
-                trailing={<ChevronDownIcon />}
+                trailing={
+                  <span style={{ display: "inline-flex", transition: "transform 0.2s", transform: experienceHovered ? "rotate(90deg)" : "rotate(0deg)" }}>
+                    <ChevronRightIcon />
+                  </span>
+                }
               />
 
               {experienceHovered && (
-                <div style={{ position: "absolute", left: "100%", top: 0, marginLeft: 12, width: 180, padding: 8, borderRadius: 12, background: WHITE, border: `1px solid ${BORDER}`, boxShadow: SHADOW, zIndex: 40 }}>
+                <div style={{ paddingLeft: 12, paddingTop: 2 }}>
                   {[
                     { key: "remote_config", label: "Feature Rollouts", action: goToRemoteConfigList },
-                    {
-                      key: "ab_testing",
-                      label: "A/B Tests",
-                      action: goToAbList,
-                    },
+                    { key: "ab_testing", label: "A/B Tests", action: goToAbList },
                   ].map((item) => (
                     <button
                       key={item.key}
@@ -5903,7 +5903,7 @@ export default function App() {
                         display: "flex",
                         alignItems: "center",
                         gap: 10,
-                        padding: "10px 10px",
+                        padding: "8px 10px",
                         border: "none",
                         borderRadius: 9,
                         background: activeMenu === item.key ? PAGE_BG : "transparent",
@@ -5915,7 +5915,6 @@ export default function App() {
                     >
                       <span style={{ color: TEXT_MUTED }}><LinkIcon /></span>
                       <span style={{ flex: 1, whiteSpace: "nowrap" }}>{item.label}</span>
-                      <span style={{ color: TEXT_MUTED }}><HeartIcon /></span>
                     </button>
                   ))}
                 </div>
@@ -5933,10 +5932,14 @@ export default function App() {
                 icon={<DeveloperIcon />}
                 label="Developers"
                 active={activeMenu === "dev_remote_config"}
-                trailing={<ChevronDownIcon />}
+                trailing={
+                  <span style={{ display: "inline-flex", transition: "transform 0.2s", transform: devHovered ? "rotate(90deg)" : "rotate(0deg)" }}>
+                    <ChevronRightIcon />
+                  </span>
+                }
               />
               {devHovered && (
-                <div style={{ position: "absolute", left: "100%", top: 0, marginLeft: 12, width: 180, padding: 8, borderRadius: 12, background: WHITE, border: `1px solid ${BORDER}`, boxShadow: SHADOW, zIndex: 40 }}>
+                <div style={{ paddingLeft: 12, paddingTop: 2 }}>
                   {[
                     { key: "dev_remote_config", label: "Config Library", action: goToDevSchemaList },
                   ].map((item) => (
@@ -5948,7 +5951,7 @@ export default function App() {
                         display: "flex",
                         alignItems: "center",
                         gap: 10,
-                        padding: "10px 10px",
+                        padding: "8px 10px",
                         border: "none",
                         borderRadius: 9,
                         background: activeMenu === item.key ? PAGE_BG : "transparent",
