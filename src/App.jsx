@@ -4464,7 +4464,10 @@ function DevRemoteConfigList({ schemas, onCreateNew, onViewSchema }) {
             <p style={pageDescriptionStyle}>Define reusable configurations your SDK can fetch. These are the building blocks used in rollouts and experiments.</p>
           </div>
         </div>
-        <button onClick={onCreateNew} style={{ ...primaryButtonStyle, flexShrink: 0 }}>
+        <button onClick={onCreateNew}
+          style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 15px", height: 32, borderRadius: 6, border: "none", background: "#3B82F6", color: WHITE, fontSize: 14, fontWeight: 500, cursor: "pointer", flexShrink: 0, boxShadow: "0 2px 0 rgba(5,145,255,0.1)", transition: "all 0.2s" }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = "#2563EB"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = "#3B82F6"; }}>
           + New Config
         </button>
       </div>
@@ -4884,10 +4887,17 @@ ${params.slice(0, 3).map((p) => `final ${p.key || "param"} = config.get('${p.key
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100%" }}>
       {/* Page header */}
       <div style={{ marginBottom: 24, display: "flex", alignItems: "flex-start", gap: 14 }}>
-        <div style={{ width: 5, height: 52, borderRadius: 999, background: "#3B82F6", marginTop: 2, flexShrink: 0 }} />
+        <div style={{ width: 5, alignSelf: "stretch", borderRadius: 999, background: "#3B82F6", flexShrink: 0 }} />
         <div>
           <h1 style={pageTitleStyle}>{isEdit ? "Edit Config" : "New Config"}</h1>
-          <p style={pageDescriptionStyle}>{isEdit ? `Editing ${schema.name}` : "Define the keys and default values your SDK will fetch."}</p>
+          {isEdit ? (
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 4 }}>
+              <span style={{ fontSize: 13, color: TEXT_MUTED }}>{schema.name}</span>
+              <span style={{ display: "inline-flex", alignItems: "center", padding: "2px 8px", borderRadius: 4, background: "#F3F4F6", border: "1px solid #d9d9d9", color: "#595959", fontSize: 12, fontWeight: 600, letterSpacing: 0.3 }}>DRAFT</span>
+            </div>
+          ) : (
+            <p style={pageDescriptionStyle}>Define the keys and default values your SDK will fetch.</p>
+          )}
         </div>
       </div>
 
@@ -5087,14 +5097,27 @@ ${params.slice(0, 3).map((p) => `final ${p.key || "param"} = config.get('${p.key
         </div>
       </div>
 
-      {/* Sticky footer */}
+      {/* Sticky footer — Ant Design button styles */}
       <div style={{ position: "sticky", bottom: 0, background: WHITE, borderTop: `1px solid ${BORDER}`, padding: "14px 0", marginLeft: -28, marginRight: -28, paddingLeft: 28, paddingRight: 28, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <button onClick={onBack} style={{ ...secondaryButtonStyle, background: WHITE }}>Back</button>
+        <button onClick={onBack}
+          style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 15px", height: 32, borderRadius: 6, border: "1px solid #d9d9d9", background: WHITE, color: "#374151", fontSize: 14, fontWeight: 500, cursor: "pointer", transition: "all 0.2s" }}
+          onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#3B82F6"; e.currentTarget.style.color = "#3B82F6"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#d9d9d9"; e.currentTarget.style.color = "#374151"; }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+          Back
+        </button>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <button onClick={onBack} style={{ ...secondaryButtonStyle, background: WHITE }}>Cancel</button>
-          <button onClick={handleSaveAsDraft} style={{ ...secondaryButtonStyle, background: WHITE }}>Save as Draft</button>
-          <button onClick={handleSave} style={{ ...primaryButtonStyle }}>
-            {isEdit ? "Save Changes" : "Publish Config"}
+          <button onClick={handleSaveAsDraft}
+            style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 15px", height: 32, borderRadius: 6, border: "1px solid #d9d9d9", background: WHITE, color: "#374151", fontSize: 14, fontWeight: 500, cursor: "pointer", transition: "all 0.2s" }}
+            onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#3B82F6"; e.currentTarget.style.color = "#3B82F6"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#d9d9d9"; e.currentTarget.style.color = "#374151"; }}>
+            Save as Draft
+          </button>
+          <button onClick={handleSave}
+            style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 15px", height: 32, borderRadius: 6, border: "none", background: "#3B82F6", color: WHITE, fontSize: 14, fontWeight: 500, cursor: "pointer", boxShadow: "0 2px 0 rgba(5,145,255,0.1)", transition: "all 0.2s" }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = "#2563EB"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = "#3B82F6"; }}>
+            Publish Config
           </button>
         </div>
       </div>
@@ -5261,10 +5284,15 @@ export default function App() {
       if (newMatch) {
         setDevSchemaView("new");
         setSelectedSchema(null);
-      } else if (editMatch || detailMatch) {
-        const id = (editMatch || detailMatch)[1];
+      } else if (editMatch) {
+        const id = editMatch[1];
         const schema = currentSchemas.find((s) => s.id === id);
         if (schema) { setSelectedSchema(schema); setDevSchemaView("new"); }
+        else { setDevSchemaView("list"); }
+      } else if (detailMatch) {
+        const id = detailMatch[1];
+        const schema = currentSchemas.find((s) => s.id === id);
+        if (schema) { setSelectedSchema(schema); setDevSchemaView(schema.status === "Active" ? "detail" : "new"); }
         else { setDevSchemaView("list"); }
       } else {
         setDevSchemaView("list");
@@ -5316,19 +5344,22 @@ export default function App() {
   };
 
   const handleDuplicateAsDraft = (schema) => {
-    const duplicate = {
-      id: `s_${Date.now()}`,
-      name: `${schema.name} (Copy)`,
-      key: `${schema.key}_copy`,
-      description: schema.description,
-      sdks: schema.sdks,
-      parameters: schema.parameters.map((p) => ({ ...p, id: `sp_${Date.now()}_${p.id}` })),
-      created: formatToday(),
-      updated: formatToday(),
-      createdBy: "Emre Sumer",
-      status: "Draft",
-    };
-    setSchemas((prev) => [duplicate, ...prev]);
+    setSchemas((prev) => {
+      const copyCount = prev.filter((s) => s.key.startsWith(`copy_`) && s.key.includes(schema.key)).length + 1;
+      const duplicate = {
+        id: `s_${Date.now()}`,
+        name: `(Copy ${copyCount}) ${schema.name}`,
+        key: `copy_${copyCount}_${schema.key}`,
+        description: schema.description,
+        sdks: schema.sdks,
+        parameters: schema.parameters.map((p) => ({ ...p, id: `sp_${Date.now()}_${p.id}` })),
+        created: formatToday(),
+        updated: formatToday(),
+        createdBy: "Emre Sumer",
+        status: "Draft",
+      };
+      return [duplicate, ...prev];
+    });
     setToast({ type: "success", message: "Config duplicated as Draft." });
     goToDevSchemaList();
   };
