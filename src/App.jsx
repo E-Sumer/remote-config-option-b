@@ -4184,7 +4184,7 @@ function DevRemoteConfigList({ schemas, onCreateNew, onViewSchema }) {
                       <div style={{ position: "absolute", right: 0, top: "calc(100% + 4px)", width: 180, background: WHITE, border: `1px solid ${BORDER}`, borderRadius: 10, boxShadow: "0 4px 16px rgba(0,0,0,0.13)", zIndex: 9999, overflow: "visible" }}>
                         {[
                           { icon: <EditIcon />, label: "Edit", disabled: schema.status === "Active", action: () => { setOpenActionId(null); onViewSchema(schema); } },
-                          { icon: <CopyIcon />, label: "Duplicate", action: () => setOpenActionId(null) },
+                          { icon: <CopyIcon />, label: "Clone", action: () => setOpenActionId(null) },
                           { icon: <TrashIcon />, label: "Delete", danger: true, action: () => setOpenActionId(null) },
                         ].map((item) => (
                           <DisabledMenuItemWithTooltip key={item.label} item={item} />
@@ -4376,7 +4376,7 @@ function DevRemoteConfigDetail({ schema, onBack, onDuplicate }) {
           Back
         </Button>
         <Button type="primary" onClick={onDuplicate} icon={<CopyIcon />}>
-          Duplicate as Draft
+          Clone as Draft
         </Button>
       </div>
     </div>
