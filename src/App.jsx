@@ -1806,6 +1806,8 @@ function RemoteConfigurationForm({
           </div>
           <div>
             <label style={{ display: "block", marginBottom: 8, fontSize: 12, fontWeight: 700, color: TEXT_MUTED }}>CONFIG KEY *</label>
+            <style>{`.rollout-cfg-select .ant-select-selector { border-radius: 8px !important; min-height: 44px !important; padding-left: 14px !important; padding-right: 14px !important; border-color: rgba(0,0,0,0.1) !important; font-size: 13px !important; align-items: center !important; } .rollout-cfg-select.ant-select-status-error .ant-select-selector { border-color: #EF4444 !important; }`}</style>
+            <div className="rollout-cfg-select" style={{ width: "100%" }}>
             <Select
               value={selectedSchemaId || undefined}
               onChange={(schemaId) => {
@@ -1828,6 +1830,7 @@ function RemoteConfigurationForm({
               status={errors.key ? "error" : undefined}
               options={schemas.map((s) => ({ value: s.id, label: `${s.name} (${s.key})` }))}
             />
+            </div>
             {errors.key && <div style={{ marginTop: 6, fontSize: 12, color: "#EF4444" }}>{errors.key}</div>}
           </div>
         </div>
@@ -2234,10 +2237,10 @@ function RemoteConfigurationForm({
             </div>
 
             {/* Default Experience card */}
-            <div style={{ background: WHITE, border: "1px solid #E5E7EB", borderRadius: 8, overflow: "hidden" }}>
+            <div style={{ background: WHITE, border: "1px solid #E5E7EB", borderRadius: 8 }}>
               <button
                 onClick={() => setDefaultExpanded((v) => !v)}
-                style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", background: "transparent", border: "none", cursor: "pointer", textAlign: "left" }}
+                style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", background: "transparent", border: "none", cursor: "pointer", textAlign: "left", borderRadius: "8px 8px 0 0" }}
               >
                 <svg style={{ flexShrink: 0, color: "#9CA3AF" }} width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
                   <path d="M8 1a3.5 3.5 0 0 0-3.5 3.5V6H3.5A1.5 1.5 0 0 0 2 7.5v6A1.5 1.5 0 0 0 3.5 15h9a1.5 1.5 0 0 0 1.5-1.5v-6A1.5 1.5 0 0 0 12.5 6h-1V4.5A3.5 3.5 0 0 0 8 1Zm-2 3.5a2 2 0 0 1 4 0V6H6V4.5ZM3.5 7h9a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-.5.5h-9a.5.5 0 0 1-.5-.5v-6a.5.5 0 0 1 .5-.5ZM8 9a1 1 0 1 0 0 2 1 1 0 0 0 0-2Z"/>
