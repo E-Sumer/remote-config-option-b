@@ -1186,13 +1186,13 @@ function RemoteConfigurationList({
       {/* Page header */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 20 }}>
         <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
-          <div style={{ width: 5, height: 58, borderRadius: 999, background: "#3B82F6", marginTop: 2 }} />
+          <div style={{ width: 5, alignSelf: "stretch", borderRadius: 999, background: "#3B82F6", flexShrink: 0 }} />
           <div>
-            <h1 style={{ ...pageTitleStyle, color: "#111827", fontSize: 21 }}>Feature Rollouts</h1>
+            <h1 style={pageTitleStyle}>Feature Rollouts</h1>
             <p style={pageDescriptionStyle}>Roll out configuration changes to specific segments or your entire user base.</p>
           </div>
         </div>
-        <button onClick={onCreate} style={{ ...primaryButtonStyle, background: "#3B82F6" }}>+ New Rollout</button>
+        <Button type="primary" onClick={onCreate} style={{ flexShrink: 0 }}>+ New Rollout</Button>
       </div>
 
       {/* Filter bar — single cohesive row */}
@@ -1259,16 +1259,16 @@ function RemoteConfigurationList({
           <div style={{ ...cardStyle, overflow: "visible" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, borderRadius: 12, overflow: "hidden", display: "table" }}>
               <thead>
-                <tr style={{ background: WHITE }}>
+                <tr style={{ borderBottom: `1px solid ${BORDER}`, background: SOFT }}>
                   {[
                     { key: "status", label: "Status", sortable: true },
                     { key: "name", label: "Rollout Name", sortable: true },
                     { key: "created", label: "Create Date", sortable: true },
-                    { key: "updated", label: "Update Date", sortable: true },
-                    { key: "creator", label: "Creator", sortable: true },
+                    { key: "updated", label: "Last Updated", sortable: true },
+                    { key: "creator", label: "Creator User", sortable: true },
                     { key: "actions", label: "Actions", sortable: false },
                   ].map((col) => (
-                    <th key={col.key} style={{ padding: "14px 18px", textAlign: col.key === "actions" ? "center" : "left", fontSize: 11, fontWeight: 600, color: TEXT_MUTED, borderBottom: `1px solid ${BORDER}`, whiteSpace: "nowrap" }}>
+                    <th key={col.key} style={{ padding: "11px 16px", textAlign: col.key === "actions" ? "center" : "left", fontSize: 11, fontWeight: 700, color: TEXT_MUTED, letterSpacing: 0.5, whiteSpace: "nowrap" }}>
                       {col.sortable ? (
                         <button onClick={() => handleSort(col.key)} style={{ border: "none", background: "transparent", padding: 0, margin: 0, color: "inherit", fontSize: "inherit", fontWeight: "inherit", cursor: "pointer", display: "inline-flex", alignItems: "center" }}>
                           {col.label}<SortIndicator active={sortBy === col.key} direction={sortDir} />
@@ -1279,25 +1279,22 @@ function RemoteConfigurationList({
                 </tr>
               </thead>
               <tbody>
-                {pagedConfigs.map((config) => (
-                  <tr key={config.id} onClick={() => onRowClick(config)} style={{ borderBottom: `1px solid ${BORDER}`, cursor: "pointer" }}
-                    onMouseEnter={(e) => { e.currentTarget.style.background = "#F9FAFB"; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}>
-                    <td style={{ padding: "14px 18px" }}><ConfigStatusBadge status={config.status} /></td>
-                    <td style={{ padding: "14px 18px", maxWidth: 280 }}>
+                {pagedConfigs.map((config, idx) => (
+                  <tr key={config.id} onClick={() => onRowClick(config)}
+                    style={{ borderBottom: idx < pagedConfigs.length - 1 ? `1px solid ${BORDER}` : "none", cursor: "pointer", transition: "background 0.12s" }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = SOFT; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = ""; }}>
+                    <td style={{ padding: "14px 16px" }}><SchemaStatusBadge status={config.status} /></td>
+                    <td style={{ padding: "14px 16px", maxWidth: 280 }}>
                       <div style={{ fontSize: 13, fontWeight: 600, color: TEXT }}>{config.name}</div>
                       {config.description && <div style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 260 }}>{config.description}</div>}
                     </td>
-                    <td style={{ padding: "14px 18px", whiteSpace: "nowrap" }}>
-                      <span title={relativeDateLabel(config.created)} style={{ fontSize: 13, color: TEXT }}>{formatPrettyDate(config.created)}</span>
+                    <td style={{ padding: "14px 16px", fontSize: 12, color: TEXT_MUTED, whiteSpace: "nowrap" }}>{config.created}</td>
+                    <td style={{ padding: "14px 16px", fontSize: 12, color: TEXT_MUTED, whiteSpace: "nowrap" }}>{config.updated}</td>
+                    <td style={{ padding: "14px 16px", fontSize: 12, color: TEXT_MUTED, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 140 }}>
+                      {config.creator}
                     </td>
-                    <td style={{ padding: "14px 18px", whiteSpace: "nowrap" }}>
-                      <span title={relativeDateLabel(config.updated)} style={{ fontSize: 13, color: TEXT }}>{formatPrettyDate(config.updated)}</span>
-                    </td>
-                    <td style={{ padding: "14px 18px" }}>
-                      <span style={{ fontSize: 13, color: TEXT, display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 140 }} title={config.creator}>{config.creator}</span>
-                    </td>
-                    <td style={{ padding: "10px 18px", width: 88, textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
+                    <td style={{ padding: "10px 16px", width: 88, textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
                       <RemoteConfigActionMenu
                         config={config}
                         isOpen={openActionId === config.id}
