@@ -1308,6 +1308,7 @@ function RemoteConfigurationForm({
   const [inlineEditValue, setInlineEditValue] = useState("");
   const [dragHandleVariantId, setDragHandleVariantId] = useState(null);
   const [defaultExpanded, setDefaultExpanded] = useState(false);
+  const [configKeyOpen, setConfigKeyOpen] = useState(false);
 
   useEffect(() => {
     setForm(buildInitialForm());
@@ -1825,39 +1826,28 @@ function RemoteConfigurationForm({
               </div>
             </label>
             <style>{`
-              /* Ant Design v6 class names */
               .rollout-cfg-select .ant-select-content {
                 border-radius: 8px !important;
-                height: 45px !important;
-                min-height: 45px !important;
-                padding-left: 14px !important;
-                padding-right: 14px !important;
                 border-color: rgba(0,0,0,0.1) !important;
+                padding: 12px 14px !important;
+                height: unset !important;
+                min-height: unset !important;
                 font-size: 13px !important;
-                display: flex !important;
                 align-items: center !important;
               }
-              .rollout-cfg-select .ant-select-placeholder {
-                font-size: 13px !important;
-                line-height: 1 !important;
-              }
+              .rollout-cfg-select .ant-select-placeholder,
               .rollout-cfg-select .ant-select-selection-item {
                 font-size: 13px !important;
-                line-height: 1 !important;
+                line-height: 1.5 !important;
               }
-              .rollout-cfg-select .ant-select-suffix {
-                transition: transform 0.2s ease !important;
-              }
-              .rollout-cfg-select .ant-select.ant-select-open .ant-select-suffix {
-                transform: rotate(180deg) !important;
-              }
-              .rollout-cfg-select .ant-select-status-error .ant-select-content {
+              .rollout-cfg-select.ant-select-status-error .ant-select-content {
                 border-color: #EF4444 !important;
               }
             `}</style>
-            <div className="rollout-cfg-select" style={{ width: "100%" }}>
             <Select
               value={selectedSchemaId || undefined}
+              open={configKeyOpen}
+              onDropdownVisibleChange={setConfigKeyOpen}
               onChange={(schemaId) => {
                 setSelectedSchemaId(schemaId);
                 const schema = schemas.find((s) => s.id === schemaId);
@@ -1874,11 +1864,16 @@ function RemoteConfigurationForm({
                 }
               }}
               placeholder="Select a config from library..."
-              style={{ width: "100%" }}
+              style={{ width: "100%", height: "auto" }}
+              suffixIcon={
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ transition: "transform 0.2s", transform: configKeyOpen ? "rotate(90deg)" : "rotate(0deg)", color: "#9CA3AF", flexShrink: 0 }}>
+                  <path d="M6 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              }
+              className="rollout-cfg-select"
               status={errors.key ? "error" : undefined}
               options={schemas.map((s) => ({ value: s.id, label: `${s.name} (${s.key})` }))}
             />
-            </div>
             {errors.key && <div style={{ marginTop: 6, fontSize: 12, color: "#EF4444" }}>{errors.key}</div>}
           </div>
         </div>
