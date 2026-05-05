@@ -1795,7 +1795,16 @@ function RemoteConfigurationForm({
         <p style={{ margin: "0 0 16px", fontSize: 13, color: TEXT_MUTED }}>Choose a config from the library to roll out.</p>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
           <div>
-            <label style={{ display: "block", marginBottom: 8, fontSize: 12, fontWeight: 700, color: TEXT_MUTED }}>ROLLOUT NAME *</label>
+            <label style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 8, fontSize: 12, fontWeight: 700, color: TEXT_MUTED }}>
+              ROLLOUT NAME *
+              <div style={{ position: "relative", display: "inline-flex", cursor: "default" }} onMouseEnter={(e) => { e.currentTarget.lastChild.style.visibility = "visible"; e.currentTarget.lastChild.style.opacity = "1"; }} onMouseLeave={(e) => { e.currentTarget.lastChild.style.visibility = "hidden"; e.currentTarget.lastChild.style.opacity = "0"; }}>
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6.5" stroke="#D1D5DB"/><rect x="6.5" y="6" width="1" height="4.5" rx="0.5" fill="#9CA3AF"/><rect x="6.5" y="3.5" width="1" height="1.3" rx="0.5" fill="#9CA3AF"/></svg>
+                <div style={{ visibility: "hidden", opacity: 0, position: "absolute", bottom: "calc(100% + 8px)", left: "50%", transform: "translateX(-50%)", background: "#111827", color: WHITE, fontSize: 12, fontWeight: 400, padding: "7px 12px", borderRadius: 6, whiteSpace: "nowrap", boxShadow: "0 4px 12px rgba(0,0,0,0.15)", zIndex: 9999, transition: "opacity 0.15s, visibility 0.15s", pointerEvents: "none" }}>
+                  Give this rollout a memorable name to identify it in the list.
+                  <span style={{ position: "absolute", top: "100%", left: "50%", transform: "translateX(-50%)", width: 0, height: 0, borderLeft: "5px solid transparent", borderRight: "5px solid transparent", borderTop: "5px solid #111827" }} />
+                </div>
+              </div>
+            </label>
             <input
               value={form.name}
               onChange={(e) => handleNameChange(e.target.value)}
@@ -1805,8 +1814,41 @@ function RemoteConfigurationForm({
             {errors.name && <div style={{ marginTop: 6, fontSize: 12, color: "#EF4444" }}>{errors.name}</div>}
           </div>
           <div>
-            <label style={{ display: "block", marginBottom: 8, fontSize: 12, fontWeight: 700, color: TEXT_MUTED }}>CONFIG KEY *</label>
-            <style>{`.rollout-cfg-select .ant-select-selector { border-radius: 8px !important; min-height: 44px !important; padding-left: 14px !important; padding-right: 14px !important; border-color: rgba(0,0,0,0.1) !important; font-size: 13px !important; align-items: center !important; } .rollout-cfg-select.ant-select-status-error .ant-select-selector { border-color: #EF4444 !important; }`}</style>
+            <label style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 8, fontSize: 12, fontWeight: 700, color: TEXT_MUTED }}>
+              CONFIG KEY *
+              <div style={{ position: "relative", display: "inline-flex", cursor: "default" }} onMouseEnter={(e) => { e.currentTarget.lastChild.style.visibility = "visible"; e.currentTarget.lastChild.style.opacity = "1"; }} onMouseLeave={(e) => { e.currentTarget.lastChild.style.visibility = "hidden"; e.currentTarget.lastChild.style.opacity = "0"; }}>
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6.5" stroke="#D1D5DB"/><rect x="6.5" y="6" width="1" height="4.5" rx="0.5" fill="#9CA3AF"/><rect x="6.5" y="3.5" width="1" height="1.3" rx="0.5" fill="#9CA3AF"/></svg>
+                <div style={{ visibility: "hidden", opacity: 0, position: "absolute", bottom: "calc(100% + 8px)", left: "50%", transform: "translateX(-50%)", background: "#111827", color: WHITE, fontSize: 12, fontWeight: 400, padding: "7px 12px", borderRadius: 6, whiteSpace: "nowrap", boxShadow: "0 4px 12px rgba(0,0,0,0.15)", zIndex: 9999, transition: "opacity 0.15s, visibility 0.15s", pointerEvents: "none" }}>
+                  Choose which config from your library this rollout will serve.
+                  <span style={{ position: "absolute", top: "100%", left: "50%", transform: "translateX(-50%)", width: 0, height: 0, borderLeft: "5px solid transparent", borderRight: "5px solid transparent", borderTop: "5px solid #111827" }} />
+                </div>
+              </div>
+            </label>
+            <style>{`
+              .rollout-cfg-select .ant-select-selector {
+                border-radius: 8px !important;
+                height: 45px !important;
+                padding-left: 14px !important;
+                padding-right: 14px !important;
+                border-color: rgba(0,0,0,0.1) !important;
+                font-size: 13px !important;
+                align-items: center !important;
+              }
+              .rollout-cfg-select .ant-select-selection-item,
+              .rollout-cfg-select .ant-select-selection-placeholder {
+                line-height: 43px !important;
+                font-size: 13px !important;
+              }
+              .rollout-cfg-select .ant-select-arrow {
+                transition: transform 0.2s ease !important;
+              }
+              .rollout-cfg-select.ant-select-open .ant-select-arrow {
+                transform: translateY(-50%) rotate(180deg) !important;
+              }
+              .rollout-cfg-select.ant-select-status-error .ant-select-selector {
+                border-color: #EF4444 !important;
+              }
+            `}</style>
             <div className="rollout-cfg-select" style={{ width: "100%" }}>
             <Select
               value={selectedSchemaId || undefined}
@@ -5488,7 +5530,7 @@ export default function App() {
           </div>
         </div>
 
-        <div style={{ padding: "4px 8px 0", flex: 1, overflowY: "auto" }}>
+        <div style={{ padding: "4px 8px 0", flex: 1 }}>
           <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
             <SidebarItem icon={<HeartIcon />} label="Favorites" />
             <SidebarItem icon={<DashboardIcon />} label="Dashboard" />
@@ -5517,7 +5559,7 @@ export default function App() {
               />
 
               {experienceHovered && (
-                <div style={{ position: "absolute", left: "100%", top: 0, marginLeft: 8, width: 190, padding: 8, borderRadius: 12, background: WHITE, border: `1px solid ${BORDER}`, boxShadow: SHADOW, zIndex: 40 }}>
+                <div style={{ position: "absolute", left: "100%", top: 0, marginLeft: 8, width: 190, padding: 8, borderRadius: 12, background: WHITE, border: `1px solid ${BORDER}`, boxShadow: SHADOW, zIndex: 9999 }}>
                   {[
                     { key: "remote_config", label: "Feature Rollouts", action: goToRemoteConfigList },
                     { key: "ab_testing", label: "A/B Tests", action: goToAbList },
@@ -5566,7 +5608,7 @@ export default function App() {
                 }
               />
               {devHovered && (
-                <div style={{ position: "absolute", left: "100%", top: 0, marginLeft: 8, width: 190, padding: 8, borderRadius: 12, background: WHITE, border: `1px solid ${BORDER}`, boxShadow: SHADOW, zIndex: 40 }}>
+                <div style={{ position: "absolute", left: "100%", top: 0, marginLeft: 8, width: 190, padding: 8, borderRadius: 12, background: WHITE, border: `1px solid ${BORDER}`, boxShadow: SHADOW, zIndex: 9999 }}>
                   {[
                     { key: "dev_remote_config", label: "Config Library", action: goToDevSchemaList },
                   ].map((item) => (
