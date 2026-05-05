@@ -3602,7 +3602,7 @@ function ExperimentDetail({ experiment, onBack, onOpenRemoteConfig, linkedConfig
   }, [exportMenuOpen]);
 
   return (
-    <div>
+    <div style={{ paddingBottom: 80 }}>
       <ApplyWinnerModal open={applyWinnerOpen} experiment={experiment} onCancel={() => setApplyWinnerOpen(false)}
         onConfirm={() => { console.log(`Winner applied: ${experiment.linkedConfigMeta?.key} = ${experiment.linkedConfigMeta?.variantBValue}`); setApplyWinnerOpen(false); }}
       />
@@ -3610,91 +3610,24 @@ function ExperimentDetail({ experiment, onBack, onOpenRemoteConfig, linkedConfig
         onConfirm={() => { console.log("Experiment stopped:", experiment.id); setStopConfirmOpen(false); }}
       />
 
-      {/* ── Breadcrumb ── */}
-      <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 14, fontSize: 12, color: "#6B7280" }}>
-        <span style={{ color: "#6B7280" }}>Platform</span>
-        <span style={{ color: "#D1D5DB" }}>›</span>
-        <button onClick={onBack} style={{ background: "none", border: "none", padding: 0, color: "#6B7280", cursor: "pointer", fontSize: 12 }}>A/B Tests</button>
-        <span style={{ color: "#D1D5DB" }}>›</span>
-        <span style={{ color: "#3B82F6", fontWeight: 500 }}>{experiment.name}</span>
-      </div>
-
       {/* ── Page Header ── */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
-        <div style={{ flex: 1, minWidth: 0, marginRight: 20 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-            <h1 style={pageTitleStyle}>{experiment.name}</h1>
-            <StatusBadge status={experiment.status} />
-          </div>
-          {/* Dynamic status summary (replaces static hypothesis) */}
-          {isWinnerDeclared ? (
-            <p style={{ margin: "5px 0 2px", fontSize: 13, color: "#16A34A", display: "flex", alignItems: "center", gap: 5 }}>
-              <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M2 7.5L5.5 11L12 4" stroke="#16A34A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-              Hypothesis confirmed — Variant B outperformed Control by {liftValue}% ({experiment.confidenceLevel || 95}% confidence)
-            </p>
-          ) : null}
-          <p style={{ margin: "4px 0 0", fontSize: 12, color: "#6B7280" }}>{statusSummary}</p>
-          {/* Meta row */}
-          <div style={{ marginTop: 5, fontSize: 12, color: "#6B7280", display: "flex", flexWrap: "wrap", gap: 4, alignItems: "center" }}>
-            {startLabel !== "—" && <span>Started: {startLabel}</span>}
-            {startLabel !== "—" && endLabel !== "—" && <span style={{ color: "#D1D5DB" }}>·</span>}
-            {endLabel !== "—" && <span>Completed: {endLabel}</span>}
-            {experiment.createdBy && <><span style={{ color: "#D1D5DB" }}>·</span><span>Created by: {experiment.createdBy}</span></>}
-          </div>
+      <div style={{ marginBottom: 6 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+          <h1 style={pageTitleStyle}>{experiment.name}</h1>
+          <StatusBadge status={experiment.status} />
         </div>
-
-        {/* Action button cluster */}
-        <div style={{ display: "flex", gap: 6, alignItems: "center", flexShrink: 0 }}>
-          {/* Lifecycle controls — left group */}
-          {isRunning && (
-            <div style={{ display: "flex", gap: 6, paddingRight: 10, borderRight: "1px solid #E5E7EB" }}>
-              <button style={{ ...secondaryButtonStyle, background: "#FFFBEB", borderColor: "#FDE68A", color: "#92400E", padding: "9px 14px" }}>
-                Pause
-              </button>
-              <button
-                onClick={() => setStopConfirmOpen(true)}
-                style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "9px 14px", border: "none", borderRadius: 8, background: "#DC2626", color: WHITE, fontSize: 13, fontWeight: 600, cursor: "pointer" }}
-              >
-                <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor" aria-hidden="true"><rect x="1" y="1" width="8" height="8" rx="1.5"/></svg>
-                Stop
-              </button>
-            </div>
-          )}
-          {/* Apply Winner — primary CTA */}
-          {isWinnerDeclared && (
-            <button onClick={() => setApplyWinnerOpen(true)} style={{ ...primaryButtonStyle, display: "inline-flex", alignItems: "center", gap: 7 }}>
-              <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M2 7.5L5.5 11L12 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-              Apply Winner
-            </button>
-          )}
-          {/* Utility controls — right group */}
-          <div style={{ display: "flex", gap: 6, paddingLeft: isRunning || isWinnerDeclared ? 4 : 0 }}>
-            {/* Export dropdown */}
-            <div style={{ position: "relative" }}>
-              <button onClick={(e) => { e.stopPropagation(); setExportMenuOpen((o) => !o); }}
-                style={{ ...secondaryButtonStyle, gap: 7, padding: "9px 14px" }} aria-label="Export results">
-                <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M7 1v8M4 6l3 3 3-3M2 11h10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                Export
-              </button>
-              {exportMenuOpen && (
-                <div style={{ position: "absolute", right: 0, top: "calc(100% + 6px)", background: WHITE, border: "1px solid #E5E7EB", borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", zIndex: 100, minWidth: 190, overflow: "hidden" }}>
-                  {[{ label: "Export as PDF", icon: "📄" }, { label: "Download CSV", icon: "⬇" }, { label: "Copy shareable link", icon: "🔗" }].map((opt) => (
-                    <button key={opt.label} onClick={() => { console.log(opt.label); setExportMenuOpen(false); }}
-                      style={{ display: "flex", alignItems: "center", gap: 9, width: "100%", padding: "10px 14px", border: "none", background: "none", fontSize: 13, color: TEXT, cursor: "pointer", textAlign: "left" }}
-                      onMouseEnter={(e) => { e.currentTarget.style.background = "#F9FAFB"; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.background = "none"; }}
-                    >{opt.icon} {opt.label}</button>
-                  ))}
-                </div>
-              )}
-            </div>
-            {/* Copy link — labelled text button */}
-            <button aria-label="Copy link to this experiment" onClick={() => { console.log("Copy link"); }}
-              style={{ ...secondaryButtonStyle, gap: 7, padding: "9px 12px" }}>
-              <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden="true"><circle cx="11" cy="3" r="1.5" stroke="currentColor" strokeWidth="1.5"/><circle cx="3" cy="7" r="1.5" stroke="currentColor" strokeWidth="1.5"/><circle cx="11" cy="11" r="1.5" stroke="currentColor" strokeWidth="1.5"/><path d="M4.4 7.8L9.7 10.4M9.7 3.6L4.4 6.2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>
-              Copy link
-            </button>
-          </div>
+        {isWinnerDeclared ? (
+          <p style={{ margin: "5px 0 2px", fontSize: 13, color: "#16A34A", display: "flex", alignItems: "center", gap: 5 }}>
+            <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M2 7.5L5.5 11L12 4" stroke="#16A34A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            Hypothesis confirmed — Variant B outperformed Control by {liftValue}% ({experiment.confidenceLevel || 95}% confidence)
+          </p>
+        ) : null}
+        <p style={{ margin: "4px 0 0", fontSize: 12, color: "#6B7280" }}>{statusSummary}</p>
+        <div style={{ marginTop: 5, fontSize: 12, color: "#6B7280", display: "flex", flexWrap: "wrap", gap: 4, alignItems: "center" }}>
+          {startLabel !== "—" && <span>Started: {startLabel}</span>}
+          {startLabel !== "—" && endLabel !== "—" && <span style={{ color: "#D1D5DB" }}>·</span>}
+          {endLabel !== "—" && <span>Completed: {endLabel}</span>}
+          {experiment.createdBy && <><span style={{ color: "#D1D5DB" }}>·</span><span>Created by: {experiment.createdBy}</span></>}
         </div>
       </div>
 
@@ -3938,12 +3871,29 @@ function ExperimentDetail({ experiment, onBack, onOpenRemoteConfig, linkedConfig
         </div>
       )}
 
-      {/* Sticky footer */}
-      <div style={{ position: "sticky", bottom: 0, marginTop: 24, padding: "14px 0", background: WHITE, borderTop: "1px solid #E5E7EB", boxShadow: "0 -3px 12px rgba(0,0,0,0.05)", display: "flex", alignItems: "center", zIndex: 40 }}>
-        <button onClick={onBack} style={{ ...secondaryButtonStyle, display: "inline-flex", alignItems: "center", gap: 7, background: WHITE, border: "1px solid #D1D5DB", color: "#374151" }}>
+      {/* Fixed footer */}
+      <div style={{ position: "fixed", bottom: 0, left: 222, right: 0, padding: "14px 28px", background: WHITE, borderTop: "2px solid #E5E7EB", display: "flex", alignItems: "center", justifyContent: "space-between", zIndex: 40 }}>
+        <button onClick={onBack} style={{ ...secondaryButtonStyle, display: "inline-flex", alignItems: "center", gap: 7 }}>
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M9 12L4 7L9 2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
           Back to experiments
         </button>
+        {isWinnerDeclared && (
+          <button onClick={() => setApplyWinnerOpen(true)} style={{ ...primaryButtonStyle, display: "inline-flex", alignItems: "center", gap: 7 }}>
+            <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M2 7.5L5.5 11L12 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            Apply Winner
+          </button>
+        )}
+        {isRunning && (
+          <div style={{ display: "flex", gap: 8 }}>
+            <button style={{ ...secondaryButtonStyle, background: "#FFFBEB", borderColor: "#FDE68A", color: "#92400E" }}>
+              Pause
+            </button>
+            <button onClick={() => setStopConfirmOpen(true)} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "9px 14px", border: "none", borderRadius: 8, background: "#DC2626", color: WHITE, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor" aria-hidden="true"><rect x="1" y="1" width="8" height="8" rx="1.5"/></svg>
+              Stop
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
