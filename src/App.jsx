@@ -1825,55 +1825,47 @@ function RemoteConfigurationForm({
                 </div>
               </div>
             </label>
-            <style>{`
-              .rollout-cfg-select .ant-select-content {
-                border-radius: 8px !important;
-                border-color: rgba(0,0,0,0.1) !important;
-                padding: 12px 14px !important;
-                height: unset !important;
-                min-height: unset !important;
-                font-size: 13px !important;
-                align-items: center !important;
-              }
-              .rollout-cfg-select .ant-select-placeholder,
-              .rollout-cfg-select .ant-select-selection-item {
-                font-size: 13px !important;
-                line-height: 1.5 !important;
-              }
-              .rollout-cfg-select.ant-select-status-error .ant-select-content {
-                border-color: #EF4444 !important;
-              }
-            `}</style>
-            <Select
-              value={selectedSchemaId || undefined}
-              open={configKeyOpen}
-              onDropdownVisibleChange={setConfigKeyOpen}
-              onChange={(schemaId) => {
-                setSelectedSchemaId(schemaId);
-                const schema = schemas.find((s) => s.id === schemaId);
-                if (schema) {
-                  setFieldValue("key", schema.key);
-                  setFieldValue("parameters", (schema.parameters || []).map((p) => ({
-                    id: p.id,
-                    key: p.key,
-                    type: p.type,
-                    description: p.description || "",
-                    value: p.defaultValue ?? "",
-                    collapsed: false,
-                  })));
-                }
-              }}
-              placeholder="Select a config from library..."
-              style={{ width: "100%", height: "auto" }}
-              suffixIcon={
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ transition: "transform 0.2s", transform: configKeyOpen ? "rotate(90deg)" : "rotate(0deg)", color: "#9CA3AF", flexShrink: 0 }}>
+            {/* Custom dropdown — uses fieldInputStyle so height is guaranteed identical to ROLLOUT NAME */}
+            <div style={{ position: "relative" }}>
+              <button
+                type="button"
+                onClick={() => setConfigKeyOpen((v) => !v)}
+                style={{ ...fieldInputStyle("key"), display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, cursor: "pointer", appearance: "none", WebkitAppearance: "none", textAlign: "left", fontFamily: "inherit" }}
+              >
+                <span style={{ flex: 1, color: selectedSchemaId ? TEXT : "#9CA3AF", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {selectedSchemaId ? (() => { const s = schemas.find((s) => s.id === selectedSchemaId); return s ? `${s.name} (${s.key})` : "Select a config from library..."; })() : "Select a config from library..."}
+                </span>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0, color: "#9CA3AF", transition: "transform 0.2s", transform: configKeyOpen ? "rotate(90deg)" : "rotate(0deg)" }}>
                   <path d="M6 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
-              }
-              className="rollout-cfg-select"
-              status={errors.key ? "error" : undefined}
-              options={schemas.map((s) => ({ value: s.id, label: `${s.name} (${s.key})` }))}
-            />
+              </button>
+              {configKeyOpen && (
+                <>
+                  <div style={{ position: "fixed", inset: 0, zIndex: 9998 }} onClick={() => setConfigKeyOpen(false)} />
+                  <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, background: WHITE, border: `1px solid ${BORDER}`, borderRadius: 8, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", zIndex: 9999, maxHeight: 260, overflowY: "auto" }}>
+                    {schemas.length === 0
+                      ? <div style={{ padding: "10px 14px", fontSize: 13, color: "#9CA3AF" }}>No configs available</div>
+                      : schemas.map((s) => (
+                        <div
+                          key={s.id}
+                          onClick={() => {
+                            setSelectedSchemaId(s.id);
+                            setFieldValue("key", s.key);
+                            setFieldValue("parameters", (s.parameters || []).map((p) => ({ id: p.id, key: p.key, type: p.type, description: p.description || "", value: p.defaultValue ?? "", collapsed: false })));
+                            setConfigKeyOpen(false);
+                          }}
+                          style={{ padding: "10px 14px", fontSize: 13, color: selectedSchemaId === s.id ? "#3B82F6" : TEXT, background: selectedSchemaId === s.id ? "#EFF6FF" : "transparent", cursor: "pointer" }}
+                          onMouseEnter={(e) => { if (selectedSchemaId !== s.id) e.currentTarget.style.background = "#F9FAFB"; }}
+                          onMouseLeave={(e) => { if (selectedSchemaId !== s.id) e.currentTarget.style.background = "transparent"; }}
+                        >
+                          {s.name} ({s.key})
+                        </div>
+                      ))
+                    }
+                  </div>
+                </>
+              )}
+            </div>
             {errors.key && <div style={{ marginTop: 6, fontSize: 12, color: "#EF4444" }}>{errors.key}</div>}
           </div>
         </div>
