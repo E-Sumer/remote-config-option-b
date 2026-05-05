@@ -4627,6 +4627,156 @@ function CustomSelect({ value, onChange, options }) {
   );
 }
 
+// ─── DevRemoteConfigDetail (read-only, Active configs) ────────────────────
+function DevRemoteConfigDetail({ schema, onBack, onDuplicate }) {
+  const [activeTab, setActiveTab] = useState("iOS");
+  const [snippetCopied, setSnippetCopied] = useState(false);
+
+  const disabledInput = {
+    ...inputStyle,
+    background: "#f5f5f5",
+    color: "#bfbfbf",
+    cursor: "not-allowed",
+    borderColor: "#d9d9d9",
+  };
+
+  const codeSnippets = {
+    iOS: `import NetmeraSDK\n\n// Fetch schema: ${schema.key}\nlet config = Netmera.getRemoteConfig(key: "${schema.key}")\n${schema.parameters.slice(0, 3).map((p) => {
+      const cast = p.type === "Integer" ? `config.intValue(for: "${p.key}")` : p.type === "Boolean" ? `config.boolValue(for: "${p.key}")` : `config.stringValue(for: "${p.key}")`;
+      return `let ${p.key} = ${cast}`;
+    }).join("\n")}`,
+    Android: `import com.netmera.sdk.RemoteConfig\n\n// Fetch schema: ${schema.key}\nval config = Netmera.getRemoteConfig("${schema.key}")\n${schema.parameters.slice(0, 3).map((p) => {
+      const type = p.type === "Integer" ? "Int" : p.type === "Boolean" ? "Boolean" : "String";
+      return `val ${p.key}: ${type} = config.get${type}("${p.key}")`;
+    }).join("\n")}`,
+    Web: `import { Netmera } from '@netmera/web-sdk';\n\n// Fetch schema: ${schema.key}\nconst config = await Netmera.getRemoteConfig('${schema.key}');\n${schema.parameters.slice(0, 3).map((p) => `const ${p.key} = config.get('${p.key}');`).join("\n")}`,
+    "React Native": `import { Netmera } from '@netmera/react-native-sdk';\n\n// Fetch schema: ${schema.key}\nconst config = await Netmera.getRemoteConfig('${schema.key}');\n${schema.parameters.slice(0, 3).map((p) => `const ${p.key} = config.get('${p.key}');`).join("\n")}`,
+    Flutter: `import 'package:netmera_flutter_sdk/netmera.dart';\n\n// Fetch schema: ${schema.key}\nfinal config = await Netmera.getRemoteConfig('${schema.key}');\n${schema.parameters.slice(0, 3).map((p) => `final ${p.key} = config.get('${p.key}');`).join("\n")}`,
+  };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", minHeight: "100%" }}>
+      {/* Page header */}
+      <div style={{ marginBottom: 20, display: "flex", alignItems: "flex-start", gap: 14 }}>
+        <div style={{ width: 5, alignSelf: "stretch", borderRadius: 999, background: "#3B82F6", flexShrink: 0 }} />
+        <div>
+          <h1 style={pageTitleStyle}>{schema.name}</h1>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 4 }}>
+            <span style={{ fontSize: 13, color: TEXT_MUTED }}>{schema.key}</span>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "2px 8px", borderRadius: 4, background: "#f6ffed", border: "1px solid #b7eb8f", color: "#52c41a", fontSize: 12, fontWeight: 600 }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="#52c41a"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm-1 15l-4-4 1.414-1.414L11 14.172l6.586-6.586L19 9l-8 8z"/></svg>
+              ACTIVE
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Ant Design info alert */}
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "12px 16px", background: "#e6f4ff", border: "1px solid #91caff", borderRadius: 6, marginBottom: 20 }}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="#1677FF" style={{ flexShrink: 0, marginTop: 1 }}><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm0 15a1 1 0 110-2 1 1 0 010 2zm1-4a1 1 0 01-2 0V8a1 1 0 012 0v5z"/></svg>
+        <div style={{ fontSize: 13, color: "#0958D9", lineHeight: 1.6 }}>
+          This config is currently active and cannot be edited. To make changes, duplicate this config to create a new Draft.
+        </div>
+      </div>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 18, flex: 1, paddingBottom: 90 }}>
+        {/* Basic Info — read-only */}
+        <div style={{ ...cardStyle, padding: 24 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: TEXT, marginBottom: 18 }}>Basic Information</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <div>
+              <label style={{ display: "block", marginBottom: 6, fontSize: 12, fontWeight: 700, color: TEXT_MUTED }}>CONFIG NAME</label>
+              <input value={schema.name} readOnly style={disabledInput} />
+            </div>
+            <div>
+              <label style={{ display: "block", marginBottom: 6, fontSize: 12, fontWeight: 700, color: TEXT_MUTED }}>KEY (SDK IDENTIFIER)</label>
+              <input value={schema.key} readOnly style={{ ...disabledInput, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", fontSize: 12 }} />
+            </div>
+            <div>
+              <label style={{ display: "block", marginBottom: 6, fontSize: 12, fontWeight: 700, color: TEXT_MUTED }}>DESCRIPTION</label>
+              <textarea value={schema.description || "—"} readOnly rows={3} style={{ ...disabledInput, resize: "none" }} />
+            </div>
+          </div>
+        </div>
+
+        {/* Parameters — read-only */}
+        <div style={{ ...cardStyle, padding: 24 }}>
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: TEXT }}>Parameters</div>
+            <div style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 2 }}>Parameters defined for this config.</div>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {schema.parameters.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "20px 12px", color: TEXT_MUTED, fontSize: 13 }}>No parameters defined.</div>
+            ) : schema.parameters.map((p) => (
+              <div key={p.id} style={{ background: WHITE, borderRadius: 8, border: `1px solid ${BORDER}`, padding: 16 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+                  <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: TEXT }}>{p.key}</span>
+                    <span style={{ display: "inline-flex", alignItems: "center", padding: "0px 8px", borderRadius: 4, background: "#f5f5f5", border: "1px solid #d9d9d9", color: "#595959", fontSize: 12 }}>{p.type}</span>
+                  </div>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: 11, fontWeight: 500, color: TEXT_MUTED, marginBottom: 4 }}>Parameter Key</label>
+                    <input value={p.key} readOnly style={{ ...disabledInput, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", fontSize: 12, padding: "6px 12px" }} />
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: 11, fontWeight: 500, color: TEXT_MUTED, marginBottom: 4 }}>Default Value</label>
+                    <input value={String(p.defaultValue)} readOnly style={{ ...disabledInput, fontSize: 12, padding: "6px 12px" }} />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* SDK Code Snippet — read-only */}
+        <div style={{ ...cardStyle, padding: 24 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: TEXT, marginBottom: 4 }}>SDK Code Snippet</div>
+          <div style={{ fontSize: 12, color: TEXT_MUTED, marginBottom: 16 }}>Copy this snippet into your app to fetch schema values at runtime.</div>
+          <div style={{ display: "flex", gap: 4, marginBottom: 14, borderBottom: `1px solid ${BORDER}`, paddingBottom: 0 }}>
+            {["iOS", "Android", "Web", "React Native", "Flutter"].map((tab) => (
+              <button key={tab} onClick={() => setActiveTab(tab)}
+                style={{ padding: "8px 14px", border: "none", borderRadius: "8px 8px 0 0", cursor: "pointer", fontSize: 12, fontWeight: activeTab === tab ? 700 : 400, background: activeTab === tab ? WHITE : "transparent", color: activeTab === tab ? TEXT : TEXT_MUTED, borderBottom: activeTab === tab ? "2px solid #4F46E5" : "2px solid transparent" }}>
+                {tab}
+              </button>
+            ))}
+          </div>
+          <pre style={{ margin: 0, padding: 16, borderRadius: 10, background: "#1E293B", color: "#E2E8F0", fontSize: 12, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", overflowX: "auto", lineHeight: 1.7 }}>
+            {codeSnippets[activeTab]}
+          </pre>
+          <button
+            onClick={() => { try { navigator.clipboard.writeText(codeSnippets[activeTab]); } catch (_) {} setSnippetCopied(true); setTimeout(() => setSnippetCopied(false), 2000); }}
+            style={{ ...secondaryButtonStyle, background: WHITE, marginTop: 10, padding: "7px 12px", fontSize: 12, color: snippetCopied ? "#16A34A" : TEXT }}
+          >
+            {snippetCopied ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#16A34A" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg> : <CopyIcon />}
+            {snippetCopied ? "Copied" : "Copy Snippet"}
+          </button>
+        </div>
+      </div>
+
+      {/* Sticky footer — Ant Design button styles */}
+      <div style={{ position: "sticky", bottom: 0, background: WHITE, borderTop: `1px solid ${BORDER}`, padding: "14px 0", marginLeft: -28, marginRight: -28, paddingLeft: 28, paddingRight: 28, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <button onClick={onBack}
+          style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 15px", height: 32, borderRadius: 6, border: "1px solid #d9d9d9", background: WHITE, color: "#374151", fontSize: 14, fontWeight: 500, cursor: "pointer", transition: "all 0.2s" }}
+          onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#3B82F6"; e.currentTarget.style.color = "#3B82F6"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#d9d9d9"; e.currentTarget.style.color = "#374151"; }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+          Back
+        </button>
+        <button onClick={onDuplicate}
+          style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 15px", height: 32, borderRadius: 6, border: "none", background: "#3B82F6", color: WHITE, fontSize: 14, fontWeight: 500, cursor: "pointer", boxShadow: "0 2px 0 rgba(5,145,255,0.1)", transition: "all 0.2s" }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = "#2563EB"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = "#3B82F6"; }}>
+          <CopyIcon />
+          Duplicate as Draft
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ─── DevRemoteConfigNew ────────────────────────────────────────────────────
 function DevRemoteConfigNew({ schema, onBack, onSave, experiments = [], configs = [] }) {
   const isEdit = Boolean(schema);
@@ -5157,6 +5307,32 @@ export default function App() {
     navigate(schema ? `/config_library/${schema.id}/edit` : "/config_library/new");
   };
 
+  const goToDevSchemaDetail = (schema) => {
+    isNavigatingRef.current = true;
+    setActiveMenu("dev_remote_config");
+    setDevSchemaView("detail");
+    setSelectedSchema(schema);
+    navigate(`/config_library/${schema.id}`);
+  };
+
+  const handleDuplicateAsDraft = (schema) => {
+    const duplicate = {
+      id: `s_${Date.now()}`,
+      name: `${schema.name} (Copy)`,
+      key: `${schema.key}_copy`,
+      description: schema.description,
+      sdks: schema.sdks,
+      parameters: schema.parameters.map((p) => ({ ...p, id: `sp_${Date.now()}_${p.id}` })),
+      created: formatToday(),
+      updated: formatToday(),
+      createdBy: "Emre Sumer",
+      status: "Draft",
+    };
+    setSchemas((prev) => [duplicate, ...prev]);
+    setToast({ type: "success", message: "Config duplicated as Draft." });
+    goToDevSchemaList();
+  };
+
   const handleSaveSchema = (data) => {
     if (selectedSchema) {
       setSchemas((prev) => prev.map((s) => s.id === selectedSchema.id ? { ...s, ...data, updated: formatToday() } : s));
@@ -5498,6 +5674,15 @@ export default function App() {
 
   const renderMainContent = () => {
     if (activeMenu === "dev_remote_config") {
+      if (devSchemaView === "detail" && selectedSchema) {
+        return (
+          <DevRemoteConfigDetail
+            schema={selectedSchema}
+            onBack={goToDevSchemaList}
+            onDuplicate={() => handleDuplicateAsDraft(selectedSchema)}
+          />
+        );
+      }
       if (devSchemaView === "new") {
         return (
           <DevRemoteConfigNew
@@ -5513,7 +5698,7 @@ export default function App() {
         <DevRemoteConfigList
           schemas={schemas}
           onCreateNew={() => goToDevSchemaNew(null)}
-          onViewSchema={(schema) => goToDevSchemaNew(schema)}
+          onViewSchema={(schema) => schema.status === "Active" ? goToDevSchemaDetail(schema) : goToDevSchemaNew(schema)}
         />
       );
     }
