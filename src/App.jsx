@@ -2528,6 +2528,7 @@ function ExperimentList({
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [upliftTooltipOpen, setUpliftTooltipOpen] = useState(false);
+  const [upliftTooltipPos, setUpliftTooltipPos] = useState({ x: 0, y: 0 });
 
   const configMap = useMemo(() => new Map(configs.map((config) => [config.key, config])), [configs]);
   const hasArchived = experiments.some((experiment) => experiment.archived);
@@ -2637,7 +2638,7 @@ function ExperimentList({
               {item.label}
               <div style={{ position: "relative", display: "inline-flex", cursor: "default" }} onMouseEnter={(e) => { e.currentTarget.lastChild.style.visibility = "visible"; e.currentTarget.lastChild.style.opacity = "1"; }} onMouseLeave={(e) => { e.currentTarget.lastChild.style.visibility = "hidden"; e.currentTarget.lastChild.style.opacity = "0"; }}>
                 <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6.5" stroke="#D1D5DB"/><rect x="6.5" y="6" width="1" height="4.5" rx="0.5" fill="#9CA3AF"/><rect x="6.5" y="3.5" width="1" height="1.3" rx="0.5" fill="#9CA3AF"/></svg>
-                <div style={{ visibility: "hidden", opacity: 0, position: "absolute", bottom: "calc(100% + 8px)", left: "50%", transform: "translateX(-50%)", background: "#111827", color: WHITE, fontSize: 12, fontWeight: 400, padding: "7px 12px", borderRadius: 6, whiteSpace: "nowrap", boxShadow: "0 4px 12px rgba(0,0,0,0.15)", zIndex: 9999, transition: "opacity 0.15s, visibility 0.15s", pointerEvents: "none" }}>
+                <div style={{ visibility: "hidden", opacity: 0, position: "absolute", bottom: "calc(100% + 8px)", left: "50%", transform: "translateX(-50%)", background: "#111827", color: WHITE, fontSize: 12, fontWeight: 400, padding: "7px 12px", borderRadius: 6, whiteSpace: "nowrap", boxShadow: "0 4px 12px rgba(0,0,0,0.15)", zIndex: 9999, transition: "opacity 0.15s, visibility 0.15s", pointerEvents: "none", textTransform: "none", letterSpacing: "normal" }}>
                   {item.tooltip}
                   <span style={{ position: "absolute", top: "100%", left: "50%", transform: "translateX(-50%)", width: 0, height: 0, borderLeft: "5px solid transparent", borderRight: "5px solid transparent", borderTop: "5px solid #111827" }} />
                 </div>
@@ -2657,7 +2658,7 @@ function ExperimentList({
             label: (
               <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
                 {f === "ALL" ? "All" : f.charAt(0) + f.slice(1).toLowerCase()}
-                <span style={{ padding: "0px 6px", borderRadius: 999, background: "rgba(0,0,0,0.06)", fontSize: 11, fontWeight: 600, color: "inherit" }}>
+                <span style={{ padding: "0px 5px", borderRadius: 999, background: "rgba(0,0,0,0.08)", fontSize: 10, fontWeight: 600, color: "inherit", lineHeight: "16px", display: "inline-block" }}>
                   {counts[f]}
                 </span>
               </span>
@@ -2684,13 +2685,13 @@ function ExperimentList({
                     <th key={column.key} style={{ padding: "14px 16px", textAlign: column.key === "actions" ? "center" : "left", fontSize: 12, fontWeight: 600, color: TEXT_MUTED, borderBottom: `1px solid ${BORDER}` }}>
                       {column.label}
                       {column.key === "lift" && (
-                        <div style={{ position: "relative", display: "inline-flex", cursor: "default", verticalAlign: "middle", marginLeft: 4 }} onMouseEnter={(e) => { e.currentTarget.lastChild.style.visibility = "visible"; e.currentTarget.lastChild.style.opacity = "1"; }} onMouseLeave={(e) => { e.currentTarget.lastChild.style.visibility = "hidden"; e.currentTarget.lastChild.style.opacity = "0"; }}>
+                        <span
+                          style={{ display: "inline-flex", cursor: "default", verticalAlign: "middle", marginLeft: 4 }}
+                          onMouseEnter={(e) => { const r = e.currentTarget.getBoundingClientRect(); setUpliftTooltipPos({ x: r.left + r.width / 2, y: r.top }); setUpliftTooltipOpen(true); }}
+                          onMouseLeave={() => setUpliftTooltipOpen(false)}
+                        >
                           <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6.5" stroke="#D1D5DB"/><rect x="6.5" y="6" width="1" height="4.5" rx="0.5" fill="#9CA3AF"/><rect x="6.5" y="3.5" width="1" height="1.3" rx="0.5" fill="#9CA3AF"/></svg>
-                          <div style={{ visibility: "hidden", opacity: 0, position: "absolute", bottom: "calc(100% + 8px)", left: "50%", transform: "translateX(-50%)", background: "#111827", color: WHITE, fontSize: 12, fontWeight: 400, padding: "7px 12px", borderRadius: 6, whiteSpace: "nowrap", boxShadow: "0 4px 12px rgba(0,0,0,0.15)", zIndex: 9999, transition: "opacity 0.15s, visibility 0.15s", pointerEvents: "none" }}>
-                            Relative change in goal metric vs. control variant.
-                            <span style={{ position: "absolute", top: "100%", left: "50%", transform: "translateX(-50%)", width: 0, height: 0, borderLeft: "5px solid transparent", borderRight: "5px solid transparent", borderTop: "5px solid #111827" }} />
-                          </div>
-                        </div>
+                        </span>
                       )}
                     </th>
                   ))}
@@ -2813,6 +2814,12 @@ function ExperimentList({
             </div>
           </div>
         </>
+      )}
+      {upliftTooltipOpen && (
+        <div style={{ position: "fixed", left: upliftTooltipPos.x, top: upliftTooltipPos.y - 8, transform: "translateX(-50%) translateY(-100%)", background: "#111827", color: "#fff", fontSize: 12, fontWeight: 400, padding: "7px 12px", borderRadius: 6, whiteSpace: "nowrap", boxShadow: "0 4px 12px rgba(0,0,0,0.15)", zIndex: 9999, pointerEvents: "none" }}>
+          Relative change in goal metric vs. control variant.
+          <span style={{ position: "absolute", top: "100%", left: "50%", transform: "translateX(-50%)", width: 0, height: 0, borderLeft: "5px solid transparent", borderRight: "5px solid transparent", borderTop: "5px solid #111827" }} />
+        </div>
       )}
     </div>
   );
