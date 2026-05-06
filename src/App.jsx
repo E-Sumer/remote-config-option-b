@@ -259,7 +259,7 @@ const initialExperiments = [
   {
     id: 3,
     name: "Promo banner placement",
-    status: "winner_declared",
+    status: "COMPLETED",
     linkedConfigKey: "search_results_display",
     hypothesis: "Top banner drives more clicks than bottom.",
     metric: "banner_click",
@@ -307,7 +307,7 @@ const initialExperiments = [
   {
     id: 5,
     name: "Search ranking weights",
-    status: "PAUSED",
+    status: "RUNNING",
     linkedConfigKey: "product_page_layout",
     hypothesis: "ML-based ranking improves relevance.",
     metric: "search_result_click",
@@ -817,11 +817,8 @@ function StatusBadge({ status }) {
   const palette = {
     RUNNING: { bg: "#EAFBF4", color: CTA_GREEN_DARK, dot: CTA_GREEN, label: "Running" },
     running: { bg: "#EAFBF4", color: CTA_GREEN_DARK, dot: CTA_GREEN, label: "Running" },
-    PAUSED: { bg: "#EAFBF4", color: CTA_GREEN_DARK, dot: CTA_GREEN, label: "Running" },
     COMPLETED: { bg: "#EEF3FF", color: "#4E5FE2", dot: "#6E7AF0", label: "Completed" },
     completed: { bg: "#EEF3FF", color: "#4E5FE2", dot: "#6E7AF0", label: "Completed" },
-    winner_declared: { bg: "#EEF3FF", color: "#4E5FE2", dot: "#6E7AF0", label: "Completed" },
-    inconclusive: { bg: "#EEF3FF", color: "#4E5FE2", dot: "#6E7AF0", label: "Completed" },
     DRAFT: { bg: DRAFT_BG, color: DRAFT_TEXT, dot: "#C4CAD4", label: "Draft" },
   };
   const current = palette[status] || palette.DRAFT;
@@ -2576,8 +2573,8 @@ function ExperimentList({
   const configMap = useMemo(() => new Map(configs.map((config) => [config.key, config])), [configs]);
   const filters = ["ALL", "RUNNING", "COMPLETED", "DRAFT"];
 
-  const isRunningStatus = (s) => s === "RUNNING" || s === "running" || s === "PAUSED";
-  const isCompletedStatus = (s) => s === "COMPLETED" || s === "completed" || s === "winner_declared" || s === "inconclusive";
+  const isRunningStatus = (s) => s === "RUNNING" || s === "running";
+  const isCompletedStatus = (s) => s === "COMPLETED" || s === "completed";
 
   const counts = useMemo(() => ({
     ALL: experiments.filter((experiment) => !experiment.archived).length,
@@ -2623,7 +2620,7 @@ function ExperimentList({
   const total = visibleExperiments.length;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const pagedExperiments = visibleExperiments.slice((page - 1) * pageSize, page * pageSize);
-  const activeExperiments = experiments.filter((experiment) => !experiment.archived && (experiment.status === "RUNNING" || experiment.status === "PAUSED"));
+  const activeExperiments = experiments.filter((experiment) => !experiment.archived && experiment.status === "RUNNING");
   const winningVariants = experiments.filter((experiment) => !experiment.archived && typeof experiment.confidence === "number" && experiment.confidence >= 95 && String(experiment.lift).startsWith("+")).length;
   const stats = [
     { label: "Active Experiments", value: activeExperiments.length, tooltip: "Experiments currently running or paused." },
@@ -2750,12 +2747,8 @@ function ExperimentList({
                     RUNNING: [
                       { key: "pause", label: "Mark as Completed", icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>, onClick: () => onPause(experiment) },
                       { key: "view", label: "View Report", icon: <ReportIcon />, onClick: () => onOpenReport(experiment) },
+                      { key: "clone", label: "Clone", icon: <CopyIcon />, onClick: () => onClone(experiment) },
                       { key: "edit", label: "Edit", icon: <EditIcon />, disabled: true, tooltip: "Running experiments cannot be edited" },
-                    ],
-                    PAUSED: [
-                      { key: "resume", label: "Resume", icon: <PlayIcon />, onClick: () => onResume(experiment) },
-                      { key: "view", label: "View Report", icon: <ReportIcon />, onClick: () => onOpenReport(experiment) },
-                      { key: "edit", label: "Edit", icon: <EditIcon />, onClick: () => onOpenEditor(experiment) },
                     ],
                     COMPLETED: [
                       { key: "view", label: "View Report", icon: <ReportIcon />, onClick: () => onOpenReport(experiment) },
@@ -2764,11 +2757,8 @@ function ExperimentList({
                     DRAFT: [
                       { key: "edit", label: "Edit", icon: <EditIcon />, onClick: () => onOpenEditor(experiment) },
                       { key: "launch", label: "Launch", icon: <PlayIcon />, onClick: () => onLaunch(experiment) },
-                      { key: "delete", label: "Delete", icon: <TrashIcon />, onClick: () => onDeleteDraft(experiment), destructive: true },
-                    ],
-                    winner_declared: [
-                      { key: "view", label: "View Report", icon: <ReportIcon />, onClick: () => onOpenReport(experiment) },
                       { key: "clone", label: "Clone", icon: <CopyIcon />, onClick: () => onClone(experiment) },
+                      { key: "delete", label: "Delete", icon: <TrashIcon />, onClick: () => onDeleteDraft(experiment), destructive: true },
                     ],
                   };
 
@@ -3777,9 +3767,6 @@ function ExperimentDetail({ experiment, onBack, onOpenRemoteConfig, linkedConfig
   const [vttOpen, setVttOpen] = useState(null);
   const [vttPos, setVttPos] = useState({ x: 0, y: 0 });
   const svgRef = useRef(null);
-
-  const isWinnerDeclared = experiment.status === "winner_declared";
-  const isRunning = experiment.status === "RUNNING" || experiment.status === "running";
 
   const trafficSplit = experiment.trafficSplit || { control: 50, variant_b: 50 };
   const totalUsers = experiment.totalUsers || experiment.users || 0;
@@ -5412,7 +5399,7 @@ export default function App() {
       {
         ...experiment,
         id: nextId,
-        name: `${experiment.name} (Copy)`,
+        name: `(Copy) ${experiment.name}`,
         status: "DRAFT",
         users: 0,
         confidence: null,
