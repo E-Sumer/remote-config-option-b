@@ -2748,7 +2748,7 @@ function ExperimentList({
 
                   const actionsByStatus = {
                     RUNNING: [
-                      { key: "pause", label: "Pause", icon: <PauseIcon />, onClick: () => onPause(experiment) },
+                      { key: "pause", label: "Mark as Completed", icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>, onClick: () => onPause(experiment) },
                       { key: "view", label: "View Report", icon: <ReportIcon />, onClick: () => onOpenReport(experiment) },
                       { key: "edit", label: "Edit", icon: <EditIcon />, disabled: true, tooltip: "Running experiments cannot be edited" },
                     ],
@@ -4106,17 +4106,13 @@ function ExperimentDetail({ experiment, onBack, onOpenRemoteConfig, linkedConfig
         >
           Back
         </Button>
-        {isWinnerDeclared ? (
-          <Button
-            type="primary"
-            onClick={() => setApplyWinnerOpen(true)}
-            icon={<svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M2 7.5L5.5 11L12 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
-          >
-            Apply Winner
-          </Button>
-        ) : (
-          <Button type="primary" onClick={onBack}>Done</Button>
-        )}
+        <Button
+          type="primary"
+          onClick={onBack}
+          icon={<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>}
+        >
+          Done
+        </Button>
       </div>
     </div>
   );
@@ -5388,10 +5384,10 @@ export default function App() {
   const handlePauseExperiment = async (experiment) => {
     setLoadingAction({ scope: "experiment", id: experiment.id, type: "pause" });
     await sleep(450);
-    updateExperiment(experiment.id, (current) => ({ ...current, status: "PAUSED" }));
+    updateExperiment(experiment.id, (current) => ({ ...current, status: "COMPLETED" }));
     setLoadingAction(null);
     setOpenActionId(null);
-    setToast({ type: "success", message: "Experiment paused." });
+    setToast({ type: "success", message: "Experiment marked as completed." });
   };
 
   const handleResumeExperiment = async (experiment) => {
