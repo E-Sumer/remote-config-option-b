@@ -2493,7 +2493,7 @@ function ExperimentActionMenu({ experiment, isOpen, onToggle, actions, loadingAc
               position: "fixed",
               top: menuPos.top,
               right: menuPos.right,
-              width: 166,
+              width: 190,
               padding: 8,
               borderRadius: 10,
               background: WHITE,
@@ -2528,10 +2528,10 @@ function ExperimentActionMenu({ experiment, isOpen, onToggle, actions, loadingAc
                       opacity: loadingAction && loadingAction !== action.key ? 0.6 : 1,
                     }}
                   >
-                    <span style={{ width: 16, height: 16, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+                    <span style={{ width: 16, height: 16, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                       {loadingAction === action.key ? <Spinner size={14} /> : action.icon}
                     </span>
-                    {loadingAction === action.key ? `${action.label}...` : action.label}
+                    <span style={{ whiteSpace: "nowrap" }}>{loadingAction === action.key ? `${action.label}...` : action.label}</span>
                   </button>
                   {action.disabled && action.tooltip && (
                     <div className="action-tip" style={{ visibility: "hidden", opacity: 0, position: "absolute", right: "calc(100% + 8px)", top: "50%", transform: "translateY(-50%)", background: "#1F2937", color: WHITE, fontSize: 11, padding: "5px 8px", borderRadius: 6, whiteSpace: "nowrap", pointerEvents: "none", transition: "opacity 0.15s", zIndex: 99999 }}>
@@ -4106,11 +4106,7 @@ function ExperimentDetail({ experiment, onBack, onOpenRemoteConfig, linkedConfig
         >
           Back
         </Button>
-        <Button
-          type="primary"
-          onClick={onBack}
-          icon={<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>}
-        >
+        <Button type="primary" onClick={onBack}>
           Done
         </Button>
       </div>
