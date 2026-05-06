@@ -2930,54 +2930,30 @@ function SearchableSelect({
             <span style={{ color: TEXT_MUTED }}>{placeholder}</span>
           )}
         </span>
-        <span style={{ color: TEXT_MUTED, flexShrink: 0 }}><ChevronDownIcon /></span>
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0, color: TEXT_MUTED, transition: "transform 0.2s", transform: open ? "rotate(180deg)" : "rotate(0deg)" }}>
+          <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
       </button>
       {error && <div style={{ marginTop: 6, fontSize: 12, color: "#EF4444" }}>{error}</div>}
 
       {open && (
-        <div style={{ position: "absolute", top: "calc(100% + 8px)", left: 0, right: 0, zIndex: 40, background: WHITE, borderRadius: 12, border: `1px solid ${BORDER}`, boxShadow: SHADOW, overflow: "hidden" }}>
-          <div style={{ padding: 12, borderBottom: `1px solid ${BORDER}`, position: "relative" }}>
-            <span style={{ position: "absolute", left: 24, top: 22, color: TEXT_MUTED }}><SearchIcon /></span>
-            <input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search..."
-              style={{ ...inputStyle, paddingLeft: 36 }}
-            />
-          </div>
-          <div style={{ maxHeight: 220, overflowY: "auto", padding: 8 }}>
-            {filteredOptions.length > 0 ? filteredOptions.map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                onClick={() => {
-                  onSelect(option.value);
-                  setOpen(false);
-                  setSearch("");
-                }}
-                style={{
-                  width: "100%",
-                  padding: "10px 12px",
-                  border: "none",
-                  borderRadius: 10,
-                  background: selectedValue === option.value ? "#ececf0" : "transparent",
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "flex-start",
-                  gap: 2,
-                  cursor: "pointer",
-                  textAlign: "left",
-                }}
-              >
-                <span style={{ color: TEXT, fontWeight: 600 }}>{option.label}</span>
-                {option.subLabel && <span style={{ color: TEXT_MUTED, fontSize: 12, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace" }}>{option.subLabel}</span>}
-              </button>
-            )) : (
-              <div style={{ padding: 12 }}>
-                {renderEmpty ? renderEmpty() : <div style={{ fontSize: 13, color: TEXT_MUTED }}>{emptyMessage}</div>}
-              </div>
-            )}
-          </div>
+        <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, background: WHITE, border: "1px solid rgba(0,0,0,0.1)", borderRadius: 8, boxShadow: "0px 8px 24px rgba(0,0,0,0.12)", zIndex: 9999, maxHeight: 260, overflowY: "auto" }}>
+          {filteredOptions.length > 0 ? filteredOptions.map((option) => (
+            <div
+              key={option.value}
+              onClick={() => { onSelect(option.value); setOpen(false); setSearch(""); }}
+              style={{ padding: "10px 14px", fontSize: 13, color: TEXT, background: selectedValue === option.value ? "#F3F4F6" : "transparent", cursor: "pointer", display: "flex", flexDirection: "column", gap: 2 }}
+              onMouseEnter={(e) => { if (selectedValue !== option.value) e.currentTarget.style.background = "#F9FAFB"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = selectedValue === option.value ? "#F3F4F6" : "transparent"; }}
+            >
+              <span style={{ fontWeight: selectedValue === option.value ? 600 : 400 }}>{option.label}</span>
+              {option.subLabel && <span style={{ color: TEXT_MUTED, fontSize: 11, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace" }}>{option.subLabel}</span>}
+            </div>
+          )) : (
+            <div style={{ padding: "12px 14px" }}>
+              {renderEmpty ? renderEmpty() : <div style={{ fontSize: 13, color: TEXT_MUTED }}>{emptyMessage}</div>}
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -3324,11 +3300,6 @@ function CreateExperiment({
                   labelStyle={{ fontSize: 13, fontWeight: 600, color: TEXT }}
                   tooltip="The primary conversion event used to measure and compare variant performance."
                 />
-                {selectedMetric && (
-                  <div style={{ marginTop: 8, padding: "10px 14px", borderRadius: 8, border: `1px solid ${BORDER}`, background: "#F0F9FF", color: "#0369A1", fontSize: 12 }}>
-                    Baseline reference: {selectedMetric.baseline}
-                  </div>
-                )}
               </div>
             </div>
           </div>
@@ -3430,7 +3401,7 @@ function CreateExperiment({
                             value={variant.name}
                             onChange={(e) => updateVariant(variant.id, (cur) => ({ ...cur, name: e.target.value }))}
                             disabled={isControl}
-                            style={{ ...inputStyle, flex: "0 0 180px", background: isControl ? "#F3F4F6" : WHITE, fontSize: 13 }}
+                            style={{ flex: "0 0 180px", padding: "6px 10px", border: "1px solid #E5E7EB", borderRadius: 6, fontSize: 13, color: TEXT, background: isControl ? "#F3F4F6" : WHITE, outline: "none" }}
                           />
                           <span style={{ padding: "3px 10px", borderRadius: 5, fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", background: isControl ? "#EFF6FF" : "#F0FDF4", color: isControl ? "#1D4ED8" : "#15803D", border: `1px solid ${isControl ? "#BFDBFE" : "#BBF7D0"}`, whiteSpace: "nowrap" }}>
                             {isControl ? "CONTROL GROUP" : "VARIANT"}
@@ -3443,7 +3414,7 @@ function CreateExperiment({
                             max={100}
                             value={variant.traffic}
                             onChange={(e) => updateVariant(variant.id, (cur) => ({ ...cur, traffic: Number(e.target.value) }))}
-                            style={{ ...inputStyle, width: 70, textAlign: "center", fontSize: 13 }}
+                            style={{ width: 72, padding: "6px 10px", border: "1px solid #E5E7EB", borderRadius: 6, textAlign: "center", fontSize: 14, fontWeight: 700, color: TEXT, background: WHITE, outline: "none" }}
                           />
                           {variant.removable ? (
                             <Button
@@ -3474,14 +3445,20 @@ function CreateExperiment({
                                   <div style={{ fontSize: 12, fontWeight: 600, color: TEXT, marginBottom: 4 }}>{parameter.key}</div>
                                   <div style={{ fontSize: 11, color: TEXT_MUTED, marginBottom: 8 }}>{parameter.type}</div>
                                   {parameter.type === "Boolean" ? (
-                                    <Select
-                                      size="small"
-                                      style={{ width: "100%" }}
-                                      value={String(parameter.value === true || parameter.value === "true")}
-                                      disabled={isControl}
-                                      onChange={(v) => updateVariantParameter(variant.id, parameter.id, (cur) => ({ ...cur, value: v === "true" }))}
-                                      options={[{ value: "true", label: "True" }, { value: "false", label: "False" }]}
-                                    />
+                                    <div style={{ position: "relative" }}>
+                                      <select
+                                        value={String(parameter.value === true || parameter.value === "true")}
+                                        disabled={isControl}
+                                        onChange={(e) => updateVariantParameter(variant.id, parameter.id, (cur) => ({ ...cur, value: e.target.value === "true" }))}
+                                        style={{ ...inputStyle, background: isControl ? "#F3F4F6" : WHITE, appearance: "none", paddingRight: 36, cursor: isControl ? "default" : "pointer" }}
+                                      >
+                                        <option value="true">True</option>
+                                        <option value="false">False</option>
+                                      </select>
+                                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", color: TEXT_MUTED, pointerEvents: "none" }}>
+                                        <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                                      </svg>
+                                    </div>
                                   ) : parameter.type === "JSON" ? (
                                     <textarea
                                       rows={3}
