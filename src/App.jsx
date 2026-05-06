@@ -5005,6 +5005,9 @@ export default function App() {
   const [devSchemaView, setDevSchemaView] = useState("list");
   const [selectedSchema, setSelectedSchema] = useState(null);
   const [schemas, setSchemas] = useState(mockSchemas);
+  // Tracks which schema IDs have been explicitly set up as Feature Rollouts.
+  // Schemas created from the Config Library do NOT appear here automatically.
+  const [featureRolloutIds, setFeatureRolloutIds] = useState(new Set(["s1"]));
   // Stores per-config edited parameter values: { [configId]: { [paramId]: value } }
   const [configParamValues, setConfigParamValues] = useState({});
   const configs = useMemo(() => schemas.map((s) => ({
@@ -5302,6 +5305,9 @@ export default function App() {
       setSchemas((prev) => [...prev, newSchema]);
     }
 
+    // Mark this config as an explicit Feature Rollout so it appears in the rollout list
+    setFeatureRolloutIds((prev) => new Set([...prev, savedConfig.id]));
+
     // Persist edited parameter values so detail view shows the saved values.
     // User edits are in the default variant's parameterOverrides, not form.parameters.value.
     if (form.parameters?.length) {
@@ -5575,7 +5581,7 @@ export default function App() {
           <RemoteConfigurationForm
             mode={remoteConfigView}
             initialValue={editingConfig}
-            existingConfigs={configs}
+            existingConfigs={configs.filter((c) => featureRolloutIds.has(c.id))}
             schemas={schemas}
             onCancel={goToRemoteConfigList}
             onSave={handleSaveConfig}
@@ -5599,7 +5605,7 @@ export default function App() {
 
       return (
         <RemoteConfigurationList
-          configs={configs}
+          configs={configs.filter((c) => featureRolloutIds.has(c.id))}
           openActionId={openActionId}
           setOpenActionId={setOpenActionId}
           onCreate={goToRemoteConfigCreate}
