@@ -2870,6 +2870,9 @@ function SearchableSelect({
   error,
   emptyMessage,
   renderEmpty,
+  triggerBg,
+  labelStyle: labelStyleOverride,
+  tooltip,
 }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -2880,23 +2883,44 @@ function SearchableSelect({
     || (option.subLabel || "").toLowerCase().includes(search.toLowerCase())
   ));
 
+  const bg = triggerBg || INPUT_BG;
+
   return (
     <div style={{ position: "relative" }}>
-      <label style={{ display: "block", marginBottom: 8, fontSize: 12, fontWeight: 700, color: TEXT_MUTED }}>{label}{required ? " *" : ""}</label>
+      <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: labelStyleOverride ? 6 : 8 }}>
+        <label style={labelStyleOverride || { display: "block", fontSize: 12, fontWeight: 700, color: TEXT_MUTED }}>{label}{required ? <span style={{ color: "#EF4444" }}> *</span> : ""}</label>
+        {tooltip && (
+          <div style={{ position: "relative", display: "inline-flex", cursor: "default" }}
+            onMouseEnter={(e) => { e.currentTarget.lastChild.style.visibility = "visible"; e.currentTarget.lastChild.style.opacity = "1"; }}
+            onMouseLeave={(e) => { e.currentTarget.lastChild.style.visibility = "hidden"; e.currentTarget.lastChild.style.opacity = "0"; }}
+          >
+            <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6.5" stroke="#D1D5DB"/><rect x="6.5" y="6" width="1" height="4.5" rx="0.5" fill="#9CA3AF"/><rect x="6.5" y="3.5" width="1" height="1.3" rx="0.5" fill="#9CA3AF"/></svg>
+            <div style={{ visibility: "hidden", opacity: 0, position: "absolute", bottom: "calc(100% + 8px)", left: "50%", transform: "translateX(-50%)", background: "#111827", color: WHITE, fontSize: 12, fontWeight: 400, padding: "7px 12px", borderRadius: 6, whiteSpace: "nowrap", zIndex: 9999, transition: "opacity 0.15s", pointerEvents: "none", boxShadow: "0 4px 12px rgba(0,0,0,0.15)" }}>
+              {tooltip}
+              <span style={{ position: "absolute", top: "100%", left: "50%", transform: "translateX(-50%)", width: 0, height: 0, borderLeft: "5px solid transparent", borderRight: "5px solid transparent", borderTop: "5px solid #111827" }} />
+            </div>
+          </div>
+        )}
+      </div>
       <button
         onClick={() => setOpen((current) => !current)}
         type="button"
         style={{
           ...inputStyle,
+          background: bg,
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
+          gap: 8,
           textAlign: "left",
+          cursor: "pointer",
+          appearance: "none",
+          fontFamily: "inherit",
           borderColor: error ? "#EF4444" : BORDER_DARK,
-          boxShadow: error ? "0 0 0 3px rgba(239, 68, 68, 0.12)" : "none",
+          boxShadow: "none",
         }}
       >
-        <span>
+        <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {selectedOption ? (
             <span style={{ display: "flex", flexDirection: "column", gap: 2 }}>
               <span style={{ color: TEXT, fontWeight: 600 }}>{selectedOption.label}</span>
@@ -2906,7 +2930,7 @@ function SearchableSelect({
             <span style={{ color: TEXT_MUTED }}>{placeholder}</span>
           )}
         </span>
-        <span style={{ color: TEXT_MUTED }}><ChevronDownIcon /></span>
+        <span style={{ color: TEXT_MUTED, flexShrink: 0 }}><ChevronDownIcon /></span>
       </button>
       {error && <div style={{ marginTop: 6, fontSize: 12, color: "#EF4444" }}>{error}</div>}
 
@@ -3235,17 +3259,20 @@ function CreateExperiment({
           {/* Experiment Details */}
           <div style={{ ...cardStyle, padding: 24 }}>
             <h3 style={{ margin: "0 0 4px", fontSize: 16, fontWeight: 700, color: TEXT }}>Experiment Details</h3>
-            <p style={{ margin: "0 0 20px", fontSize: 13, color: TEXT_MUTED }}>Set the name, linked configuration, hypothesis and goal metric.</p>
+            <p style={{ margin: "0 0 20px", fontSize: 13, color: TEXT_MUTED }}>Set the name, linked configuration and goal metric.</p>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
               {/* Name */}
               <div>
-                <label style={{ display: "block", marginBottom: 6, fontSize: 13, fontWeight: 600, color: TEXT }}>Experiment Name <span style={{ color: "#EF4444" }}>*</span></label>
+                <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 6 }}>
+                  <label style={{ fontSize: 13, fontWeight: 600, color: TEXT }}>Experiment Name <span style={{ color: "#EF4444" }}>*</span></label>
+                  <FieldTooltip text="A unique name to identify this experiment. Used for display purposes only." />
+                </div>
                 <input
                   value={form.name}
                   onChange={(e) => setField("name", e.target.value)}
                   placeholder="e.g. Homepage hero message test"
-                  style={{ ...inputStyle, borderColor: errors.name ? "#EF4444" : BORDER_DARK }}
+                  style={{ ...inputStyle, background: WHITE, boxShadow: "none", borderColor: errors.name ? "#EF4444" : BORDER_DARK }}
                 />
                 {errors.name && <div style={{ marginTop: 5, fontSize: 12, color: "#EF4444" }}>{errors.name}</div>}
               </div>
@@ -3261,6 +3288,9 @@ function CreateExperiment({
                   onSelect={syncVariantsForConfig}
                   error={errors.linkedConfigKey}
                   emptyMessage="No configurations available."
+                  triggerBg={WHITE}
+                  labelStyle={{ fontSize: 13, fontWeight: 600, color: TEXT }}
+                  tooltip="The remote configuration key this experiment will test. Variants override its parameter values."
                   renderEmpty={() => (
                     <div>
                       <div style={{ fontSize: 13, color: TEXT_MUTED, marginBottom: 10 }}>No configurations available. Create one first.</div>
@@ -3279,23 +3309,6 @@ function CreateExperiment({
                 )}
               </div>
 
-              {/* Hypothesis */}
-              <div>
-                <label style={{ display: "block", marginBottom: 6, fontSize: 13, fontWeight: 600, color: TEXT }}>Hypothesis</label>
-                <textarea
-                  value={form.hypothesis}
-                  maxLength={280}
-                  onChange={(e) => setField("hypothesis", e.target.value)}
-                  rows={3}
-                  placeholder="e.g. Changing the CTA button color to green will increase purchase conversion by 10%"
-                  style={{ ...inputStyle, resize: "vertical", borderColor: errors.hypothesis ? "#EF4444" : BORDER_DARK }}
-                />
-                <div style={{ marginTop: 4, display: "flex", justifyContent: "space-between" }}>
-                  {errors.hypothesis ? <div style={{ fontSize: 12, color: "#EF4444" }}>{errors.hypothesis}</div> : <span />}
-                  <div style={{ fontSize: 11, color: hypothesisCount >= 280 ? "#EF4444" : TEXT_MUTED }}>{hypothesisCount}/280</div>
-                </div>
-              </div>
-
               {/* Primary Metric */}
               <div>
                 <SearchableSelect
@@ -3307,6 +3320,9 @@ function CreateExperiment({
                   onSelect={(v) => setField("primaryMetric", v)}
                   error={errors.primaryMetric}
                   emptyMessage="No events available."
+                  triggerBg={WHITE}
+                  labelStyle={{ fontSize: 13, fontWeight: 600, color: TEXT }}
+                  tooltip="The primary conversion event used to measure and compare variant performance."
                 />
                 {selectedMetric && (
                   <div style={{ marginTop: 8, padding: "10px 14px", borderRadius: 8, border: `1px solid ${BORDER}`, background: "#F0F9FF", color: "#0369A1", fontSize: 12 }}>
@@ -3369,7 +3385,7 @@ function CreateExperiment({
                   max={100}
                   value={rolloutPct}
                   onChange={(e) => setRolloutPct(Math.max(1, Math.min(100, Number(e.target.value))))}
-                  style={{ ...inputStyle, width: 90 }}
+                  style={{ width: 72, padding: "6px 10px", border: "1px solid #E5E7EB", borderRadius: 6, textAlign: "center", fontSize: 14, fontWeight: 700, color: TEXT, background: WHITE, outline: "none" }}
                 />
                 <span style={{ fontSize: 13, color: TEXT_MUTED }}>%</span>
               </div>
@@ -3580,6 +3596,22 @@ function CreateExperiment({
             Launch Experiment
           </Button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Field tooltip helper ────────────────────────────────────────────────────
+function FieldTooltip({ text }) {
+  return (
+    <div style={{ position: "relative", display: "inline-flex", cursor: "default" }}
+      onMouseEnter={(e) => { e.currentTarget.lastChild.style.visibility = "visible"; e.currentTarget.lastChild.style.opacity = "1"; }}
+      onMouseLeave={(e) => { e.currentTarget.lastChild.style.visibility = "hidden"; e.currentTarget.lastChild.style.opacity = "0"; }}
+    >
+      <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6.5" stroke="#D1D5DB"/><rect x="6.5" y="6" width="1" height="4.5" rx="0.5" fill="#9CA3AF"/><rect x="6.5" y="3.5" width="1" height="1.3" rx="0.5" fill="#9CA3AF"/></svg>
+      <div style={{ visibility: "hidden", opacity: 0, position: "absolute", bottom: "calc(100% + 8px)", left: "50%", transform: "translateX(-50%)", background: "#111827", color: "#FFFFFF", fontSize: 12, fontWeight: 400, padding: "7px 12px", borderRadius: 6, whiteSpace: "nowrap", zIndex: 9999, transition: "opacity 0.15s", pointerEvents: "none", boxShadow: "0 4px 12px rgba(0,0,0,0.15)" }}>
+        {text}
+        <span style={{ position: "absolute", top: "100%", left: "50%", transform: "translateX(-50%)", width: 0, height: 0, borderLeft: "5px solid transparent", borderRight: "5px solid transparent", borderTop: "5px solid #111827" }} />
       </div>
     </div>
   );
