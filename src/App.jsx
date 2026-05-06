@@ -239,6 +239,7 @@ const initialExperiments = [
     archived: false,
     createdAt: "2025-03-10",
     updatedAt: "2025-04-28",
+    createdBy: "Emre Sumer",
   },
   {
     id: 2,
@@ -253,6 +254,7 @@ const initialExperiments = [
     archived: false,
     createdAt: "2025-02-14",
     updatedAt: "2025-04-20",
+    createdBy: "Ahmet Seyyar",
   },
   {
     id: 3,
@@ -300,6 +302,7 @@ const initialExperiments = [
     archived: false,
     createdAt: "2025-04-30",
     updatedAt: "2025-05-01",
+    createdBy: "Ecemnaz Canbaz",
   },
   {
     id: 5,
@@ -314,6 +317,7 @@ const initialExperiments = [
     archived: false,
     createdAt: "2025-03-22",
     updatedAt: "2025-04-15",
+    createdBy: "Burak Alparslan",
   },
   {
     id: 6,
@@ -813,12 +817,12 @@ function StatusBadge({ status }) {
   const palette = {
     RUNNING: { bg: "#EAFBF4", color: CTA_GREEN_DARK, dot: CTA_GREEN, label: "Running" },
     running: { bg: "#EAFBF4", color: CTA_GREEN_DARK, dot: CTA_GREEN, label: "Running" },
+    PAUSED: { bg: "#EAFBF4", color: CTA_GREEN_DARK, dot: CTA_GREEN, label: "Running" },
     COMPLETED: { bg: "#EEF3FF", color: "#4E5FE2", dot: "#6E7AF0", label: "Completed" },
     completed: { bg: "#EEF3FF", color: "#4E5FE2", dot: "#6E7AF0", label: "Completed" },
-    winner_declared: { bg: "#EEF3FF", color: "#4E5FE2", dot: "#6E7AF0", label: "Winner Declared" },
-    inconclusive: { bg: "#FFF5E7", color: "#B27612", dot: "#E0A43F", label: "Inconclusive" },
+    winner_declared: { bg: "#EEF3FF", color: "#4E5FE2", dot: "#6E7AF0", label: "Completed" },
+    inconclusive: { bg: "#EEF3FF", color: "#4E5FE2", dot: "#6E7AF0", label: "Completed" },
     DRAFT: { bg: DRAFT_BG, color: DRAFT_TEXT, dot: "#C4CAD4", label: "Draft" },
-    PAUSED: { bg: "#FFF5E7", color: "#B27612", dot: "#E0A43F", label: "Paused" },
   };
   const current = palette[status] || palette.DRAFT;
   return (
@@ -2556,22 +2560,23 @@ function ExperimentList({
   const [colTooltipPos, setColTooltipPos] = useState({ x: 0, y: 0 });
 
   const configMap = useMemo(() => new Map(configs.map((config) => [config.key, config])), [configs]);
-  const hasArchived = experiments.some((experiment) => experiment.archived);
-  const filters = ["ALL", "RUNNING", "COMPLETED", "DRAFT", "PAUSED", ...(hasArchived ? ["ARCHIVED"] : [])];
+  const filters = ["ALL", "RUNNING", "COMPLETED", "DRAFT"];
+
+  const isRunningStatus = (s) => s === "RUNNING" || s === "running" || s === "PAUSED";
+  const isCompletedStatus = (s) => s === "COMPLETED" || s === "completed" || s === "winner_declared" || s === "inconclusive";
 
   const counts = useMemo(() => ({
     ALL: experiments.filter((experiment) => !experiment.archived).length,
-    RUNNING: experiments.filter((experiment) => !experiment.archived && experiment.status === "RUNNING").length,
-    COMPLETED: experiments.filter((experiment) => !experiment.archived && experiment.status === "COMPLETED").length,
+    RUNNING: experiments.filter((experiment) => !experiment.archived && isRunningStatus(experiment.status)).length,
+    COMPLETED: experiments.filter((experiment) => !experiment.archived && isCompletedStatus(experiment.status)).length,
     DRAFT: experiments.filter((experiment) => !experiment.archived && experiment.status === "DRAFT").length,
-    PAUSED: experiments.filter((experiment) => !experiment.archived && experiment.status === "PAUSED").length,
-    ARCHIVED: experiments.filter((experiment) => experiment.archived).length,
   }), [experiments]);
 
   const visibleExperiments = useMemo(() => {
     const filtered = experiments.filter((experiment) => {
-      if (filter === "ARCHIVED") return experiment.archived;
       if (filter === "ALL") return !experiment.archived;
+      if (filter === "RUNNING") return !experiment.archived && isRunningStatus(experiment.status);
+      if (filter === "COMPLETED") return !experiment.archived && isCompletedStatus(experiment.status);
       return !experiment.archived && experiment.status === filter;
     });
 
@@ -2701,11 +2706,11 @@ function ExperimentList({
                 <tr style={{ background: WHITE }}>
                   {[
                     { key: "status", label: "Status" },
-                    { key: "name", label: "Experiment" },
-                    { key: "config", label: "Linked Config", tooltip: "The Remote Config key this experiment is testing." },
+                    { key: "name", label: "Experiment Name", tooltip: "Displays the created experiment names with their config keys." },
                     { key: "metric", label: "Goal Metric" },
                     { key: "createdAt", label: "Create Date" },
                     { key: "updatedAt", label: "Last Updated" },
+                    { key: "creator", label: "Creator" },
                     { key: "actions", label: "Actions", sortable: false },
                   ].map((column) => (
                     <th key={column.key} style={{ padding: "14px 16px", textAlign: column.key === "actions" ? "center" : "left", fontSize: 12, fontWeight: 600, color: TEXT_MUTED, borderBottom: `1px solid ${BORDER}` }}>
@@ -2772,21 +2777,15 @@ function ExperimentList({
                       <td style={{ padding: "14px 16px" }}><StatusBadge status={experiment.status} /></td>
                       <td style={{ padding: "14px 16px" }}>
                         <div style={{ fontWeight: 600, color: TEXT }}>{experiment.name}</div>
-                        <div style={{ marginTop: 3, color: TEXT_MUTED, fontSize: 11 }}>{experiment.hypothesis}</div>
-                      </td>
-                      <td style={{ padding: "14px 16px" }}>
                         {linkedConfig ? (
                           <button
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              onOpenRemoteConfig(linkedConfig.key);
-                            }}
-                            style={{ border: "none", background: "transparent", padding: 0, color: TEXT, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", fontSize: 12, cursor: "pointer" }}
+                            onClick={(event) => { event.stopPropagation(); onOpenRemoteConfig(linkedConfig.key); }}
+                            style={{ border: "none", background: "transparent", padding: "2px 0 0", color: TEXT_MUTED, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", fontSize: 11, cursor: "pointer", display: "block" }}
                           >
                             {linkedConfig.key}
                           </button>
                         ) : (
-                          <span style={{ color: "#DC2626", fontSize: 12 }}>Config removed</span>
+                          <span style={{ marginTop: 2, display: "block", color: "#DC2626", fontSize: 11 }}>Config removed</span>
                         )}
                       </td>
                       <td style={{ padding: "14px 16px", color: experiment.metric ? TEXT_MUTED : "#D97706", fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", fontSize: 12 }}>
@@ -2794,6 +2793,7 @@ function ExperimentList({
                       </td>
                       <td style={{ padding: "14px 16px", color: TEXT_MUTED, fontSize: 13 }}>{fmtTableDate(experiment.createdAt)}</td>
                       <td style={{ padding: "14px 16px", color: TEXT_MUTED, fontSize: 13 }}>{fmtTableDate(experiment.updatedAt)}</td>
+                      <td style={{ padding: "14px 16px", color: TEXT_MUTED, fontSize: 13 }}>{experiment.createdBy || "—"}</td>
                       <td style={{ padding: "12px 16px", textAlign: "center" }} onClick={(event) => event.stopPropagation()}>
                         <ExperimentActionMenu
                           experiment={experiment}
@@ -3746,11 +3746,6 @@ function ExperimentDetail({ experiment, onBack, onOpenRemoteConfig, linkedConfig
                 {card.isMetric && goalMetric.key !== "—" && (
                   <div style={{ marginTop: 5 }}><CodePill>{goalMetric.key}</CodePill></div>
                 )}
-                {card.isUplift && isWinnerDeclared && (
-                  <div style={{ marginTop: 6, fontSize: 11, color: "#166534" }}>
-                    {experiment.confidenceLevel || 95}% confidence · p &lt; {(experiment.pValue || 0.05).toFixed(3)}
-                  </div>
-                )}
               </div>
             ))}
           </div>
@@ -3819,12 +3814,19 @@ function ExperimentDetail({ experiment, onBack, onOpenRemoteConfig, linkedConfig
           {/* Variant breakdown table */}
           <div style={{ ...cardStyle, padding: 20 }}>
             <h3 style={{ margin: "0 0 16px", fontSize: 15, fontWeight: 700, color: TEXT }}>Variant Breakdown</h3>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, tableLayout: "fixed" }}>
+              <colgroup>
+                <col style={{ width: "34%" }} />
+                <col style={{ width: "16%" }} />
+                <col style={{ width: "16%" }} />
+                <col style={{ width: "18%" }} />
+                <col style={{ width: "16%" }} />
+              </colgroup>
               <thead>
                 <tr>
                   <th style={{ padding: "10px 14px", textAlign: "left", fontSize: 12, fontWeight: 600, color: TEXT_MUTED, borderBottom: `1px solid ${BORDER}` }}>Variations</th>
                   {vtCols.map((col) => (
-                    <th key={col.key} style={{ padding: "10px 14px", textAlign: col.key === "uplift" ? "right" : "left", fontSize: 12, fontWeight: 600, color: TEXT_MUTED, borderBottom: `1px solid ${BORDER}` }}>
+                    <th key={col.key} style={{ padding: "10px 14px", textAlign: "left", fontSize: 12, fontWeight: 600, color: TEXT_MUTED, borderBottom: `1px solid ${BORDER}` }}>
                       {col.label}
                       <span style={{ display: "inline-flex", cursor: "default", verticalAlign: "middle", marginLeft: 4 }}
                         onMouseEnter={(e) => { const r = e.currentTarget.getBoundingClientRect(); setVttPos({ x: r.left + r.width / 2, y: r.top }); setVttOpen(col.tooltip); }}
@@ -3848,7 +3850,7 @@ function ExperimentDetail({ experiment, onBack, onOpenRemoteConfig, linkedConfig
                     <td style={{ padding: "14px 14px", color: TEXT }}>{row.users.toLocaleString()}</td>
                     <td style={{ padding: "14px 14px", color: TEXT }}>{row.conversions.toLocaleString()}</td>
                     <td style={{ padding: "14px 14px", color: TEXT }}>{row.rate.toFixed(2)}%</td>
-                    <td style={{ padding: "14px 14px", textAlign: "right", color: row.upliftColor, fontWeight: row.uplift !== "—" ? 700 : 400 }}>{row.uplift}</td>
+                    <td style={{ padding: "14px 14px", color: row.upliftColor, fontWeight: row.uplift !== "—" ? 700 : 400 }}>{row.uplift}</td>
                   </tr>
                 ))}
               </tbody>
