@@ -2981,11 +2981,14 @@ function CreateExperiment({
     hypothesis: "",
     primaryMetric: "",
     variants: [],
+    startDate: null,
+    endDate: null,
   });
   const [errors, setErrors] = useState({});
   const [saveLoading, setSaveLoading] = useState(false);
   const [launchLoading, setLaunchLoading] = useState(false);
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
+  const [summaryModalOpen, setSummaryModalOpen] = useState(false);
   const [draftConfigWarningOpen, setDraftConfigWarningOpen] = useState(false);
   const [runningConflict, setRunningConflict] = useState(null);
   const [browseSchemasOpen, setBrowseSchemasOpen] = useState(false);
@@ -2999,6 +3002,8 @@ function CreateExperiment({
     hypothesis: "",
     primaryMetric: "",
     variants: [],
+    startDate: null,
+    endDate: null,
   }));
   const currentSnapshot = JSON.stringify(form);
   const isDirty = currentSnapshot !== savedSnapshot;
@@ -3106,12 +3111,8 @@ function CreateExperiment({
       nextErrors.linkedConfigKey = "You must link a remote configuration to run an experiment.";
     }
 
-    if (launchMode && !form.hypothesis.trim()) {
-      nextErrors.hypothesis = "A hypothesis is required to launch an experiment.";
-    }
-
     if (launchMode && !form.primaryMetric) {
-      nextErrors.primaryMetric = "A primary metric is required to launch an experiment.";
+      nextErrors.primaryMetric = "A goal metric is required to launch an experiment.";
     }
 
     if (launchMode && form.variants.length < 2) {
@@ -3163,7 +3164,7 @@ function CreateExperiment({
       return;
     }
 
-    setConfirmModalOpen(true);
+    setSummaryModalOpen(true);
   };
 
   const submitLaunch = async (publishConfig = false) => {
@@ -3213,6 +3214,48 @@ function CreateExperiment({
         onCancel={() => setRunningConflict(null)}
         onConfirm={() => setRunningConflict(null)}
       />
+      {/* ── Experiment Summary Modal ── */}
+      <Modal
+        open={summaryModalOpen}
+        title={<span style={{ fontSize: 17, fontWeight: 700 }}>Experiment Summary</span>}
+        onCancel={() => setSummaryModalOpen(false)}
+        footer={[
+          <Button key="cancel" onClick={() => setSummaryModalOpen(false)}>Cancel</Button>,
+          <Button key="launch" type="primary" loading={launchLoading} onClick={() => submitLaunch(selectedConfig?.status === "Draft")}>
+            Confirm & Launch
+          </Button>,
+        ]}
+        width={520}
+        styles={{ content: { background: WHITE }, header: { background: WHITE } }}
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: 14, paddingTop: 8 }}>
+          {[
+            { label: "Experiment Name", value: form.name || "—" },
+            { label: "Linked Config", value: form.linkedConfigKey || "—" },
+            { label: "Goal Metric", value: form.primaryMetric || "—" },
+            { label: "Target Audience", value: filterRules.length === 0 ? "No filters (All users)" : `${filterRules.length} filter rule${filterRules.length > 1 ? "s" : ""}` },
+            { label: "Rollout", value: `${rolloutPct}%` },
+            { label: "Start Date", value: form.startDate ? form.startDate.format("MMM D, YYYY HH:mm") : "Not set (starts immediately)" },
+            { label: "End Date", value: form.endDate ? form.endDate.format("MMM D, YYYY HH:mm") : "Not set (runs until deactivated)" },
+          ].map(({ label, value }) => (
+            <div key={label} style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+              <span style={{ minWidth: 130, fontSize: 13, color: TEXT_MUTED, fontWeight: 500, flexShrink: 0 }}>{label}</span>
+              <span style={{ fontSize: 13, color: TEXT, fontWeight: 600, wordBreak: "break-all" }}>{value}</span>
+            </div>
+          ))}
+          {form.variants.length > 0 && (
+            <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+              <span style={{ minWidth: 130, fontSize: 13, color: TEXT_MUTED, fontWeight: 500, flexShrink: 0 }}>Variants</span>
+              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                {form.variants.map((v) => (
+                  <span key={v.id} style={{ fontSize: 13, color: TEXT, fontWeight: 600 }}>{v.name} — {v.traffic}%</span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </Modal>
+
       {browseSchemasOpen && schemas && (
         <BrowseSchemasModal schemas={schemas} onClose={() => setBrowseSchemasOpen(false)} onUseSchema={() => setBrowseSchemasOpen(false)} />
       )}
@@ -3235,7 +3278,7 @@ function CreateExperiment({
           {/* Experiment Details */}
           <div style={{ ...cardStyle, padding: 24 }}>
             <h3 style={{ margin: "0 0 4px", fontSize: 16, fontWeight: 700, color: TEXT }}>Experiment Details</h3>
-            <p style={{ margin: "0 0 20px", fontSize: 13, color: TEXT_MUTED }}>Set the name, linked configuration and goal metric.</p>
+            <p style={{ margin: "0 0 20px", fontSize: 13, color: TEXT_MUTED }}>Set the name, linked configuration, goal metric and experiment duration.</p>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
               {/* Name */}
@@ -3285,10 +3328,10 @@ function CreateExperiment({
                 )}
               </div>
 
-              {/* Primary Metric */}
+              {/* Goal Metric */}
               <div>
                 <SearchableSelect
-                  label="Primary Metric"
+                  label="Goal Metric"
                   required={true}
                   placeholder="Select a tracked event"
                   options={mockEvents.map((e) => ({ value: e.id, label: e.name }))}
@@ -3300,6 +3343,35 @@ function CreateExperiment({
                   labelStyle={{ fontSize: 13, fontWeight: 600, color: TEXT }}
                   tooltip="The primary conversion event used to measure and compare variant performance."
                 />
+              </div>
+
+              {/* Experiment Duration */}
+              <div>
+                <div style={{ marginBottom: 6 }}>
+                  <span style={{ fontSize: 16, fontWeight: 700, color: TEXT }}>Experiment Duration</span>
+                </div>
+                <p style={{ margin: "0 0 14px", fontSize: 13, color: TEXT_MUTED }}>
+                  Select the start and end date range for your experiment. If you do not select date range, your experiment will run until deactivated
+                </p>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  <DatePicker
+                    showTime
+                    placeholder="Start Date"
+                    value={form.startDate}
+                    onChange={(date) => setField("startDate", date)}
+                    style={{ width: "100%", borderRadius: 8, height: 46 }}
+                    format="MMM D, YYYY HH:mm"
+                  />
+                  <DatePicker
+                    showTime
+                    placeholder="End Date"
+                    value={form.endDate}
+                    onChange={(date) => setField("endDate", date)}
+                    style={{ width: "100%", borderRadius: 8, height: 46 }}
+                    format="MMM D, YYYY HH:mm"
+                    disabledDate={(current) => form.startDate ? current && current < form.startDate.startOf("day") : false}
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -3536,10 +3608,18 @@ function CreateExperiment({
 
               {form.primaryMetric && (
                 <div style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 12 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: TEXT, marginBottom: 6 }}>Conversion Goals:</div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: TEXT, marginBottom: 6 }}>Goal Metric:</div>
                   <div style={{ fontSize: 12, color: TEXT_MUTED, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace" }}>
                     {form.primaryMetric}
                   </div>
+                </div>
+              )}
+
+              {(form.startDate || form.endDate) && (
+                <div style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 12 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: TEXT, marginBottom: 6 }}>Duration:</div>
+                  {form.startDate && <div style={{ fontSize: 12, color: TEXT_MUTED }}>Start: {form.startDate.format("MMM D, YYYY HH:mm")}</div>}
+                  {form.endDate && <div style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 2 }}>End: {form.endDate.format("MMM D, YYYY HH:mm")}</div>}
                 </div>
               )}
 
