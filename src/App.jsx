@@ -3622,9 +3622,10 @@ function ExperimentDetail({ experiment, onBack, onOpenRemoteConfig, linkedConfig
   const vFill = chartData.length > 1 ? `${vPath} L${xs(chartData.length - 1).toFixed(1)},${IH} L0,${IH} Z` : "";
   const yTicks = [0, 0.25, 0.5, 0.75, 1].map((t) => ({ v: Math.round(yMax * t), y: ys(yMax * t) }));
   const fmtY = (v) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v);
-  const xTickStep = Math.max(1, Math.floor(chartData.length / 7));
+  const maxXLabels = 6;
+  const xTickStep = Math.max(1, Math.ceil(chartData.length / maxXLabels));
   const xTicks = chartData.reduce((acc, d, i) => {
-    if (i === 0 || i === chartData.length - 1 || i % xTickStep === 0) acc.push({ i, label: d.label });
+    if (i === 0 || i % xTickStep === 0) acc.push({ i, label: d.label });
     return acc;
   }, []);
 
@@ -3676,7 +3677,7 @@ function ExperimentDetail({ experiment, onBack, onOpenRemoteConfig, linkedConfig
 
       {/* ── Header ── */}
       <div style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 20 }}>
-        <div style={{ width: 5, height: 52, borderRadius: 999, background: PRIMARY, marginTop: 2, flexShrink: 0 }} />
+        <div style={{ width: 5, height: 52, borderRadius: 999, background: "#3B82F6", marginTop: 2, flexShrink: 0 }} />
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
             <h1 style={pageTitleStyle}>{experiment.name}</h1>
@@ -3690,15 +3691,22 @@ function ExperimentDetail({ experiment, onBack, onOpenRemoteConfig, linkedConfig
 
       {/* ── Date filter ── */}
       <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 20, flexWrap: "wrap" }}>
-        <button onClick={() => setActiveDateFilter("Custom")} style={filterBtnStyle(activeDateFilter === "Custom")}>Custom</button>
+        <Button
+          type={activeDateFilter === "Custom" ? "primary" : "default"}
+          size="small"
+          onClick={() => setActiveDateFilter("Custom")}
+          style={{ borderRadius: 8, fontSize: 12, fontWeight: 500, height: 34, padding: "0 12px" }}
+        >Custom</Button>
         {activeDateFilter === "Custom" && (
-          <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 10px", border: `1px solid ${BORDER}`, borderRadius: 8, background: WHITE }}>
-            <input type="date" value={customStart} onChange={(e) => setCustomStart(e.target.value)}
-              style={{ border: "none", outline: "none", fontSize: 12, color: TEXT }} />
-            <span style={{ color: TEXT_MUTED }}>→</span>
-            <input type="date" value={customEnd} onChange={(e) => setCustomEnd(e.target.value)}
-              style={{ border: "none", outline: "none", fontSize: 12, color: TEXT }} />
-          </div>
+          <DatePicker.RangePicker
+            size="small"
+            value={[customStart ? dayjs(customStart) : null, customEnd ? dayjs(customEnd) : null]}
+            onChange={(dates) => {
+              setCustomStart(dates?.[0]?.format("YYYY-MM-DD") || "");
+              setCustomEnd(dates?.[1]?.format("YYYY-MM-DD") || "");
+            }}
+            style={{ borderRadius: 8, height: 34, fontSize: 12 }}
+          />
         )}
         {dateFilterBtns.map((f) => (
           <button key={f} onClick={() => setActiveDateFilter(f)} style={filterBtnStyle(activeDateFilter === f)}>{f}</button>
@@ -3833,8 +3841,8 @@ function ExperimentDetail({ experiment, onBack, onOpenRemoteConfig, linkedConfig
                   <tr key={row.id} style={{ borderBottom: idx < variantRows.length - 1 ? `1px solid ${BORDER}` : "none" }}>
                     <td style={{ padding: "14px 14px" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <span style={{ fontWeight: 500, color: TEXT }}>{row.label}</span>
                         <span style={{ display: "inline-flex", alignItems: "center", padding: "2px 8px", borderRadius: 5, fontSize: 11, fontWeight: 600, background: row.badgeBg, color: row.badgeColor, border: `1px solid ${row.badgeBorder}` }}>{row.badgeLabel}</span>
+                        <span style={{ fontWeight: 500, color: TEXT }}>{row.label}</span>
                       </div>
                     </td>
                     <td style={{ padding: "14px 14px", color: TEXT }}>{row.users.toLocaleString()}</td>
