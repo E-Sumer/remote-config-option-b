@@ -3534,13 +3534,11 @@ function ApplyWinnerModal({ open, experiment, onCancel, onConfirm }) {
 }
 
 function ExperimentDetail({ experiment, onBack, onOpenRemoteConfig, linkedConfig }) {
-  const [tab, setTab] = useState("results");
   const [applyWinnerOpen, setApplyWinnerOpen] = useState(false);
   const [stopConfirmOpen, setStopConfirmOpen] = useState(false);
   const [activeDateFilter, setActiveDateFilter] = useState("30D");
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
-  const [metricKeyVisible, setMetricKeyVisible] = useState(false);
   const [chartTooltip, setChartTooltip] = useState(null);
   const [vttOpen, setVttOpen] = useState(null);
   const [vttPos, setVttPos] = useState({ x: 0, y: 0 });
@@ -3638,8 +3636,6 @@ function ExperimentDetail({ experiment, onBack, onOpenRemoteConfig, linkedConfig
     setChartTooltip({ idx, clientX: e.clientX, clientY: e.clientY });
   };
 
-  const tabIds = ["results", "config", "settings"];
-  const tabLabels = { results: "Results", config: "Config", settings: "Settings" };
   const dateFilterBtns = ["Today", "Yesterday", "7D", "30D", "3M", "6M", "12M"];
   const filterBtnStyle = (active) => ({
     padding: "7px 12px", borderRadius: 8, border: `1px solid ${active ? PRIMARY : BORDER}`,
@@ -3686,10 +3682,9 @@ function ExperimentDetail({ experiment, onBack, onOpenRemoteConfig, linkedConfig
             <h1 style={pageTitleStyle}>{experiment.name}</h1>
             <StatusBadge status={experiment.status} />
           </div>
-          <div style={{ marginTop: 4, fontSize: 12, color: "#6B7280", display: "flex", flexWrap: "wrap", gap: 4, alignItems: "center" }}>
-            {startLabel !== "—" && <span>Started {startLabel}</span>}
-            {experiment.createdBy && <><span style={{ color: "#D1D5DB" }}>·</span><span>Created by: {experiment.createdBy}</span></>}
-          </div>
+          {experiment.createdBy && (
+            <p style={{ margin: "4px 0 0", fontSize: 12, color: "#6B7280" }}>Created by: {experiment.createdBy}</p>
+          )}
         </div>
       </div>
 
@@ -3710,38 +3705,27 @@ function ExperimentDetail({ experiment, onBack, onOpenRemoteConfig, linkedConfig
         ))}
       </div>
 
-      {/* ── Tabs ── */}
-      <div role="tablist" style={{ display: "flex", gap: 8, marginBottom: 20 }}>
-        {tabIds.map((item) => (
-          <button key={item} role="tab" aria-selected={tab === item}
-            onClick={() => setTab(item)}
-            style={{ padding: "9px 18px", borderRadius: 10, border: `1px solid ${tab === item ? PRIMARY : BORDER}`, background: tab === item ? PRIMARY : WHITE, color: tab === item ? WHITE : "#4B5563", cursor: "pointer", fontSize: 13, fontWeight: 600, outline: "none" }}
-          >{tabLabels[item]}</button>
-        ))}
-      </div>
-
-      {/* ══ RESULTS TAB ══ */}
-      {tab === "results" && (
-        <>
+      {/* ══ Results content ══ */}
+      <>
           {/* 4 stat cards */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 20 }}>
             {[
               { label: "Users Exposed", value: totalUsers.toLocaleString(), sub: "Across all variants", tooltip: "Total number of unique users enrolled across all experiment variants." },
               { label: "Goal Metric", value: goalMetric.label, isMetric: true, tooltip: "The primary event metric used to evaluate performance between variants." },
               { label: "Control Rate", value: `${baselineRate.toFixed(2)}%`, sub: "Baseline conversion rate", tooltip: "Baseline conversion rate of the control group during the experiment." },
-              { label: "Uplift", value: experiment.lift !== "—" ? `${upliftPct >= 0 ? "+" : ""}${upliftPct.toFixed(1)}%` : "—", valueColor: upliftPct > 0 ? "#16A34A" : upliftPct < 0 ? "#DC2626" : TEXT, sub: experiment.lift !== "—" ? "vs control group" : null, hero: upliftPct > 0, tooltip: "Relative change in conversion rate between the leading variant and control group." },
+              { label: "Uplift", value: experiment.lift !== "—" ? `${upliftPct >= 0 ? "+" : ""}${upliftPct.toFixed(1)}%` : "—", valueColor: upliftPct > 0 ? "#16A34A" : upliftPct < 0 ? "#DC2626" : TEXT, sub: experiment.lift !== "—" ? "vs control group" : null, isUplift: true, tooltip: "Relative change in conversion rate between the leading variant and control group." },
             ].map((card) => (
-              <div key={card.label} style={{ ...cardStyle, padding: "16px 18px", ...(card.hero ? { background: "#F0FDF4", border: "1px solid #BBF7D0" } : {}) }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, fontWeight: 600, color: card.hero ? "#15803D" : "#4B5563", letterSpacing: "0.04em", marginBottom: 6 }}>
+              <div key={card.label} style={{ ...cardStyle, padding: "16px 18px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, fontWeight: 600, color: "#4B5563", letterSpacing: "0.04em", marginBottom: 6 }}>
                   {card.label}
                   <div style={{ position: "relative", display: "inline-flex", cursor: "default" }}
                     onMouseEnter={(e) => { e.currentTarget.lastChild.style.visibility = "visible"; e.currentTarget.lastChild.style.opacity = "1"; }}
                     onMouseLeave={(e) => { e.currentTarget.lastChild.style.visibility = "hidden"; e.currentTarget.lastChild.style.opacity = "0"; }}
                   >
                     <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
-                      <circle cx="7" cy="7" r="6.5" stroke={card.hero ? "#86EFAC" : "#D1D5DB"} />
-                      <rect x="6.5" y="6" width="1" height="4.5" rx="0.5" fill={card.hero ? "#86EFAC" : "#9CA3AF"} />
-                      <rect x="6.5" y="3.5" width="1" height="1.3" rx="0.5" fill={card.hero ? "#86EFAC" : "#9CA3AF"} />
+                      <circle cx="7" cy="7" r="6.5" stroke="#D1D5DB" />
+                      <rect x="6.5" y="6" width="1" height="4.5" rx="0.5" fill="#9CA3AF" />
+                      <rect x="6.5" y="3.5" width="1" height="1.3" rx="0.5" fill="#9CA3AF" />
                     </svg>
                     <div style={{ visibility: "hidden", opacity: 0, position: "absolute", bottom: "calc(100% + 8px)", left: "50%", transform: "translateX(-50%)", background: "#111827", color: WHITE, fontSize: 12, fontWeight: 400, padding: "7px 12px", borderRadius: 6, whiteSpace: "nowrap", boxShadow: "0 4px 12px rgba(0,0,0,0.15)", zIndex: 9999, transition: "opacity 0.15s, visibility 0.15s", pointerEvents: "none", textTransform: "none", letterSpacing: "normal" }}>
                       {card.tooltip}
@@ -3749,18 +3733,12 @@ function ExperimentDetail({ experiment, onBack, onOpenRemoteConfig, linkedConfig
                     </div>
                   </div>
                 </div>
-                <div style={{ fontSize: card.hero ? 26 : 22, fontWeight: 700, color: card.valueColor || TEXT, lineHeight: 1.2 }}>{card.value}</div>
-                {card.sub && <div style={{ marginTop: 4, fontSize: 11, color: card.hero ? "#15803D" : "#4B5563" }}>{card.sub}</div>}
-                {card.isMetric && (
-                  <>
-                    <button onClick={() => setMetricKeyVisible((v) => !v)}
-                      style={{ marginTop: 5, fontSize: 11, color: "#6B7280", background: "none", border: "none", padding: 0, cursor: "pointer", textDecoration: "underline" }}>
-                      {metricKeyVisible ? "Hide key" : "Show key"}
-                    </button>
-                    {metricKeyVisible && <div style={{ marginTop: 4 }}><CodePill>{goalMetric.key}</CodePill></div>}
-                  </>
+                <div style={{ fontSize: 21, fontWeight: 700, color: card.valueColor || TEXT, lineHeight: 1.2 }}>{card.value}</div>
+                {card.sub && <div style={{ marginTop: 4, fontSize: 11, color: "#4B5563" }}>{card.sub}</div>}
+                {card.isMetric && goalMetric.key !== "—" && (
+                  <div style={{ marginTop: 5 }}><CodePill>{goalMetric.key}</CodePill></div>
                 )}
-                {card.hero && isWinnerDeclared && (
+                {card.isUplift && isWinnerDeclared && (
                   <div style={{ marginTop: 6, fontSize: 11, color: "#166534" }}>
                     {experiment.confidenceLevel || 95}% confidence · p &lt; {(experiment.pValue || 0.05).toFixed(3)}
                   </div>
@@ -3874,95 +3852,21 @@ function ExperimentDetail({ experiment, onBack, onOpenRemoteConfig, linkedConfig
               </div>
             )}
           </div>
-        </>
-      )}
-
-      {/* ══ CONFIG TAB ══ */}
-      {tab === "config" && (
-        <div style={{ ...cardStyle, padding: 24 }}>
-          <h3 style={{ margin: "0 0 6px", fontSize: 16, color: TEXT, fontWeight: 700 }}>Tested Configuration</h3>
-          <p style={{ margin: "0 0 18px", fontSize: 13, color: "#4B5563" }}>Shows the remote config key and the values assigned to each variant during the experiment run.</p>
-          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", borderBottom: `1px solid ${BORDER}`, paddingBottom: 8, marginBottom: 4 }}>
-            {["Parameter Key", "Type", "Control Value", "Variant B Value"].map((h) => (
-              <div key={h} style={{ fontSize: 11, fontWeight: 700, color: "#4B5563", textTransform: "uppercase", letterSpacing: "0.05em" }}>{h}</div>
-            ))}
-          </div>
-          {experiment.linkedConfigMeta ? (
-            <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", padding: "14px 0", borderBottom: `1px solid ${BORDER}` }}>
-              <div><CodePill>enabled</CodePill></div>
-              <div style={{ fontSize: 13, color: TEXT, alignSelf: "center" }}>Boolean</div>
-              <div style={{ fontSize: 13, color: TEXT, alignSelf: "center" }}>{String(experiment.linkedConfigMeta.controlValue)}</div>
-              <div style={{ fontSize: 13, color: "#16A34A", fontWeight: 600, alignSelf: "center" }}>{String(experiment.linkedConfigMeta.variantBValue)}</div>
-            </div>
-          ) : linkedConfig ? (
-            linkedConfig.parameters.map((parameter) => (
-              <div key={parameter.id} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", padding: "14px 0", borderBottom: `1px solid ${BORDER}` }}>
-                <div><CodePill>{parameter.key}</CodePill></div>
-                <div style={{ fontSize: 13, color: TEXT, alignSelf: "center" }}>{parameter.type}</div>
-                <div style={{ fontSize: 13, color: TEXT, alignSelf: "center" }}>{stringifyParameterValue(parameter)}</div>
-                <div style={{ fontSize: 13, color: TEXT_MUTED, alignSelf: "center" }}>—</div>
-              </div>
-            ))
-          ) : (
-            <div style={{ padding: "14px 0", fontSize: 13, color: "#B91C1C" }}>The linked configuration has been removed.</div>
-          )}
-        </div>
-      )}
-
-      {/* ══ SETTINGS TAB ══ */}
-      {tab === "settings" && (
-        <div style={{ ...cardStyle, padding: 24 }}>
-          <h3 style={{ margin: "0 0 6px", fontSize: 16, color: TEXT, fontWeight: 700 }}>Experiment Settings</h3>
-          <p style={{ margin: "0 0 18px", fontSize: 13, color: "#4B5563" }}>Campaign setup and tracking configuration.</p>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12 }}>
-            <div style={{ padding: 16, borderRadius: 12, border: "1px solid #E5E7EB", background: WHITE }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: "#4B5563", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>Goal Metric</div>
-              <div style={{ fontSize: 14, fontWeight: 600, color: TEXT, marginBottom: 4 }}>{goalMetric.label}</div>
-              <CodePill>{goalMetric.key}</CodePill>
-            </div>
-            <div style={{ padding: 16, borderRadius: 12, border: "1px solid #E5E7EB", background: WHITE }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: "#4B5563", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>Linked Config Key</div>
-              <CodePill>{experiment.linkedConfigKey || "—"}</CodePill>
-            </div>
-            {[
-              { label: "Traffic Split", value: `${trafficSplit.control ?? 50}% / ${trafficSplit.variant_b ?? 50}%` },
-              { label: "Targeting", value: experiment.targeting || "All Users" },
-              { label: "Start Date", value: startLabel },
-              { label: "End Date", value: endLabel },
-              { label: "Duration", value: durationLabel },
-              { label: "Randomization", value: experiment.randomizationUnit || "User ID" },
-              { label: "Created By", value: experiment.createdBy || "—" },
-              { label: "Last Modified By", value: experiment.lastModifiedBy ? `${experiment.lastModifiedBy} · ${fmtDate(experiment.lastModifiedAt)}` : "—" },
-            ].map((item) => (
-              <div key={item.label} style={{ padding: 16, borderRadius: 12, border: "1px solid #E5E7EB", background: WHITE }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: "#4B5563", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>{item.label}</div>
-                <div style={{ fontSize: 14, fontWeight: 500, color: TEXT }}>{item.value}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      </>
 
       {/* ── Fixed footer ── */}
       <div style={{ position: "fixed", bottom: 0, left: 222, right: 0, padding: "14px 28px", background: WHITE, borderTop: "2px solid #E5E7EB", display: "flex", alignItems: "center", justifyContent: "space-between", zIndex: 40 }}>
         <button onClick={onBack} style={{ ...secondaryButtonStyle, display: "inline-flex", alignItems: "center", gap: 7 }}>
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M9 12L4 7L9 2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
-          Back to experiments
+          Back
         </button>
-        {isWinnerDeclared && (
+        {isWinnerDeclared ? (
           <button onClick={() => setApplyWinnerOpen(true)} style={{ ...primaryButtonStyle, display: "inline-flex", alignItems: "center", gap: 7 }}>
             <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M2 7.5L5.5 11L12 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
             Apply Winner
           </button>
-        )}
-        {isRunning && (
-          <div style={{ display: "flex", gap: 8 }}>
-            <button style={{ ...secondaryButtonStyle, background: "#FFFBEB", borderColor: "#FDE68A", color: "#92400E" }}>Pause</button>
-            <button onClick={() => setStopConfirmOpen(true)} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "9px 14px", border: "none", borderRadius: 8, background: "#DC2626", color: WHITE, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
-              <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor" aria-hidden="true"><rect x="1" y="1" width="8" height="8" rx="1.5"/></svg>
-              Stop
-            </button>
-          </div>
+        ) : (
+          <button onClick={onBack} style={{ ...primaryButtonStyle }}>Done</button>
         )}
       </div>
     </div>
