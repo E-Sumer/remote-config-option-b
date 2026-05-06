@@ -3537,45 +3537,42 @@ function ExperimentDetail({ experiment, onBack, onOpenRemoteConfig, linkedConfig
   const [tab, setTab] = useState("results");
   const [applyWinnerOpen, setApplyWinnerOpen] = useState(false);
   const [stopConfirmOpen, setStopConfirmOpen] = useState(false);
-  const [exportMenuOpen, setExportMenuOpen] = useState(false);
-  const [barTooltip, setBarTooltip] = useState(null);
+  const [activeDateFilter, setActiveDateFilter] = useState("30D");
+  const [customStart, setCustomStart] = useState("");
+  const [customEnd, setCustomEnd] = useState("");
   const [metricKeyVisible, setMetricKeyVisible] = useState(false);
-  const [upliftTooltipVisible, setUpliftTooltipVisible] = useState(false);
+  const [chartTooltip, setChartTooltip] = useState(null);
+  const [vttOpen, setVttOpen] = useState(null);
+  const [vttPos, setVttPos] = useState({ x: 0, y: 0 });
+  const svgRef = useRef(null);
 
   const isWinnerDeclared = experiment.status === "winner_declared";
   const isRunning = experiment.status === "RUNNING" || experiment.status === "running";
 
-  // Variant data
+  const trafficSplit = experiment.trafficSplit || { control: 50, variant_b: 50 };
+  const totalUsers = experiment.totalUsers || experiment.users || 0;
   const expVariants = experiment.variants || [];
   const controlVariant = expVariants.find((v) => v.id === "control") || {
     id: "control", label: "Control", conversionRate: 0.032,
-    users: Math.round((experiment.users || 0) / 2),
-    conversions: Math.round((experiment.users || 0) / 2 * 0.032), isWinner: false,
+    users: Math.round(totalUsers * (trafficSplit.control / 100)),
+    conversions: Math.round(totalUsers * (trafficSplit.control / 100) * 0.032),
   };
   const variantB = expVariants.find((v) => v.id === "variant_b") || null;
   const baselineRate = controlVariant.conversionRate * 100;
-  const liftValue = experiment.lift === "—" ? 0 : Number(String(experiment.lift).replace("%", ""));
+  const liftValue = experiment.lift === "—" ? 0 : Number(String(experiment.lift).replace("+", "").replace("%", ""));
   const variantBRate = Number((variantB ? variantB.conversionRate * 100 : baselineRate * (1 + liftValue / 100)).toFixed(2));
-  const variantBUsers = variantB ? variantB.users : Math.max(0, Math.round((experiment.users || 0) / 2));
+  const variantBUsers = variantB ? variantB.users : Math.round(totalUsers * (trafficSplit.variant_b / 100));
   const variantBConversions = variantB ? variantB.conversions : Math.round(variantBUsers * variantBRate / 100);
-  const deltaAbs = (variantBRate - baselineRate).toFixed(2);
-  const deltaAbsDisplay = Number(deltaAbs).toFixed(1);
+  const controlUsersCount = controlVariant.users;
+  const controlConversionsCount = controlVariant.conversions || Math.round(controlUsersCount * baselineRate / 100);
+  const upliftPct = baselineRate > 0 ? ((variantBRate - baselineRate) / baselineRate * 100) : 0;
+  const upliftDisplay = experiment.lift !== "—" ? `${upliftPct >= 0 ? "+" : ""}${upliftPct.toFixed(2)}%` : "—";
 
-  // Auto-scale chart axis to amplify real difference
-  const chartPad = Math.max(0.4, Math.abs(variantBRate - baselineRate) * 0.6);
-  const chartMin = Math.max(0, Math.min(baselineRate, variantBRate) - chartPad);
-  const chartMax = Math.max(baselineRate, variantBRate) + chartPad;
-  const barPct = (rate) => Math.max(0, Math.min(100, ((rate - chartMin) / (chartMax - chartMin)) * 100));
-  const axisStep = Number(((chartMax - chartMin) / 4).toFixed(1));
-  const axisTicks = [0, 1, 2, 3, 4].map((i) => Number((chartMin + axisStep * i).toFixed(1)));
-
-  // Goal metric
   const goalMetric = experiment.goalMetric || {
     key: experiment.metric || "—",
     label: experiment.metric ? experiment.metric.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) : "—",
   };
 
-  // Date helpers
   const fmtDate = (iso) => {
     if (!iso) return "—";
     return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
@@ -3584,230 +3581,305 @@ function ExperimentDetail({ experiment, onBack, onOpenRemoteConfig, linkedConfig
   const endLabel = fmtDate(experiment.endDate);
   const durationLabel = experiment.durationDays ? `${experiment.durationDays} days` : "—";
 
-  // Dynamic status summary
-  const statusSummary = isWinnerDeclared
-    ? `Experiment ran for ${durationLabel} · Statistically significant result detected (${experiment.confidenceLevel || 95}% confidence)`
-    : isRunning
-    ? `Experiment running${experiment.durationDays ? ` for ${durationLabel}` : ""} · Collecting data`
-    : `Experiment ${experiment.status?.toLowerCase() || "completed"} · ${durationLabel}`;
+  // Chart data
+  const chartData = useMemo(() => {
+    let numDays = 30;
+    if (activeDateFilter === "Today") numDays = 1;
+    else if (activeDateFilter === "Yesterday") numDays = 2;
+    else if (activeDateFilter === "7D") numDays = 7;
+    else if (activeDateFilter === "30D") numDays = 30;
+    else if (activeDateFilter === "3M") numDays = 90;
+    else if (activeDateFilter === "6M") numDays = 180;
+    else if (activeDateFilter === "12M") numDays = 365;
+    const endDate = experiment.endDate ? new Date(experiment.endDate) : new Date();
+    const rangeStart = experiment.startDate
+      ? new Date(Math.max(new Date(experiment.startDate).getTime(), endDate.getTime() - (numDays - 1) * 86400000))
+      : new Date(endDate.getTime() - (numDays - 1) * 86400000);
+    const days = Math.max(2, Math.round((endDate - rangeStart) / 86400000) + 1);
+    const vPerDay = variantBUsers / days;
+    const cPerDay = controlUsersCount / days;
+    return Array.from({ length: days }, (_, i) => {
+      const date = new Date(rangeStart.getTime() + i * 86400000);
+      const noise = 0.92 + Math.sin(i * 2.1 + 1.3) * 0.08;
+      return {
+        label: date.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+        variantUsers: Math.max(0, Math.round(vPerDay * noise)),
+        controlUsers: Math.max(0, Math.round(cPerDay * noise)),
+      };
+    });
+  }, [experiment, activeDateFilter, variantBUsers, controlUsersCount]);
+
+  // SVG chart constants
+  const CW = 800, CH = 220;
+  const PAD = { top: 16, right: 20, bottom: 36, left: 56 };
+  const IW = CW - PAD.left - PAD.right;
+  const IH = CH - PAD.top - PAD.bottom;
+  const maxV = Math.max(...chartData.map((d) => d.variantUsers), 1);
+  const yMax = Math.ceil(maxV * 1.25 / 5000) * 5000 || 100000;
+  const xs = (i) => chartData.length > 1 ? (i / (chartData.length - 1)) * IW : IW / 2;
+  const ys = (v) => IH - (v / yMax) * IH;
+  const makePath = (fn) => chartData.map((d, i) => `${i === 0 ? "M" : "L"}${xs(i).toFixed(1)},${ys(fn(d)).toFixed(1)}`).join(" ");
+  const vPath = makePath((d) => d.variantUsers);
+  const cPath = makePath((d) => d.controlUsers);
+  const vFill = chartData.length > 1 ? `${vPath} L${xs(chartData.length - 1).toFixed(1)},${IH} L0,${IH} Z` : "";
+  const yTicks = [0, 0.25, 0.5, 0.75, 1].map((t) => ({ v: Math.round(yMax * t), y: ys(yMax * t) }));
+  const fmtY = (v) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v);
+  const xTickStep = Math.max(1, Math.floor(chartData.length / 7));
+  const xTicks = chartData.reduce((acc, d, i) => {
+    if (i === 0 || i === chartData.length - 1 || i % xTickStep === 0) acc.push({ i, label: d.label });
+    return acc;
+  }, []);
+
+  const handleSvgMove = (e) => {
+    if (!svgRef.current) return;
+    const rect = svgRef.current.getBoundingClientRect();
+    const rawX = ((e.clientX - rect.left) / rect.width) * CW - PAD.left;
+    const idx = Math.max(0, Math.min(chartData.length - 1, Math.round((rawX / IW) * (chartData.length - 1))));
+    setChartTooltip({ idx, clientX: e.clientX, clientY: e.clientY });
+  };
 
   const tabIds = ["results", "config", "settings"];
   const tabLabels = { results: "Results", config: "Config", settings: "Settings" };
+  const dateFilterBtns = ["Today", "Yesterday", "7D", "30D", "3M", "6M", "12M"];
+  const filterBtnStyle = (active) => ({
+    padding: "7px 12px", borderRadius: 8, border: `1px solid ${active ? PRIMARY : BORDER}`,
+    background: active ? PRIMARY : WHITE, color: active ? WHITE : TEXT,
+    fontSize: 12, fontWeight: 500, cursor: "pointer",
+  });
 
-  useEffect(() => {
-    if (!exportMenuOpen) return;
-    const close = () => setExportMenuOpen(false);
-    window.addEventListener("click", close);
-    return () => window.removeEventListener("click", close);
-  }, [exportMenuOpen]);
+  const variantRows = [
+    {
+      id: "variant_b", label: `Variant B (${trafficSplit.variant_b ?? 50}%)`,
+      badgeLabel: "Variant", badgeBg: "#EFF6FF", badgeColor: "#1D4ED8", badgeBorder: "#BFDBFE",
+      users: variantBUsers, conversions: variantBConversions, rate: variantBRate,
+      uplift: upliftDisplay, upliftColor: upliftPct > 0 ? "#16A34A" : upliftPct < 0 ? "#DC2626" : TEXT_MUTED,
+    },
+    {
+      id: "control", label: `Control Group (${trafficSplit.control ?? 50}%)`,
+      badgeLabel: "Control", badgeBg: "#F3F4F6", badgeColor: "#374151", badgeBorder: "#D1D5DB",
+      users: controlUsersCount, conversions: controlConversionsCount, rate: baselineRate,
+      uplift: "—", upliftColor: TEXT_MUTED,
+    },
+  ];
+
+  const vtCols = [
+    { key: "users", label: "Users", tooltip: "Number of unique users assigned to this variant." },
+    { key: "conversions", label: "Conversions", tooltip: "Total goal metric events recorded for users in this variant." },
+    { key: "rate", label: "Conversion Rate", tooltip: "Percentage of users who completed the goal metric in this variant." },
+    { key: "uplift", label: "Uplift", tooltip: "Relative change in conversion rate compared to the control group." },
+  ];
 
   return (
     <div style={{ paddingBottom: 80 }}>
       <ApplyWinnerModal open={applyWinnerOpen} experiment={experiment} onCancel={() => setApplyWinnerOpen(false)}
-        onConfirm={() => { console.log(`Winner applied: ${experiment.linkedConfigMeta?.key} = ${experiment.linkedConfigMeta?.variantBValue}`); setApplyWinnerOpen(false); }}
+        onConfirm={() => { console.log(`Winner applied`); setApplyWinnerOpen(false); }}
       />
       <StopExperimentModal open={stopConfirmOpen} experimentName={experiment.name} onCancel={() => setStopConfirmOpen(false)}
         onConfirm={() => { console.log("Experiment stopped:", experiment.id); setStopConfirmOpen(false); }}
       />
 
-      {/* ── Page Header ── */}
-      <div style={{ marginBottom: 6 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-          <h1 style={pageTitleStyle}>{experiment.name}</h1>
-          <StatusBadge status={experiment.status} />
-        </div>
-        {isWinnerDeclared ? (
-          <p style={{ margin: "5px 0 2px", fontSize: 13, color: "#16A34A", display: "flex", alignItems: "center", gap: 5 }}>
-            <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M2 7.5L5.5 11L12 4" stroke="#16A34A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-            Hypothesis confirmed — Variant B outperformed Control by {liftValue}% ({experiment.confidenceLevel || 95}% confidence)
-          </p>
-        ) : null}
-        <p style={{ margin: "4px 0 0", fontSize: 12, color: "#6B7280" }}>{statusSummary}</p>
-        <div style={{ marginTop: 5, fontSize: 12, color: "#6B7280", display: "flex", flexWrap: "wrap", gap: 4, alignItems: "center" }}>
-          {startLabel !== "—" && <span>Started: {startLabel}</span>}
-          {startLabel !== "—" && endLabel !== "—" && <span style={{ color: "#D1D5DB" }}>·</span>}
-          {endLabel !== "—" && <span>Completed: {endLabel}</span>}
-          {experiment.createdBy && <><span style={{ color: "#D1D5DB" }}>·</span><span>Created by: {experiment.createdBy}</span></>}
+      {/* ── Header ── */}
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 20 }}>
+        <div style={{ width: 5, height: 52, borderRadius: 999, background: PRIMARY, marginTop: 2, flexShrink: 0 }} />
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <h1 style={pageTitleStyle}>{experiment.name}</h1>
+            <StatusBadge status={experiment.status} />
+          </div>
+          <div style={{ marginTop: 4, fontSize: 12, color: "#6B7280", display: "flex", flexWrap: "wrap", gap: 4, alignItems: "center" }}>
+            {startLabel !== "—" && <span>Started {startLabel}</span>}
+            {experiment.createdBy && <><span style={{ color: "#D1D5DB" }}>·</span><span>Created by: {experiment.createdBy}</span></>}
+          </div>
         </div>
       </div>
 
+      {/* ── Date filter ── */}
+      <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 20, flexWrap: "wrap" }}>
+        <button onClick={() => setActiveDateFilter("Custom")} style={filterBtnStyle(activeDateFilter === "Custom")}>Custom</button>
+        {activeDateFilter === "Custom" && (
+          <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 10px", border: `1px solid ${BORDER}`, borderRadius: 8, background: WHITE }}>
+            <input type="date" value={customStart} onChange={(e) => setCustomStart(e.target.value)}
+              style={{ border: "none", outline: "none", fontSize: 12, color: TEXT }} />
+            <span style={{ color: TEXT_MUTED }}>→</span>
+            <input type="date" value={customEnd} onChange={(e) => setCustomEnd(e.target.value)}
+              style={{ border: "none", outline: "none", fontSize: 12, color: TEXT }} />
+          </div>
+        )}
+        {dateFilterBtns.map((f) => (
+          <button key={f} onClick={() => setActiveDateFilter(f)} style={filterBtnStyle(activeDateFilter === f)}>{f}</button>
+        ))}
+      </div>
+
       {/* ── Tabs ── */}
-      <div role="tablist" aria-label="Experiment sections" style={{ display: "flex", gap: 8, marginBottom: 20, marginTop: 18 }}>
+      <div role="tablist" style={{ display: "flex", gap: 8, marginBottom: 20 }}>
         {tabIds.map((item) => (
-          <button key={item} role="tab" aria-selected={tab === item} aria-controls={`tabpanel-${item}`} id={`tab-${item}`}
+          <button key={item} role="tab" aria-selected={tab === item}
             onClick={() => setTab(item)}
-            onKeyDown={(e) => {
-              const idx = tabIds.indexOf(item);
-              if (e.key === "ArrowRight") { e.preventDefault(); setTab(tabIds[(idx + 1) % tabIds.length]); }
-              if (e.key === "ArrowLeft") { e.preventDefault(); setTab(tabIds[(idx + tabIds.length - 1) % tabIds.length]); }
-            }}
-            style={{ padding: "9px 18px", borderRadius: 10, border: `1px solid ${tab === item ? "#3B82F6" : "#E5E7EB"}`, background: tab === item ? "#3B82F6" : WHITE, color: tab === item ? WHITE : "#4B5563", cursor: "pointer", fontSize: 13, fontWeight: 600, outline: "none" }}
+            style={{ padding: "9px 18px", borderRadius: 10, border: `1px solid ${tab === item ? PRIMARY : BORDER}`, background: tab === item ? PRIMARY : WHITE, color: tab === item ? WHITE : "#4B5563", cursor: "pointer", fontSize: 13, fontWeight: 600, outline: "none" }}
           >{tabLabels[item]}</button>
         ))}
       </div>
 
       {/* ══ RESULTS TAB ══ */}
       {tab === "results" && (
-        <div id="tabpanel-results" role="tabpanel" aria-labelledby="tab-results">
-
-          {/* Stat cards — 3 supporting + 1 hero uplift */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr) 1.45fr", gap: 12, marginBottom: 20 }}>
-            {/* Users Exposed */}
-            <div style={{ ...cardStyle, padding: "16px 18px" }}>
-              <div style={{ fontSize: 11, color: "#4B5563", fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase" }}>Users Exposed</div>
-              <div style={{ marginTop: 4, fontSize: 24, fontWeight: 700, color: TEXT }}>{(experiment.totalUsers || experiment.users || 0).toLocaleString()}</div>
-              <div style={{ marginTop: 2, fontSize: 11, color: "#4B5563" }}>Across all variants</div>
-            </div>
-            {/* Goal Metric — demoted, key hidden behind toggle */}
-            <div style={{ ...cardStyle, padding: "16px 18px" }}>
-              <div style={{ fontSize: 11, color: "#4B5563", fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: 6 }}>Goal Metric</div>
-              <div style={{ fontSize: 15, fontWeight: 600, color: TEXT }}>{goalMetric.label}</div>
-              <button onClick={() => setMetricKeyVisible((v) => !v)}
-                style={{ marginTop: 5, fontSize: 11, color: "#6B7280", background: "none", border: "none", padding: 0, cursor: "pointer", textDecoration: "underline" }}>
-                {metricKeyVisible ? "Hide key" : "Show key"}
-              </button>
-              {metricKeyVisible && <div style={{ marginTop: 4 }}><CodePill>{goalMetric.key}</CodePill></div>}
-            </div>
-            {/* Control Rate */}
-            <div style={{ ...cardStyle, padding: "16px 18px" }}>
-              <div style={{ fontSize: 11, color: "#4B5563", fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase" }}>Control Rate</div>
-              <div style={{ marginTop: 4, fontSize: 24, fontWeight: 700, color: TEXT }}>{baselineRate.toFixed(1)}%</div>
-              <div style={{ marginTop: 2, fontSize: 11, color: "#4B5563" }}>Baseline conversion rate</div>
-            </div>
-            {/* HERO: Uplift card */}
-            <div style={{ ...cardStyle, padding: "18px 20px", background: "#F0FDF4", borderLeft: "4px solid #16A34A" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
-                <div style={{ fontSize: 11, color: "#15803D", fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase" }}>Uplift</div>
-                <span style={{ position: "relative", display: "inline-flex" }}
-                  onMouseEnter={() => setUpliftTooltipVisible(true)}
-                  onMouseLeave={() => setUpliftTooltipVisible(false)}>
-                  <span style={{ fontSize: 12, color: "#86EFAC", cursor: "default" }}>ⓘ</span>
-                  {upliftTooltipVisible && (
-                    <span style={{ position: "absolute", bottom: "calc(100% + 8px)", left: "50%", transform: "translateX(-50%)", background: "#1F2937", color: WHITE, fontSize: 11, padding: "8px 12px", borderRadius: 8, width: 230, lineHeight: 1.6, zIndex: 60, boxShadow: "0 4px 16px rgba(0,0,0,0.25)", pointerEvents: "none" }}>
-                      <b>Uplift = (Variant Rate − Control Rate) / Control Rate</b><br/>
-                      Relative improvement of the winning variant's conversion rate over the control group.
-                    </span>
-                  )}
-                </span>
-              </div>
-              <div style={{ fontSize: 36, fontWeight: 800, color: "#16A34A", lineHeight: 1.1, marginBottom: 4 }}>{experiment.lift}</div>
-              <div style={{ fontSize: 12, color: "#15803D", fontWeight: 600 }}>vs control</div>
-              <div style={{ marginTop: 5, fontSize: 11, color: "#166534" }}>
-                {experiment.confidenceLevel || 95}% confidence · p &lt; {(experiment.pValue || 0.05).toFixed(3)}
-              </div>
-              {isWinnerDeclared && (
-                <div style={{ marginTop: 10 }}>
-                  <button onClick={() => setApplyWinnerOpen(true)}
-                    style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 8, background: "#16A34A", color: WHITE, border: "none", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
-                    <svg width="11" height="11" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M2 7.5L5.5 11L12 4" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                    Apply Winner
-                  </button>
+        <>
+          {/* 4 stat cards */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 20 }}>
+            {[
+              { label: "Users Exposed", value: totalUsers.toLocaleString(), sub: "Across all variants", tooltip: "Total number of unique users enrolled across all experiment variants." },
+              { label: "Goal Metric", value: goalMetric.label, isMetric: true, tooltip: "The primary event metric used to evaluate performance between variants." },
+              { label: "Control Rate", value: `${baselineRate.toFixed(2)}%`, sub: "Baseline conversion rate", tooltip: "Baseline conversion rate of the control group during the experiment." },
+              { label: "Uplift", value: experiment.lift !== "—" ? `${upliftPct >= 0 ? "+" : ""}${upliftPct.toFixed(1)}%` : "—", valueColor: upliftPct > 0 ? "#16A34A" : upliftPct < 0 ? "#DC2626" : TEXT, sub: experiment.lift !== "—" ? "vs control group" : null, hero: upliftPct > 0, tooltip: "Relative change in conversion rate between the leading variant and control group." },
+            ].map((card) => (
+              <div key={card.label} style={{ ...cardStyle, padding: "16px 18px", ...(card.hero ? { background: "#F0FDF4", border: "1px solid #BBF7D0" } : {}) }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, fontWeight: 600, color: card.hero ? "#15803D" : "#4B5563", letterSpacing: "0.04em", marginBottom: 6 }}>
+                  {card.label}
+                  <div style={{ position: "relative", display: "inline-flex", cursor: "default" }}
+                    onMouseEnter={(e) => { e.currentTarget.lastChild.style.visibility = "visible"; e.currentTarget.lastChild.style.opacity = "1"; }}
+                    onMouseLeave={(e) => { e.currentTarget.lastChild.style.visibility = "hidden"; e.currentTarget.lastChild.style.opacity = "0"; }}
+                  >
+                    <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+                      <circle cx="7" cy="7" r="6.5" stroke={card.hero ? "#86EFAC" : "#D1D5DB"} />
+                      <rect x="6.5" y="6" width="1" height="4.5" rx="0.5" fill={card.hero ? "#86EFAC" : "#9CA3AF"} />
+                      <rect x="6.5" y="3.5" width="1" height="1.3" rx="0.5" fill={card.hero ? "#86EFAC" : "#9CA3AF"} />
+                    </svg>
+                    <div style={{ visibility: "hidden", opacity: 0, position: "absolute", bottom: "calc(100% + 8px)", left: "50%", transform: "translateX(-50%)", background: "#111827", color: WHITE, fontSize: 12, fontWeight: 400, padding: "7px 12px", borderRadius: 6, whiteSpace: "nowrap", boxShadow: "0 4px 12px rgba(0,0,0,0.15)", zIndex: 9999, transition: "opacity 0.15s, visibility 0.15s", pointerEvents: "none", textTransform: "none", letterSpacing: "normal" }}>
+                      {card.tooltip}
+                      <span style={{ position: "absolute", top: "100%", left: "50%", transform: "translateX(-50%)", width: 0, height: 0, borderLeft: "5px solid transparent", borderRight: "5px solid transparent", borderTop: "5px solid #111827" }} />
+                    </div>
+                  </div>
                 </div>
-              )}
-            </div>
+                <div style={{ fontSize: card.hero ? 26 : 22, fontWeight: 700, color: card.valueColor || TEXT, lineHeight: 1.2 }}>{card.value}</div>
+                {card.sub && <div style={{ marginTop: 4, fontSize: 11, color: card.hero ? "#15803D" : "#4B5563" }}>{card.sub}</div>}
+                {card.isMetric && (
+                  <>
+                    <button onClick={() => setMetricKeyVisible((v) => !v)}
+                      style={{ marginTop: 5, fontSize: 11, color: "#6B7280", background: "none", border: "none", padding: 0, cursor: "pointer", textDecoration: "underline" }}>
+                      {metricKeyVisible ? "Hide key" : "Show key"}
+                    </button>
+                    {metricKeyVisible && <div style={{ marginTop: 4 }}><CodePill>{goalMetric.key}</CodePill></div>}
+                  </>
+                )}
+                {card.hero && isWinnerDeclared && (
+                  <div style={{ marginTop: 6, fontSize: 11, color: "#166534" }}>
+                    {experiment.confidenceLevel || 95}% confidence · p &lt; {(experiment.pValue || 0.05).toFixed(3)}
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
 
-          {/* Variant Performance chart */}
+          {/* User exposure over time line chart */}
           <div style={{ ...cardStyle, padding: 24, marginBottom: 20 }}>
-            <div style={{ marginBottom: 18 }}>
-              <h3 style={{ margin: "0 0 4px", color: TEXT, fontSize: 15, fontWeight: 700 }}>Variant Performance</h3>
-              <div style={{ fontSize: 12, color: "#6B7280" }}>Conversion rate by variant ({goalMetric.label}) · Auto-scaled axis</div>
-            </div>
-            <div role="img" aria-label={`Bar chart comparing conversion rates: Control ${baselineRate.toFixed(1)}%, Variant B ${variantBRate.toFixed(1)}%`}>
-              {[
-                { id: "control", name: "Control", rate: baselineRate, users: controlVariant.users, conversions: controlVariant.conversions, isWinner: false, striped: true },
-                { id: "variant_b", name: "Variant B", rate: variantBRate, users: variantBUsers, conversions: variantBConversions, isWinner: isWinnerDeclared, striped: false },
-              ].map((variant, index) => {
-                const pct = barPct(variant.rate);
-                const isHovered = barTooltip?.variantId === variant.id;
-                const barColor = variant.id === "control" ? "#6B7280" : "#16A34A";
-                // Diagonal stripes for Control (accessibility: shape+colour, not colour alone)
-                const barBg = variant.striped
-                  ? `repeating-linear-gradient(45deg, #6B7280 0px, #6B7280 4px, #9CA3AF 4px, #9CA3AF 8px)`
-                  : barColor;
-                return (
-                  <div key={variant.id} style={{ padding: "13px 0", borderBottom: index === 0 ? `1px solid ${BORDER}` : "none", position: "relative" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 14 }}
-                      aria-label={`${variant.name}: ${variant.rate.toFixed(1)}% conversion, ${variant.users.toLocaleString()} users`}
-                      onMouseEnter={(e) => setBarTooltip({ variantId: variant.id, x: e.clientX, y: e.clientY })}
-                      onMouseMove={(e) => setBarTooltip({ variantId: variant.id, x: e.clientX, y: e.clientY })}
-                      onMouseLeave={() => setBarTooltip(null)}
-                    >
-                      {/* Colour + pattern swatch (accessibility) */}
-                      <span aria-hidden="true" style={{ width: 14, height: 14, borderRadius: 3, background: barBg, flexShrink: 0, border: "1px solid rgba(0,0,0,0.08)" }} />
-                      <div style={{ width: 100, fontSize: 13, fontWeight: 600, color: TEXT, display: "flex", alignItems: "center", gap: 7, flexShrink: 0 }}>
-                        {variant.name}
-                        {variant.isWinner && <span style={{ background: "#DCFCE7", color: "#15803D", borderRadius: 999, fontSize: 11, fontWeight: 600, padding: "2px 8px" }}>Winner</span>}
-                      </div>
-                      <div style={{ flex: 1, height: 14, borderRadius: 4, background: "#F3F4F6", overflow: "hidden" }}>
-                        <div style={{ width: `${pct}%`, height: "100%", borderRadius: 4, background: barBg, transition: "width 0.5s ease" }} />
-                      </div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 120, justifyContent: "flex-end" }}>
-                        <span style={{ fontSize: 15, fontWeight: 700, color: variant.id === "control" ? "#4B5563" : "#15803D" }}>{variant.rate.toFixed(1)}%</span>
-                        {variant.id === "variant_b" && (
-                          <span style={{ background: "#DCFCE7", color: "#15803D", borderRadius: 999, fontSize: 11, fontWeight: 600, padding: "2px 7px" }} title={`+${deltaAbsDisplay} percentage points`}>
-                            +{deltaAbsDisplay}pp
-                          </span>
-                        )}
-                      </div>
-                      <div style={{ minWidth: 90, fontSize: 12, color: "#4B5563", textAlign: "right", flexShrink: 0 }}>{variant.users.toLocaleString()} users</div>
-                    </div>
-                    {/* Hover tooltip */}
-                    {isHovered && (
-                      <div style={{ position: "fixed", left: barTooltip.x + 14, top: barTooltip.y - 12, background: "#1F2937", color: WHITE, borderRadius: 10, padding: "10px 14px", fontSize: 12, zIndex: 999, pointerEvents: "none", minWidth: 210, boxShadow: "0 6px 20px rgba(0,0,0,0.28)", lineHeight: 1.8 }}>
-                        <div style={{ fontWeight: 700, marginBottom: 4 }}>{variant.name}</div>
-                        <div>Conversion rate: <b>{variant.rate.toFixed(2)}%</b></div>
-                        <div>Users: <b>{variant.users.toLocaleString()}</b></div>
-                        <div>Conversions: <b>~{(variant.conversions || 0).toLocaleString()}</b></div>
-                        {variant.id === "variant_b" && (
-                          <div style={{ marginTop: 5, paddingTop: 5, borderTop: "1px solid rgba(255,255,255,0.1)", color: "#86EFAC" }}>
-                            vs Control: +{deltaAbsDisplay} percentage points (+{liftValue}% relative)
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-              {/* Auto-scaled axis ticks */}
-              <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8, paddingLeft: 128 }}>
-                {axisTicks.map((t) => (
-                  <div key={t} style={{ fontSize: 10, color: "#4B5563" }}>{t.toFixed(1)}%</div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
+              <div>
+                <h3 style={{ margin: "0 0 3px", fontSize: 15, fontWeight: 700, color: TEXT }}>User Exposure Over Time</h3>
+                {chartData.length > 0 && (
+                  <div style={{ fontSize: 12, color: "#6B7280" }}>{chartData[0].label} – {chartData[chartData.length - 1].label}</div>
+                )}
+              </div>
+              <div style={{ display: "flex", gap: 16 }}>
+                {[{ label: "Variant A", color: "#3B82F6" }, { label: "Control group", color: "#10B981" }].map(({ label, color }) => (
+                  <span key={label} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: TEXT }}>
+                    <span style={{ display: "inline-block", width: 20, height: 2, background: color, borderRadius: 1 }} />
+                    {label}
+                  </span>
                 ))}
               </div>
-              <div style={{ marginTop: 12, padding: "10px 14px", borderRadius: 8, background: SOFT, fontSize: 12, color: "#4B5563", display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
-                <span aria-hidden="true" style={{ display: "inline-block", width: 12, height: 12, borderRadius: 2, background: "repeating-linear-gradient(45deg, #6B7280 0px, #6B7280 4px, #9CA3AF 4px, #9CA3AF 8px)", border: "1px solid rgba(0,0,0,0.08)" }} />
-                <b>Control</b> uses a striped pattern ·
-                <span aria-hidden="true" style={{ display: "inline-block", width: 12, height: 12, borderRadius: 2, background: "#16A34A" }} />
-                <b>Variant B</b> uses a solid fill — both are distinguishable without relying on colour alone.
-              </div>
             </div>
+            <svg ref={svgRef} viewBox={`0 0 ${CW} ${CH}`} style={{ width: "100%", height: "auto", display: "block", overflow: "visible" }}
+              onMouseMove={handleSvgMove} onMouseLeave={() => setChartTooltip(null)}
+            >
+              <g transform={`translate(${PAD.left},${PAD.top})`}>
+                {yTicks.map(({ v, y }) => (
+                  <g key={v}>
+                    <line x1={0} y1={y} x2={IW} y2={y} stroke="#F3F4F6" strokeWidth={1} />
+                    <text x={-8} y={y} textAnchor="end" dominantBaseline="middle" fontSize={10} fill="#9CA3AF">{fmtY(v)}</text>
+                  </g>
+                ))}
+                {chartData.length > 1 && <path d={vFill} fill="#3B82F6" fillOpacity={0.08} />}
+                {chartData.length > 1 && <path d={vPath} fill="none" stroke="#3B82F6" strokeWidth={2} strokeLinejoin="round" />}
+                {chartData.length > 1 && <path d={cPath} fill="none" stroke="#10B981" strokeWidth={2} strokeLinejoin="round" />}
+                {xTicks.map(({ i, label }) => (
+                  <text key={i} x={xs(i)} y={IH + 20} textAnchor="middle" fontSize={10} fill="#9CA3AF">{label}</text>
+                ))}
+                {chartTooltip !== null && chartData[chartTooltip.idx] && (
+                  <g>
+                    <line x1={xs(chartTooltip.idx)} y1={0} x2={xs(chartTooltip.idx)} y2={IH} stroke="#374151" strokeWidth={1} strokeDasharray="3,3" />
+                    <circle cx={xs(chartTooltip.idx)} cy={ys(chartData[chartTooltip.idx].variantUsers)} r={4} fill="#3B82F6" stroke={WHITE} strokeWidth={1.5} />
+                    <circle cx={xs(chartTooltip.idx)} cy={ys(chartData[chartTooltip.idx].controlUsers)} r={4} fill="#10B981" stroke={WHITE} strokeWidth={1.5} />
+                  </g>
+                )}
+                <rect x={0} y={0} width={IW} height={IH} fill="transparent" style={{ cursor: "crosshair" }} />
+              </g>
+            </svg>
           </div>
 
-          {/* Configuration card (renamed from "Linked Config") */}
-          <div style={{ ...cardStyle, padding: 20 }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
-              <div>
-                <div style={{ fontSize: 11, color: "#4B5563", fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: 5 }}>Configuration</div>
-                <div style={{ fontSize: 14, fontWeight: 600, color: TEXT }}>
-                  {linkedConfig?.name || experiment.linkedConfigMeta?.name || experiment.linkedConfigKey || "Config removed"}
-                </div>
-                <div style={{ marginTop: 4 }}><CodePill>{experiment.linkedConfigKey || "—"}</CodePill></div>
-                <div style={{ marginTop: 6, fontSize: 12, color: "#6B7280" }}>This experiment uses the following remote config to serve variants to users.</div>
+          {/* Chart hover tooltip */}
+          {chartTooltip !== null && chartData[chartTooltip.idx] && (
+            <div style={{ position: "fixed", left: chartTooltip.clientX + 16, top: chartTooltip.clientY - 70, background: "#1F2937", color: WHITE, padding: "10px 14px", borderRadius: 10, fontSize: 12, zIndex: 9999, pointerEvents: "none", minWidth: 180, boxShadow: "0 6px 20px rgba(0,0,0,0.25)", lineHeight: 1.8 }}>
+              <div style={{ fontWeight: 600, marginBottom: 5, borderBottom: "1px solid rgba(255,255,255,0.1)", paddingBottom: 5 }}>{chartData[chartTooltip.idx].label}</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#3B82F6", flexShrink: 0 }} />
+                Variant A: <b>{chartData[chartTooltip.idx].variantUsers.toLocaleString()}</b>
               </div>
-              <button onClick={() => onOpenRemoteConfig(experiment.linkedConfigKey)} title="Opens Remote Config detail view"
-                style={{ ...secondaryButtonStyle, display: "inline-flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-                View Config
-                <svg width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M5.5 2.5H2A1.5 1.5 0 0 0 .5 4v8A1.5 1.5 0 0 0 2 13.5h8A1.5 1.5 0 0 0 11.5 12V8.5M8.5.5h5v5M13.5.5 6.5 7.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
-              </button>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#10B981", flexShrink: 0 }} />
+                Control group: <b>{chartData[chartTooltip.idx].controlUsers.toLocaleString()}</b>
+              </div>
             </div>
+          )}
+
+          {/* Variant breakdown table */}
+          <div style={{ ...cardStyle, padding: 20 }}>
+            <h3 style={{ margin: "0 0 16px", fontSize: 15, fontWeight: 700, color: TEXT }}>Variant Breakdown</h3>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+              <thead>
+                <tr>
+                  <th style={{ padding: "10px 14px", textAlign: "left", fontSize: 12, fontWeight: 600, color: TEXT_MUTED, borderBottom: `1px solid ${BORDER}` }}>Variations</th>
+                  {vtCols.map((col) => (
+                    <th key={col.key} style={{ padding: "10px 14px", textAlign: col.key === "uplift" ? "right" : "left", fontSize: 12, fontWeight: 600, color: TEXT_MUTED, borderBottom: `1px solid ${BORDER}` }}>
+                      {col.label}
+                      <span style={{ display: "inline-flex", cursor: "default", verticalAlign: "middle", marginLeft: 4 }}
+                        onMouseEnter={(e) => { const r = e.currentTarget.getBoundingClientRect(); setVttPos({ x: r.left + r.width / 2, y: r.top }); setVttOpen(col.tooltip); }}
+                        onMouseLeave={() => setVttOpen(null)}
+                      >
+                        <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6.5" stroke="#D1D5DB"/><rect x="6.5" y="6" width="1" height="4.5" rx="0.5" fill="#9CA3AF"/><rect x="6.5" y="3.5" width="1" height="1.3" rx="0.5" fill="#9CA3AF"/></svg>
+                      </span>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {variantRows.map((row, idx) => (
+                  <tr key={row.id} style={{ borderBottom: idx < variantRows.length - 1 ? `1px solid ${BORDER}` : "none" }}>
+                    <td style={{ padding: "14px 14px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <span style={{ fontWeight: 500, color: TEXT }}>{row.label}</span>
+                        <span style={{ display: "inline-flex", alignItems: "center", padding: "2px 8px", borderRadius: 5, fontSize: 11, fontWeight: 600, background: row.badgeBg, color: row.badgeColor, border: `1px solid ${row.badgeBorder}` }}>{row.badgeLabel}</span>
+                      </div>
+                    </td>
+                    <td style={{ padding: "14px 14px", color: TEXT }}>{row.users.toLocaleString()}</td>
+                    <td style={{ padding: "14px 14px", color: TEXT }}>{row.conversions.toLocaleString()}</td>
+                    <td style={{ padding: "14px 14px", color: TEXT }}>{row.rate.toFixed(2)}%</td>
+                    <td style={{ padding: "14px 14px", textAlign: "right", color: row.upliftColor, fontWeight: row.uplift !== "—" ? 700 : 400 }}>{row.uplift}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {vttOpen && (
+              <div style={{ position: "fixed", left: vttPos.x, top: vttPos.y - 8, transform: "translateX(-50%) translateY(-100%)", background: "#111827", color: WHITE, fontSize: 12, fontWeight: 400, padding: "7px 12px", borderRadius: 6, whiteSpace: "nowrap", boxShadow: "0 4px 12px rgba(0,0,0,0.15)", zIndex: 9999, pointerEvents: "none" }}>
+                {vttOpen}
+                <span style={{ position: "absolute", top: "100%", left: "50%", transform: "translateX(-50%)", width: 0, height: 0, borderLeft: "5px solid transparent", borderRight: "5px solid transparent", borderTop: "5px solid #111827" }} />
+              </div>
+            )}
           </div>
-        </div>
+        </>
       )}
 
       {/* ══ CONFIG TAB ══ */}
       {tab === "config" && (
-        <div id="tabpanel-config" role="tabpanel" aria-labelledby="tab-config" style={{ ...cardStyle, padding: 24 }}>
+        <div style={{ ...cardStyle, padding: 24 }}>
           <h3 style={{ margin: "0 0 6px", fontSize: 16, color: TEXT, fontWeight: 700 }}>Tested Configuration</h3>
           <p style={{ margin: "0 0 18px", fontSize: 13, color: "#4B5563" }}>Shows the remote config key and the values assigned to each variant during the experiment run.</p>
           <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", borderBottom: `1px solid ${BORDER}`, paddingBottom: 8, marginBottom: 4 }}>
@@ -3817,7 +3889,7 @@ function ExperimentDetail({ experiment, onBack, onOpenRemoteConfig, linkedConfig
           </div>
           {experiment.linkedConfigMeta ? (
             <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", padding: "14px 0", borderBottom: `1px solid ${BORDER}` }}>
-              <div style={{ display: "flex", alignItems: "center" }}><CodePill>enabled</CodePill></div>
+              <div><CodePill>enabled</CodePill></div>
               <div style={{ fontSize: 13, color: TEXT, alignSelf: "center" }}>Boolean</div>
               <div style={{ fontSize: 13, color: TEXT, alignSelf: "center" }}>{String(experiment.linkedConfigMeta.controlValue)}</div>
               <div style={{ fontSize: 13, color: "#16A34A", fontWeight: 600, alignSelf: "center" }}>{String(experiment.linkedConfigMeta.variantBValue)}</div>
@@ -3839,7 +3911,7 @@ function ExperimentDetail({ experiment, onBack, onOpenRemoteConfig, linkedConfig
 
       {/* ══ SETTINGS TAB ══ */}
       {tab === "settings" && (
-        <div id="tabpanel-settings" role="tabpanel" aria-labelledby="tab-settings" style={{ ...cardStyle, padding: 24 }}>
+        <div style={{ ...cardStyle, padding: 24 }}>
           <h3 style={{ margin: "0 0 6px", fontSize: 16, color: TEXT, fontWeight: 700 }}>Experiment Settings</h3>
           <p style={{ margin: "0 0 18px", fontSize: 13, color: "#4B5563" }}>Campaign setup and tracking configuration.</p>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12 }}>
@@ -3853,7 +3925,7 @@ function ExperimentDetail({ experiment, onBack, onOpenRemoteConfig, linkedConfig
               <CodePill>{experiment.linkedConfigKey || "—"}</CodePill>
             </div>
             {[
-              { label: "Traffic Split", value: `${experiment.trafficSplit?.control ?? 50}% / ${experiment.trafficSplit?.variant_b ?? 50}%` },
+              { label: "Traffic Split", value: `${trafficSplit.control ?? 50}% / ${trafficSplit.variant_b ?? 50}%` },
               { label: "Targeting", value: experiment.targeting || "All Users" },
               { label: "Start Date", value: startLabel },
               { label: "End Date", value: endLabel },
@@ -3871,7 +3943,7 @@ function ExperimentDetail({ experiment, onBack, onOpenRemoteConfig, linkedConfig
         </div>
       )}
 
-      {/* Fixed footer */}
+      {/* ── Fixed footer ── */}
       <div style={{ position: "fixed", bottom: 0, left: 222, right: 0, padding: "14px 28px", background: WHITE, borderTop: "2px solid #E5E7EB", display: "flex", alignItems: "center", justifyContent: "space-between", zIndex: 40 }}>
         <button onClick={onBack} style={{ ...secondaryButtonStyle, display: "inline-flex", alignItems: "center", gap: 7 }}>
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M9 12L4 7L9 2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
@@ -3885,9 +3957,7 @@ function ExperimentDetail({ experiment, onBack, onOpenRemoteConfig, linkedConfig
         )}
         {isRunning && (
           <div style={{ display: "flex", gap: 8 }}>
-            <button style={{ ...secondaryButtonStyle, background: "#FFFBEB", borderColor: "#FDE68A", color: "#92400E" }}>
-              Pause
-            </button>
+            <button style={{ ...secondaryButtonStyle, background: "#FFFBEB", borderColor: "#FDE68A", color: "#92400E" }}>Pause</button>
             <button onClick={() => setStopConfirmOpen(true)} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "9px 14px", border: "none", borderRadius: 8, background: "#DC2626", color: WHITE, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
               <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor" aria-hidden="true"><rect x="1" y="1" width="8" height="8" rx="1.5"/></svg>
               Stop
