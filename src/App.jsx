@@ -2989,6 +2989,9 @@ function CreateExperiment({
   const [draftConfigWarningOpen, setDraftConfigWarningOpen] = useState(false);
   const [runningConflict, setRunningConflict] = useState(null);
   const [browseSchemasOpen, setBrowseSchemasOpen] = useState(false);
+  const [rolloutPct, setRolloutPct] = useState(100);
+  const [variantExpanded, setVariantExpanded] = useState({});
+  const [filterRules, setFilterRules] = useState([]);
   const [savedSnapshot, setSavedSnapshot] = useState(JSON.stringify({
     id: null,
     name: "",
@@ -3175,8 +3178,12 @@ function CreateExperiment({
     setDraftConfigWarningOpen(false);
   };
 
+  const BASE_USERS = 46842;
+  const rolloutUsers = Math.round(BASE_USERS * (rolloutPct / 100));
+  const toggleVariant = (id) => setVariantExpanded((prev) => ({ ...prev, [id]: !prev[id] }));
+
   return (
-    <div>
+    <div style={{ paddingBottom: 88 }}>
       <ConfirmModal
         open={confirmModalOpen}
         title="Confirm and Launch"
@@ -3187,7 +3194,6 @@ function CreateExperiment({
         onCancel={() => setConfirmModalOpen(false)}
         onConfirm={() => submitLaunch(false)}
       />
-
       <ConfirmModal
         open={draftConfigWarningOpen}
         title="Linked configuration is not live yet"
@@ -3198,7 +3204,6 @@ function CreateExperiment({
         onCancel={() => setDraftConfigWarningOpen(false)}
         onConfirm={() => submitLaunch(true)}
       />
-
       <ConfirmModal
         open={Boolean(runningConflict)}
         title="This configuration is already being tested"
@@ -3208,244 +3213,372 @@ function CreateExperiment({
         onCancel={() => setRunningConflict(null)}
         onConfirm={() => setRunningConflict(null)}
       />
+      {browseSchemasOpen && schemas && (
+        <BrowseSchemasModal schemas={schemas} onClose={() => setBrowseSchemasOpen(false)} onUseSchema={() => setBrowseSchemasOpen(false)} />
+      )}
 
-      <div style={{ marginBottom: 24 }}>
-        <h1 style={pageTitleStyle}>New Experiment</h1>
-        <p style={pageDescriptionStyle}>Define your hypothesis, pick a remote config and launch an experiment.</p>
-      </div>
-
-      <div style={{ ...cardStyle, padding: 24 }}>
-        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-          <div>
-            <label style={{ display: "block", marginBottom: 8, fontSize: 12, fontWeight: 700, color: TEXT_MUTED }}>EXPERIMENT NAME *</label>
-            <input
-              value={form.name}
-              onChange={(event) => setField("name", event.target.value)}
-              placeholder="e.g. Homepage hero message test"
-              style={{ ...inputStyle, borderColor: errors.name ? "#EF4444" : BORDER_DARK, boxShadow: errors.name ? "0 0 0 3px rgba(239, 68, 68, 0.12)" : "none" }}
-            />
-            {errors.name && <div style={{ marginTop: 6, fontSize: 12, color: "#EF4444" }}>{errors.name}</div>}
-          </div>
-
-          {/* Browse Schemas banner */}
-          {schemas && schemas.length > 0 && (
-            <div style={{ padding: "12px 16px", borderRadius: 10, border: "1px solid #C7D2FB", background: "#EEF3FF", display: "flex", alignItems: "center", gap: 12 }}>
-              <div style={{ width: 32, height: 32, borderRadius: 8, background: "#4F46E5", color: WHITE, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <DeveloperIcon />
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: "#3730A3" }}>Use a Schema</div>
-                <div style={{ fontSize: 12, color: "#4F46E5", marginTop: 1 }}>Pre-populate parameters from a Developer schema ({schemas.length} available)</div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setBrowseSchemasOpen(true)}
-                style={{ padding: "7px 14px", background: "#4F46E5", color: WHITE, border: "none", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }}
-              >
-                Browse Schemas
-              </button>
-            </div>
-          )}
-
-          {browseSchemasOpen && schemas && (
-            <BrowseSchemasModal
-              schemas={schemas}
-              onClose={() => setBrowseSchemasOpen(false)}
-              onUseSchema={(schema) => {
-                setBrowseSchemasOpen(false);
-              }}
-            />
-          )}
-
-          <SearchableSelect
-            label="LINKED REMOTE CONFIG"
-            required={false}
-            placeholder="Select a remote configuration"
-            options={eligibleConfigs.map((config) => ({ value: config.key, label: config.name, subLabel: config.key }))}
-            selectedValue={form.linkedConfigKey}
-            onSelect={syncVariantsForConfig}
-            error={errors.linkedConfigKey}
-            emptyMessage="No configurations available."
-            renderEmpty={() => (
-              <div>
-                <div style={{ fontSize: 13, color: TEXT_MUTED, marginBottom: 10 }}>No configurations available. Create a remote configuration first.</div>
-                <button type="button" onClick={onOpenRemoteConfigCreate} style={{ ...secondaryButtonStyle, padding: "8px 12px" }}>Create Remote Configuration</button>
-              </div>
-            )}
-          />
-
-          {eligibleConfigs.length === 0 && (
-            <div style={{ padding: "12px 14px", borderRadius: 10, border: "1px solid #FCD34D", background: "#FFFBEB", color: "#92400E", fontSize: 13 }}>
-              No configurations available. Create a remote configuration first.
-            </div>
-          )}
-
-          {selectedConfig && (
-            <div style={{ padding: 16, borderRadius: 12, border: `1px solid ${BORDER}`, background: SOFT }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 12 }}>
-                <div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: TEXT }}>{selectedConfig.name}</div>
-                  <div style={{ marginTop: 3, fontSize: 12, color: TEXT_MUTED, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace" }}>{selectedConfig.key}</div>
-                </div>
-                <ConfigStatusBadge status={selectedConfig.status} />
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12 }}>
-                {selectedConfig.parameters.map((parameter) => (
-                  <div key={parameter.id} style={{ padding: 12, borderRadius: 10, border: `1px solid ${BORDER}`, background: WHITE }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: TEXT }}>{parameter.key}</div>
-                    <div style={{ marginTop: 2, fontSize: 11, color: TEXT_MUTED }}>{parameter.type}</div>
-                    <div style={{ marginTop: 8, fontSize: 12, color: TEXT_MUTED, fontFamily: parameter.type === "JSON" ? "ui-monospace, SFMono-Regular, Menlo, monospace" : "inherit", whiteSpace: "pre-wrap" }}>
-                      {stringifyParameterValue(parameter)}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div>
-            <label style={{ display: "block", marginBottom: 8, fontSize: 12, fontWeight: 700, color: TEXT_MUTED }}>HYPOTHESIS</label>
-            <textarea
-              value={form.hypothesis}
-              maxLength={280}
-              onChange={(event) => setField("hypothesis", event.target.value)}
-              rows={4}
-              placeholder="e.g. Changing the CTA button color to green will increase purchase conversion by 10%"
-              style={{ ...inputStyle, resize: "vertical", borderColor: errors.hypothesis ? "#EF4444" : BORDER_DARK, boxShadow: errors.hypothesis ? "0 0 0 3px rgba(239, 68, 68, 0.12)" : "none" }}
-            />
-            <div style={{ marginTop: 6, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              {errors.hypothesis ? <div style={{ fontSize: 12, color: "#EF4444" }}>{errors.hypothesis}</div> : <span />}
-              <div style={{ fontSize: 12, color: hypothesisCount >= 280 ? "#EF4444" : TEXT_MUTED }}>{hypothesisCount}/280</div>
-            </div>
-          </div>
-
-          <SearchableSelect
-            label="PRIMARY METRIC"
-            required={true}
-            placeholder="Select a tracked event"
-            options={mockEvents.map((event) => ({ value: event.id, label: event.name }))}
-            selectedValue={form.primaryMetric}
-            onSelect={(value) => setField("primaryMetric", value)}
-            error={errors.primaryMetric}
-            emptyMessage="No events available."
-          />
-
-          {selectedMetric && (
-            <div style={{ padding: "12px 14px", borderRadius: 10, border: "1px solid rgba(0,0,0,0.1)", background: "#ececf0", color: PRIMARY, fontSize: 13 }}>
-              Baseline reference: {selectedMetric.baseline}
-            </div>
-          )}
-
-          {selectedConfig && (
-            <div>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-                <div>
-                  <h3 style={{ margin: 0, fontSize: 16, color: TEXT }}>Variants</h3>
-                  <p style={{ margin: "4px 0 0", fontSize: 13, color: TEXT_MUTED }}>Control uses the current config values. Edit only the non-control variants.</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={addVariant}
-                  disabled={form.variants.length >= 4}
-                  style={{ ...secondaryButtonStyle, opacity: form.variants.length >= 4 ? 0.5 : 1 }}
-                >
-                  + Add Variant
-                </button>
-              </div>
-
-              <div style={{ marginBottom: 14, padding: "12px 14px", borderRadius: 10, border: `1px solid ${trafficTotal === 100 ? "#86EFAC" : "#FCA5A5"}`, background: trafficTotal === 100 ? "#F0FDF4" : "#FEF2F2", color: trafficTotal === 100 ? "#166534" : "#B91C1C", fontSize: 13, fontWeight: 600 }}>
-                Traffic allocation total: {trafficTotal}% {trafficTotal === 100 ? "(Ready to launch)" : "(Must equal 100%)"}
-              </div>
-              {errors.traffic && <div style={{ marginBottom: 12, fontSize: 12, color: "#EF4444" }}>{errors.traffic}</div>}
-
-              <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                {form.variants.map((variant, variantIndex) => (
-                  <div key={variant.id} style={{ ...cardStyle, padding: 18, background: variant.locked ? "#FAFBFF" : WHITE }}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 16 }}>
-                      <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 120px", gap: 12, flex: 1 }}>
-                        <input
-                          value={variant.name}
-                          onChange={(event) => updateVariant(variant.id, (current) => ({ ...current, name: event.target.value }))}
-                          disabled={variant.locked}
-                          style={{ ...inputStyle, background: variant.locked ? "#F3F4F6" : WHITE }}
-                        />
-                        <div style={{ position: "relative" }}>
-                          <input
-                            type="number"
-                            min={variantIndex === 0 ? "1" : "0"}
-                            max="100"
-                            value={variant.traffic}
-                            onChange={(event) => updateVariant(variant.id, (current) => ({ ...current, traffic: Number(event.target.value) }))}
-                            style={inputStyle}
-                          />
-                          <span style={{ position: "absolute", right: 12, top: 12, color: TEXT_MUTED, fontSize: 12 }}>%</span>
-                        </div>
-                      </div>
-                      {variant.removable ? (
-                        <button type="button" onClick={() => removeVariant(variant.id)} style={{ ...secondaryButtonStyle, color: "#DC2626" }}>
-                          <TrashIcon />
-                        </button>
-                      ) : (
-                        <span style={{ padding: "6px 10px", borderRadius: 999, background: variant.locked ? "#ececf0" : "#ececf0", color: variant.locked ? TEXT_MUTED : PRIMARY, fontSize: 12, fontWeight: 700 }}>
-                          {variant.locked ? "Read-only" : "Required"}
-                        </span>
-                      )}
-                    </div>
-
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 14 }}>
-                      {variant.parameters.map((parameter) => (
-                        <div key={parameter.id} style={{ padding: 14, borderRadius: 12, border: `1px solid ${BORDER}`, background: SOFT }}>
-                          <div style={{ fontSize: 12, fontWeight: 700, color: TEXT_MUTED, marginBottom: 8 }}>{parameter.key}</div>
-                          <div style={{ fontSize: 11, color: TEXT_MUTED, marginBottom: 8 }}>{parameter.type}</div>
-                          {parameter.type === "Boolean" ? (
-                            <select
-                              value={String(parameter.value === true || parameter.value === "true")}
-                              disabled={variant.locked}
-                              onChange={(event) => updateVariantParameter(variant.id, parameter.id, (current) => ({ ...current, value: event.target.value === "true" }))}
-                              style={{ ...inputStyle, background: variant.locked ? "#F3F4F6" : WHITE }}
-                            >
-                              <option value="true">True</option>
-                              <option value="false">False</option>
-                            </select>
-                          ) : parameter.type === "JSON" ? (
-                            <textarea
-                              rows={4}
-                              value={String(parameter.value)}
-                              disabled={variant.locked}
-                              onChange={(event) => updateVariantParameter(variant.id, parameter.id, (current) => ({ ...current, value: event.target.value }))}
-                              style={{ ...inputStyle, resize: "vertical", background: variant.locked ? "#F3F4F6" : WHITE, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace" }}
-                            />
-                          ) : (
-                            <input
-                              type={parameter.type === "Integer" || parameter.type === "Number" ? "number" : "text"}
-                              value={parameter.value}
-                              disabled={variant.locked}
-                              onChange={(event) => updateVariantParameter(variant.id, parameter.id, (current) => ({ ...current, value: event.target.value }))}
-                              style={{ ...inputStyle, background: variant.locked ? "#F3F4F6" : WHITE }}
-                            />
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
+      {/* ── Page header ── */}
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 24 }}>
+        <div style={{ width: 5, height: 52, borderRadius: 999, background: "#3B82F6", marginTop: 2, flexShrink: 0 }} />
+        <div>
+          <h1 style={pageTitleStyle}>New Experiment</h1>
+          <p style={pageDescriptionStyle}>Define your experiment name, pick a remote config and launch an experiment.</p>
         </div>
       </div>
 
-      {/* Sticky footer */}
-      <div style={{ position: "sticky", bottom: 0, marginTop: 24, padding: "14px 0", background: PAGE_BG, borderTop: `1px solid ${BORDER}`, display: "flex", alignItems: "center", justifyContent: "space-between", zIndex: 40 }}>
-        <button onClick={showBackConfirmation} style={{ ...secondaryButtonStyle }}>← Back to experiments</button>
+      {/* ── Two-column layout ── */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: 20, alignItems: "start" }}>
+
+        {/* ── LEFT COLUMN ── */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+
+          {/* Experiment Details */}
+          <div style={{ ...cardStyle, padding: 24 }}>
+            <h3 style={{ margin: "0 0 4px", fontSize: 16, fontWeight: 700, color: TEXT }}>Experiment Details</h3>
+            <p style={{ margin: "0 0 20px", fontSize: 13, color: TEXT_MUTED }}>Set the name, linked configuration, hypothesis and goal metric.</p>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+              {/* Name */}
+              <div>
+                <label style={{ display: "block", marginBottom: 6, fontSize: 13, fontWeight: 600, color: TEXT }}>Experiment Name <span style={{ color: "#EF4444" }}>*</span></label>
+                <input
+                  value={form.name}
+                  onChange={(e) => setField("name", e.target.value)}
+                  placeholder="e.g. Homepage hero message test"
+                  style={{ ...inputStyle, borderColor: errors.name ? "#EF4444" : BORDER_DARK }}
+                />
+                {errors.name && <div style={{ marginTop: 5, fontSize: 12, color: "#EF4444" }}>{errors.name}</div>}
+              </div>
+
+              {/* Linked Config */}
+              <div>
+                <SearchableSelect
+                  label="Linked Remote Config"
+                  required={false}
+                  placeholder="Select a remote configuration"
+                  options={eligibleConfigs.map((c) => ({ value: c.key, label: c.name, subLabel: c.key }))}
+                  selectedValue={form.linkedConfigKey}
+                  onSelect={syncVariantsForConfig}
+                  error={errors.linkedConfigKey}
+                  emptyMessage="No configurations available."
+                  renderEmpty={() => (
+                    <div>
+                      <div style={{ fontSize: 13, color: TEXT_MUTED, marginBottom: 10 }}>No configurations available. Create one first.</div>
+                      <Button size="small" onClick={onOpenRemoteConfigCreate}>Create Remote Configuration</Button>
+                    </div>
+                  )}
+                />
+                {selectedConfig && (
+                  <div style={{ marginTop: 10, padding: "10px 14px", borderRadius: 10, border: `1px solid ${BORDER}`, background: SOFT, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: TEXT }}>{selectedConfig.name}</div>
+                      <div style={{ fontSize: 11, color: TEXT_MUTED, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", marginTop: 2 }}>{selectedConfig.key}</div>
+                    </div>
+                    <ConfigStatusBadge status={selectedConfig.status} />
+                  </div>
+                )}
+              </div>
+
+              {/* Hypothesis */}
+              <div>
+                <label style={{ display: "block", marginBottom: 6, fontSize: 13, fontWeight: 600, color: TEXT }}>Hypothesis</label>
+                <textarea
+                  value={form.hypothesis}
+                  maxLength={280}
+                  onChange={(e) => setField("hypothesis", e.target.value)}
+                  rows={3}
+                  placeholder="e.g. Changing the CTA button color to green will increase purchase conversion by 10%"
+                  style={{ ...inputStyle, resize: "vertical", borderColor: errors.hypothesis ? "#EF4444" : BORDER_DARK }}
+                />
+                <div style={{ marginTop: 4, display: "flex", justifyContent: "space-between" }}>
+                  {errors.hypothesis ? <div style={{ fontSize: 12, color: "#EF4444" }}>{errors.hypothesis}</div> : <span />}
+                  <div style={{ fontSize: 11, color: hypothesisCount >= 280 ? "#EF4444" : TEXT_MUTED }}>{hypothesisCount}/280</div>
+                </div>
+              </div>
+
+              {/* Primary Metric */}
+              <div>
+                <SearchableSelect
+                  label="Primary Metric"
+                  required={true}
+                  placeholder="Select a tracked event"
+                  options={mockEvents.map((e) => ({ value: e.id, label: e.name }))}
+                  selectedValue={form.primaryMetric}
+                  onSelect={(v) => setField("primaryMetric", v)}
+                  error={errors.primaryMetric}
+                  emptyMessage="No events available."
+                />
+                {selectedMetric && (
+                  <div style={{ marginTop: 8, padding: "10px 14px", borderRadius: 8, border: `1px solid ${BORDER}`, background: "#F0F9FF", color: "#0369A1", fontSize: 12 }}>
+                    Baseline reference: {selectedMetric.baseline}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Target Audience */}
+          <div style={{ ...cardStyle, padding: 24 }}>
+            <h3 style={{ margin: "0 0 4px", fontSize: 16, fontWeight: 700, color: TEXT }}>Target Audience</h3>
+            <p style={{ margin: "0 0 16px", fontSize: 13, color: TEXT_MUTED }}>Only users in these segments are eligible for this configuration.</p>
+
+            {filterRules.length === 0 ? (
+              <div style={{ padding: "28px 20px", border: "1.5px dashed #D1D5DB", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", background: "#FAFAFA", marginBottom: 14 }}>
+                <span style={{ fontSize: 13, color: TEXT_MUTED, fontWeight: 500 }}>Add a Filter Rule or Filter Group to start segmenting your users.</span>
+              </div>
+            ) : (
+              <div style={{ marginBottom: 14, display: "flex", flexDirection: "column", gap: 8 }}>
+                {filterRules.map((rule, i) => (
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", border: `1px solid ${BORDER}`, borderRadius: 8, background: WHITE }}>
+                    <span style={{ flex: 1, fontSize: 13, color: TEXT }}>{rule}</span>
+                    <Button size="small" type="text" danger onClick={() => setFilterRules((prev) => prev.filter((_, j) => j !== i))}>✕</Button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div style={{ display: "flex", gap: 10 }}>
+              <Button onClick={() => setFilterRules((prev) => [...prev, "user.segment = All Users"])}>Add Filter Rule</Button>
+              <Button onClick={() => setFilterRules((prev) => [...prev, "Group: Premium Users"])}>Add Filter Group</Button>
+            </div>
+          </div>
+
+          {/* Rollout Percentage + A/B Variants */}
+          <div style={{ ...cardStyle, padding: 24 }}>
+            {/* Rollout % */}
+            <div style={{ marginBottom: 24 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: TEXT }}>Rollout Percentage</h3>
+                <div style={{ position: "relative", display: "inline-flex", cursor: "default" }}
+                  onMouseEnter={(e) => { e.currentTarget.lastChild.style.visibility = "visible"; e.currentTarget.lastChild.style.opacity = "1"; }}
+                  onMouseLeave={(e) => { e.currentTarget.lastChild.style.visibility = "hidden"; e.currentTarget.lastChild.style.opacity = "0"; }}
+                >
+                  <svg width="15" height="15" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6.5" stroke="#D1D5DB"/><rect x="6.5" y="6" width="1" height="4.5" rx="0.5" fill="#9CA3AF"/><rect x="6.5" y="3.5" width="1" height="1.3" rx="0.5" fill="#9CA3AF"/></svg>
+                  <div style={{ visibility: "hidden", opacity: 0, position: "absolute", bottom: "calc(100% + 8px)", left: "50%", transform: "translateX(-50%)", background: "#111827", color: WHITE, fontSize: 12, padding: "7px 12px", borderRadius: 6, whiteSpace: "nowrap", zIndex: 9999, transition: "opacity 0.15s", pointerEvents: "none" }}>
+                    Percentage of eligible users who will receive this experiment.
+                    <span style={{ position: "absolute", top: "100%", left: "50%", transform: "translateX(-50%)", width: 0, height: 0, borderLeft: "5px solid transparent", borderRight: "5px solid transparent", borderTop: "5px solid #111827" }} />
+                  </div>
+                </div>
+              </div>
+              <p style={{ margin: "0 0 14px", fontSize: 13, color: TEXT_MUTED }}>Controls what percentage of eligible users will receive this configuration.</p>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: TEXT, minWidth: 58 }}>Rollout:</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={100}
+                  value={rolloutPct}
+                  onChange={(e) => setRolloutPct(Math.max(1, Math.min(100, Number(e.target.value))))}
+                  style={{ ...inputStyle, width: 90 }}
+                />
+                <span style={{ fontSize: 13, color: TEXT_MUTED }}>%</span>
+              </div>
+            </div>
+
+            {/* Divider */}
+            <div style={{ borderTop: `1px solid ${BORDER}`, margin: "0 -24px 24px", paddingTop: 24, paddingLeft: 24, paddingRight: 24 }}>
+              {/* A/B Variants header */}
+              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 16 }}>
+                <div>
+                  <h3 style={{ margin: "0 0 3px", fontSize: 15, fontWeight: 700, color: TEXT }}>A/B Testing Variants</h3>
+                  <p style={{ margin: 0, fontSize: 13, color: TEXT_MUTED }}>Override parameter values per variant within rollout traffic.</p>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: trafficTotal === 100 ? "#16A34A" : "#B91C1C" }}>Total: {trafficTotal}%</span>
+                  <Button
+                    size="small"
+                    onClick={addVariant}
+                    disabled={form.variants.length >= 4 || !selectedConfig}
+                  >
+                    + Add Variant
+                  </Button>
+                </div>
+              </div>
+
+              {errors.traffic && <div style={{ marginBottom: 12, padding: "8px 12px", borderRadius: 8, background: "#FEF2F2", color: "#B91C1C", fontSize: 12, fontWeight: 500 }}>{errors.traffic}</div>}
+
+              {!selectedConfig ? (
+                <div style={{ padding: "20px", border: "1.5px dashed #D1D5DB", borderRadius: 10, textAlign: "center", color: TEXT_MUTED, fontSize: 13 }}>
+                  Select a linked remote config above to configure variants.
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {form.variants.map((variant, variantIndex) => {
+                    const isExpanded = !!variantExpanded[variant.id];
+                    const isControl = variant.locked;
+                    return (
+                      <div key={variant.id} style={{ border: `1px solid ${BORDER}`, borderRadius: 10, overflow: "hidden", background: WHITE }}>
+                        {/* Variant header row */}
+                        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", background: isControl ? "#FAFBFF" : WHITE }}>
+                          <input
+                            value={variant.name}
+                            onChange={(e) => updateVariant(variant.id, (cur) => ({ ...cur, name: e.target.value }))}
+                            disabled={isControl}
+                            style={{ ...inputStyle, flex: "0 0 180px", background: isControl ? "#F3F4F6" : WHITE, fontSize: 13 }}
+                          />
+                          <span style={{ padding: "3px 10px", borderRadius: 5, fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", background: isControl ? "#EFF6FF" : "#F0FDF4", color: isControl ? "#1D4ED8" : "#15803D", border: `1px solid ${isControl ? "#BFDBFE" : "#BBF7D0"}`, whiteSpace: "nowrap" }}>
+                            {isControl ? "CONTROL GROUP" : "VARIANT"}
+                          </span>
+                          <div style={{ flex: 1 }} />
+                          <span style={{ fontSize: 12, color: TEXT_MUTED, fontWeight: 500 }}>Traffic %</span>
+                          <input
+                            type="number"
+                            min={variantIndex === 0 ? 1 : 0}
+                            max={100}
+                            value={variant.traffic}
+                            onChange={(e) => updateVariant(variant.id, (cur) => ({ ...cur, traffic: Number(e.target.value) }))}
+                            style={{ ...inputStyle, width: 70, textAlign: "center", fontSize: 13 }}
+                          />
+                          {variant.removable ? (
+                            <Button
+                              size="small"
+                              type="text"
+                              danger
+                              icon={<TrashIcon />}
+                              onClick={() => removeVariant(variant.id)}
+                            />
+                          ) : <div style={{ width: 24 }} />}
+                          <button
+                            type="button"
+                            onClick={() => toggleVariant(variant.id)}
+                            style={{ background: "none", border: "none", cursor: "pointer", color: TEXT_MUTED, padding: 4, display: "flex", alignItems: "center" }}
+                          >
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ transform: isExpanded ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}>
+                              <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                          </button>
+                        </div>
+
+                        {/* Expanded parameter section */}
+                        {isExpanded && variant.parameters.length > 0 && (
+                          <div style={{ borderTop: `1px solid ${BORDER}`, padding: 14, background: SOFT }}>
+                            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0,1fr))", gap: 12 }}>
+                              {variant.parameters.map((parameter) => (
+                                <div key={parameter.id} style={{ padding: 12, borderRadius: 8, border: `1px solid ${BORDER}`, background: WHITE }}>
+                                  <div style={{ fontSize: 12, fontWeight: 600, color: TEXT, marginBottom: 4 }}>{parameter.key}</div>
+                                  <div style={{ fontSize: 11, color: TEXT_MUTED, marginBottom: 8 }}>{parameter.type}</div>
+                                  {parameter.type === "Boolean" ? (
+                                    <Select
+                                      size="small"
+                                      style={{ width: "100%" }}
+                                      value={String(parameter.value === true || parameter.value === "true")}
+                                      disabled={isControl}
+                                      onChange={(v) => updateVariantParameter(variant.id, parameter.id, (cur) => ({ ...cur, value: v === "true" }))}
+                                      options={[{ value: "true", label: "True" }, { value: "false", label: "False" }]}
+                                    />
+                                  ) : parameter.type === "JSON" ? (
+                                    <textarea
+                                      rows={3}
+                                      value={String(parameter.value)}
+                                      disabled={isControl}
+                                      onChange={(e) => updateVariantParameter(variant.id, parameter.id, (cur) => ({ ...cur, value: e.target.value }))}
+                                      style={{ ...inputStyle, resize: "vertical", background: isControl ? "#F3F4F6" : WHITE, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", fontSize: 11 }}
+                                    />
+                                  ) : (
+                                    <input
+                                      type={parameter.type === "Integer" || parameter.type === "Number" ? "number" : "text"}
+                                      value={parameter.value}
+                                      disabled={isControl}
+                                      onChange={(e) => updateVariantParameter(variant.id, parameter.id, (cur) => ({ ...cur, value: e.target.value }))}
+                                      style={{ ...inputStyle, background: isControl ? "#F3F4F6" : WHITE, fontSize: 13 }}
+                                    />
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {isExpanded && variant.parameters.length === 0 && (
+                          <div style={{ borderTop: `1px solid ${BORDER}`, padding: "14px", background: SOFT, color: TEXT_MUTED, fontSize: 13, textAlign: "center" }}>
+                            No parameters defined for this variant.
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* ── RIGHT COLUMN — Summary ── */}
+        <div style={{ position: "sticky", top: 24 }}>
+          <div style={{ ...cardStyle, padding: 20 }}>
+            <h3 style={{ margin: "0 0 16px", fontSize: 15, fontWeight: 700, color: TEXT }}>Summary</h3>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {/* Segments */}
+              <div>
+                <div style={{ fontSize: 12, color: TEXT_MUTED, marginBottom: 3 }}>Segments:</div>
+                <div style={{ fontSize: 13, color: TEXT, fontWeight: 500 }}>
+                  {filterRules.length === 0 ? "No filters" : `${filterRules.length} filter${filterRules.length > 1 ? "s" : ""} applied`}
+                </div>
+              </div>
+              {/* Users */}
+              <div>
+                <div style={{ fontSize: 12, color: TEXT_MUTED, marginBottom: 3 }}>Number of Users:</div>
+                <div style={{ fontSize: 13, color: TEXT, fontWeight: 500 }}>{rolloutUsers.toLocaleString()}</div>
+              </div>
+              {/* Rollout */}
+              <div>
+                <div style={{ fontSize: 12, color: TEXT_MUTED, marginBottom: 3 }}>Rollout:</div>
+                <div style={{ fontSize: 13, color: TEXT, fontWeight: 500 }}>{rolloutPct}%</div>
+              </div>
+
+              {form.variants.length > 0 && (
+                <>
+                  <div style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 12 }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: TEXT, marginBottom: 8 }}>Variants:</div>
+                    {form.variants.map((v) => {
+                      const variantUsers = Math.round(rolloutUsers * (v.traffic / 100));
+                      return (
+                        <div key={v.id} style={{ fontSize: 12, color: TEXT_MUTED, marginBottom: 4 }}>
+                          {v.name} — {v.traffic}% ({variantUsers.toLocaleString()} users)
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+
+              {form.primaryMetric && (
+                <div style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 12 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: TEXT, marginBottom: 6 }}>Conversion Goals:</div>
+                  <div style={{ fontSize: 12, color: TEXT_MUTED, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace" }}>
+                    {form.primaryMetric}
+                  </div>
+                </div>
+              )}
+
+              {form.name && (
+                <div style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 12 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: TEXT, marginBottom: 4 }}>Experiment:</div>
+                  <div style={{ fontSize: 12, color: TEXT_MUTED }}>{form.name}</div>
+                  {form.linkedConfigKey && (
+                    <div style={{ marginTop: 4, fontSize: 11, color: TEXT_MUTED, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace" }}>{form.linkedConfigKey}</div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Fixed footer ── */}
+      <div style={{ position: "fixed", bottom: 0, left: 222, right: 0, padding: "14px 28px", background: WHITE, borderTop: "2px solid #E5E7EB", display: "flex", alignItems: "center", justifyContent: "space-between", zIndex: 40 }}>
+        <Button
+          onClick={showBackConfirmation}
+          icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>}
+        >
+          Back
+        </Button>
         <div style={{ display: "flex", gap: 10 }}>
-          <button type="button" onClick={handleSaveDraft} disabled={saveLoading} style={{ ...secondaryButtonStyle, minWidth: 118, justifyContent: "center" }}>
-            {saveLoading ? <Spinner /> : "Save Draft"}
-          </button>
-          <button type="button" onClick={handleLaunchClick} disabled={launchLoading} style={{ ...primaryButtonStyle, minWidth: 160, justifyContent: "center" }}>
-            {launchLoading ? <Spinner color="#FFFFFF" /> : "Launch Experiment"}
-          </button>
+          <Button onClick={handleSaveDraft} loading={saveLoading} disabled={saveLoading}>
+            Save as Draft
+          </Button>
+          <Button type="primary" onClick={handleLaunchClick} loading={launchLoading} disabled={launchLoading}>
+            Launch Experiment
+          </Button>
         </div>
       </div>
     </div>
