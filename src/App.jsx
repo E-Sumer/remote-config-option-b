@@ -2500,33 +2500,45 @@ function ExperimentActionMenu({ experiment, isOpen, onToggle, actions, loadingAc
               zIndex: 9999,
             }}
           >
-            {actions.map((action) => (
-              <button
-                key={action.key}
-                onClick={action.onClick}
-                disabled={Boolean(loadingAction)}
-                style={{
-                  width: "100%",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  padding: "9px 10px",
-                  border: "none",
-                  borderRadius: 8,
-                  background: "transparent",
-                  color: action.destructive ? "#DC2626" : TEXT,
-                  cursor: "pointer",
-                  fontSize: 13,
-                  textAlign: "left",
-                  opacity: loadingAction && loadingAction !== action.key ? 0.6 : 1,
-                }}
-              >
-                <span style={{ width: 16, height: 16, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
-                  {loadingAction === action.key ? <Spinner size={14} /> : action.icon}
-                </span>
-                {loadingAction === action.key ? `${action.label}...` : action.label}
-              </button>
-            ))}
+            {actions.map((action) => {
+              const isDisabled = Boolean(loadingAction) || action.disabled;
+              return (
+                <div key={action.key} style={{ position: "relative" }}
+                  onMouseEnter={(e) => { if (action.disabled && action.tooltip) { const tip = e.currentTarget.querySelector(".action-tip"); if (tip) { tip.style.visibility = "visible"; tip.style.opacity = "1"; } } }}
+                  onMouseLeave={(e) => { if (action.disabled && action.tooltip) { const tip = e.currentTarget.querySelector(".action-tip"); if (tip) { tip.style.visibility = "hidden"; tip.style.opacity = "0"; } } }}
+                >
+                  <button
+                    onClick={isDisabled ? undefined : action.onClick}
+                    disabled={isDisabled}
+                    style={{
+                      width: "100%",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 10,
+                      padding: "9px 10px",
+                      border: "none",
+                      borderRadius: 8,
+                      background: "transparent",
+                      color: action.disabled ? "#C4CAD4" : action.destructive ? "#DC2626" : TEXT,
+                      cursor: isDisabled ? "not-allowed" : "pointer",
+                      fontSize: 13,
+                      textAlign: "left",
+                      opacity: loadingAction && loadingAction !== action.key ? 0.6 : 1,
+                    }}
+                  >
+                    <span style={{ width: 16, height: 16, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+                      {loadingAction === action.key ? <Spinner size={14} /> : action.icon}
+                    </span>
+                    {loadingAction === action.key ? `${action.label}...` : action.label}
+                  </button>
+                  {action.disabled && action.tooltip && (
+                    <div className="action-tip" style={{ visibility: "hidden", opacity: 0, position: "absolute", right: "calc(100% + 8px)", top: "50%", transform: "translateY(-50%)", background: "#1F2937", color: WHITE, fontSize: 11, padding: "5px 8px", borderRadius: 6, whiteSpace: "nowrap", pointerEvents: "none", transition: "opacity 0.15s", zIndex: 99999 }}>
+                      {action.tooltip}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </>
       )}
@@ -2736,18 +2748,16 @@ function ExperimentList({
                     RUNNING: [
                       { key: "pause", label: "Pause", icon: <PauseIcon />, onClick: () => onPause(experiment) },
                       { key: "view", label: "View Report", icon: <ReportIcon />, onClick: () => onOpenReport(experiment) },
-                      { key: "edit", label: "Edit", icon: <EditIcon />, onClick: () => onOpenEditor(experiment) },
+                      { key: "edit", label: "Edit", icon: <EditIcon />, disabled: true, tooltip: "Running experiments cannot be edited" },
                     ],
                     PAUSED: [
                       { key: "resume", label: "Resume", icon: <PlayIcon />, onClick: () => onResume(experiment) },
                       { key: "view", label: "View Report", icon: <ReportIcon />, onClick: () => onOpenReport(experiment) },
                       { key: "edit", label: "Edit", icon: <EditIcon />, onClick: () => onOpenEditor(experiment) },
-                      { key: "archive", label: "Archive", icon: <ArchiveIcon />, onClick: () => onArchive(experiment) },
                     ],
                     COMPLETED: [
                       { key: "view", label: "View Report", icon: <ReportIcon />, onClick: () => onOpenReport(experiment) },
                       { key: "clone", label: "Clone", icon: <CopyIcon />, onClick: () => onClone(experiment) },
-                      { key: "archive", label: "Archive", icon: <ArchiveIcon />, onClick: () => onArchive(experiment) },
                     ],
                     DRAFT: [
                       { key: "edit", label: "Edit", icon: <EditIcon />, onClick: () => onOpenEditor(experiment) },
@@ -2757,7 +2767,6 @@ function ExperimentList({
                     winner_declared: [
                       { key: "view", label: "View Report", icon: <ReportIcon />, onClick: () => onOpenReport(experiment) },
                       { key: "clone", label: "Clone", icon: <CopyIcon />, onClick: () => onClone(experiment) },
-                      { key: "archive", label: "Archive", icon: <ArchiveIcon />, onClick: () => onArchive(experiment) },
                     ],
                   };
 
@@ -2968,22 +2977,32 @@ function CreateExperiment({
   onOpenRemoteConfigCreate,
   onSaveDraft,
   onLaunchExperiment,
+  initialExperiment,
 }) {
+  const isEditing = Boolean(initialExperiment);
+
   const eligibleConfigs = useMemo(
     () => configs.filter((config) => config.status === "Live" || config.status === "Draft"),
     [configs],
   );
 
-  const [form, setForm] = useState({
-    id: null,
-    name: "",
-    linkedConfigKey: "",
-    hypothesis: "",
-    primaryMetric: "",
-    variants: [],
-    startDate: null,
-    endDate: null,
-  });
+  const buildInitialForm = () => {
+    if (!initialExperiment) {
+      return { id: null, name: "", linkedConfigKey: "", hypothesis: "", primaryMetric: "", variants: [], startDate: null, endDate: null };
+    }
+    return {
+      id: initialExperiment.id,
+      name: initialExperiment.name || "",
+      linkedConfigKey: initialExperiment.linkedConfigKey || "",
+      hypothesis: initialExperiment.hypothesis || "",
+      primaryMetric: initialExperiment.metric || initialExperiment.primaryMetric || "",
+      variants: initialExperiment.variants || [],
+      startDate: initialExperiment.startDate ? dayjs(initialExperiment.startDate) : null,
+      endDate: initialExperiment.endDate ? dayjs(initialExperiment.endDate) : null,
+    };
+  };
+
+  const [form, setForm] = useState(buildInitialForm);
   const [errors, setErrors] = useState({});
   const [saveLoading, setSaveLoading] = useState(false);
   const [launchLoading, setLaunchLoading] = useState(false);
@@ -2992,19 +3011,10 @@ function CreateExperiment({
   const [draftConfigWarningOpen, setDraftConfigWarningOpen] = useState(false);
   const [runningConflict, setRunningConflict] = useState(null);
   const [browseSchemasOpen, setBrowseSchemasOpen] = useState(false);
-  const [rolloutPct, setRolloutPct] = useState(100);
+  const [rolloutPct, setRolloutPct] = useState(initialExperiment?.rolloutPct ?? 100);
   const [variantExpanded, setVariantExpanded] = useState({});
-  const [filterRules, setFilterRules] = useState([]);
-  const [savedSnapshot, setSavedSnapshot] = useState(JSON.stringify({
-    id: null,
-    name: "",
-    linkedConfigKey: "",
-    hypothesis: "",
-    primaryMetric: "",
-    variants: [],
-    startDate: null,
-    endDate: null,
-  }));
+  const [filterRules, setFilterRules] = useState(initialExperiment?.filterRules || []);
+  const [savedSnapshot, setSavedSnapshot] = useState(JSON.stringify(buildInitialForm()));
   const currentSnapshot = JSON.stringify(form);
   const isDirty = currentSnapshot !== savedSnapshot;
 
@@ -3264,8 +3274,8 @@ function CreateExperiment({
       <div style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 24 }}>
         <div style={{ width: 5, height: 52, borderRadius: 999, background: "#3B82F6", marginTop: 2, flexShrink: 0 }} />
         <div>
-          <h1 style={pageTitleStyle}>New Experiment</h1>
-          <p style={pageDescriptionStyle}>Define your experiment name, pick a remote config and launch an experiment.</p>
+          <h1 style={pageTitleStyle}>{isEditing ? "Edit Experiment" : "New Experiment"}</h1>
+          <p style={pageDescriptionStyle}>{isEditing ? "Update your experiment settings. Only draft experiments can be edited." : "Define your experiment name, pick a remote config and launch an experiment."}</p>
         </div>
       </div>
 
@@ -3347,8 +3357,8 @@ function CreateExperiment({
 
               {/* Experiment Duration */}
               <div>
-                <div style={{ marginBottom: 6 }}>
-                  <span style={{ fontSize: 16, fontWeight: 700, color: TEXT }}>Experiment Duration</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 6 }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: TEXT }}>Experiment Duration</span>
                 </div>
                 <p style={{ margin: "0 0 14px", fontSize: 13, color: TEXT_MUTED }}>
                   Select the start and end date range for your experiment. If you do not select date range, your experiment will run until deactivated
@@ -4983,6 +4993,7 @@ export default function App() {
   const [abView, setAbView] = useState("list");
   const [abPlaceholderTitle, setAbPlaceholderTitle] = useState("");
   const [selectedExperimentReport, setSelectedExperimentReport] = useState(null);
+  const [editingExperiment, setEditingExperiment] = useState(null);
   const [editingConfig, setEditingConfig] = useState(null);
   const [selectedConfigReport, setSelectedConfigReport] = useState(null);
   const [experiments, setExperiments] = useState(initialExperiments);
@@ -5056,9 +5067,15 @@ export default function App() {
     } else if (path.startsWith("/experiences/ab_tests")) {
       setActiveMenu("ab_testing");
       const newMatch = path === "/experiences/ab_tests/new";
+      const editMatch = path.match(/^\/experiences\/ab_tests\/(\d+)\/edit$/);
       const detailMatch = path.match(/^\/experiences\/ab_tests\/(\d+)$/);
       if (newMatch) {
         setAbView("create");
+      } else if (editMatch) {
+        const id = parseInt(editMatch[1], 10);
+        const exp = currentExperiments.find((e) => e.id === id);
+        if (exp && exp.status === "DRAFT") { setEditingExperiment(exp); setAbView("edit"); }
+        else { setAbView("list"); }
       } else if (detailMatch) {
         const id = parseInt(detailMatch[1], 10);
         const exp = currentExperiments.find((e) => e.id === id);
@@ -5215,6 +5232,15 @@ export default function App() {
     setActiveMenu("ab_testing");
     setAbView("create");
     navigate("/experiences/ab_tests/new");
+  };
+
+  const goToAbEdit = (experiment) => {
+    isNavigatingRef.current = true;
+    setActiveMenu("ab_testing");
+    setEditingExperiment(experiment);
+    setAbView("edit");
+    setOpenActionId(null);
+    navigate(`/experiences/ab_tests/${experiment.id}/edit`);
   };
 
   const pauseConflictingConfig = (_configId) => {
@@ -5559,6 +5585,22 @@ export default function App() {
       );
     }
 
+    if (abView === "edit" && editingExperiment) {
+      return (
+        <CreateExperiment
+          key={editingExperiment.id}
+          configs={configs}
+          experiments={experiments}
+          schemas={schemas}
+          onBack={goToAbList}
+          onOpenRemoteConfigCreate={goToRemoteConfigCreate}
+          onSaveDraft={saveNewExperimentDraft}
+          onLaunchExperiment={launchNewExperiment}
+          initialExperiment={editingExperiment}
+        />
+      );
+    }
+
     if (abView === "detail" && selectedExperimentReport) {
       return (
         <ExperimentDetail
@@ -5587,7 +5629,7 @@ export default function App() {
         setOpenActionId={setOpenActionId}
         onCreateNew={goToAbCreate}
         onOpenReport={openExperimentReport}
-        onOpenEditor={(experiment) => openExperimentPlaceholder(`${experiment.name} Editor`)}
+        onOpenEditor={(experiment) => goToAbEdit(experiment)}
         onOpenRemoteConfig={openRemoteConfigFromExperiment}
         onPause={handlePauseExperiment}
         onResume={handleResumeExperiment}
