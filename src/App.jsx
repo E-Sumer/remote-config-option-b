@@ -1302,7 +1302,8 @@ function RemoteConfigurationForm({
 
   const [form, setForm] = useState(buildInitialForm);
   const [step, setStep] = useState(1);
-  const [selectedSchemaId, setSelectedSchemaId] = useState(initialValue?.schemaId || null);
+  // config.id === schema.id, so use id as fallback for pre-populating the config key dropdown
+  const [selectedSchemaId, setSelectedSchemaId] = useState(initialValue?.schemaId || initialValue?.id || null);
   const [errors, setErrors] = useState({});
   const [jsonHidden, setJsonHidden] = useState(false);
   const [copyState, setCopyState] = useState("Copy");
@@ -1332,6 +1333,7 @@ function RemoteConfigurationForm({
     setErrors({});
     setConflictConfig(null);
     setKeyTouched(Boolean(initialValue?.key));
+    setSelectedSchemaId(initialValue?.schemaId || initialValue?.id || null);
     setPublishModalOpen(false);
     setLiveWarningOpen(false);
     setZeroRolloutWarning(false);
@@ -5003,6 +5005,8 @@ export default function App() {
   const [devSchemaView, setDevSchemaView] = useState("list");
   const [selectedSchema, setSelectedSchema] = useState(null);
   const [schemas, setSchemas] = useState(mockSchemas);
+  // Stores per-config edited parameter values: { [configId]: { [paramId]: value } }
+  const [configParamValues, setConfigParamValues] = useState({});
   const configs = useMemo(() => schemas.map((s) => ({
     id: s.id,
     name: s.name,
@@ -5013,12 +5017,15 @@ export default function App() {
     created: s.created,
     updated: s.updated,
     description: s.description || "",
-    parameters: s.parameters.map((p) => ({ ...p, value: p.defaultValue })),
+    parameters: s.parameters.map((p) => ({
+      ...p,
+      value: configParamValues[s.id]?.[p.id] !== undefined ? configParamValues[s.id][p.id] : p.defaultValue,
+    })),
     rollout: 100,
     version: 1.0,
     deploymentType: s.status === "Active" ? "Rolled Out" : "Draft",
     archived: false,
-  })), [schemas]);
+  })), [schemas, configParamValues]);
   const [toast, setToast] = useState(null);
   const [loadingAction, setLoadingAction] = useState(null);
   const [removeModal, setRemoveModal] = useState({ open: false, config: null });
@@ -5270,6 +5277,40 @@ export default function App() {
         params: form.parameters?.length || 0,
       };
       setEditingConfig(savedConfig);
+    }
+
+    // Persist status + values back to schemas so the derived configs always reflect the latest state
+    const newSchemaStatus = form.status === "Live" ? "Active" : "Draft";
+
+    if (remoteConfigView === "edit" && editingConfig) {
+      // Update the matching schema's status
+      setSchemas((prev) => prev.map((s) => s.id === savedConfig.id ? { ...s, status: newSchemaStatus, updated: today } : s));
+    } else {
+      // Add a new schema entry so the config appears in the list
+      const newSchema = {
+        id: savedConfig.id,
+        name: savedConfig.name,
+        key: savedConfig.key || savedConfig.name?.toLowerCase().replace(/\s+/g, "_"),
+        description: savedConfig.description || "",
+        sdks: savedConfig.sdks || [],
+        parameters: (form.parameters || []).map((p) => ({ ...p, defaultValue: p.value ?? p.defaultValue })),
+        created: today,
+        updated: today,
+        createdBy: "Emre Sumer",
+        status: newSchemaStatus,
+      };
+      setSchemas((prev) => [...prev, newSchema]);
+    }
+
+    // Persist edited parameter values so detail view shows the saved values.
+    // User edits are in the default variant's parameterOverrides, not form.parameters.value.
+    if (form.parameters?.length) {
+      const defaultVariant = form.variants?.find((v) => v.isDefault);
+      const overrides = defaultVariant?.parameterOverrides || {};
+      const paramMap = Object.fromEntries(
+        form.parameters.map((p) => [p.id, overrides[p.key] !== undefined ? overrides[p.key] : p.value])
+      );
+      setConfigParamValues((prev) => ({ ...prev, [savedConfig.id]: paramMap }));
     }
 
     if (options.showDetail) {
