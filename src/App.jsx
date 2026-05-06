@@ -3639,8 +3639,8 @@ function ExperimentDetail({ experiment, onBack, onOpenRemoteConfig, linkedConfig
 
   const dateFilterBtns = ["Today", "Yesterday", "7D", "30D", "3M", "6M", "12M"];
   const filterBtnStyle = (active) => ({
-    padding: "7px 12px", borderRadius: 8, border: `1px solid ${active ? PRIMARY : BORDER}`,
-    background: active ? PRIMARY : WHITE, color: active ? WHITE : TEXT,
+    padding: "7px 12px", borderRadius: 8, border: `1px solid ${active ? "#3B82F6" : BORDER}`,
+    background: active ? "#3B82F6" : WHITE, color: active ? WHITE : TEXT,
     fontSize: 12, fontWeight: 500, cursor: "pointer",
   });
 
@@ -3864,17 +3864,22 @@ function ExperimentDetail({ experiment, onBack, onOpenRemoteConfig, linkedConfig
 
       {/* ── Fixed footer ── */}
       <div style={{ position: "fixed", bottom: 0, left: 222, right: 0, padding: "14px 28px", background: WHITE, borderTop: "2px solid #E5E7EB", display: "flex", alignItems: "center", justifyContent: "space-between", zIndex: 40 }}>
-        <button onClick={onBack} style={{ ...secondaryButtonStyle, display: "inline-flex", alignItems: "center", gap: 7 }}>
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M9 12L4 7L9 2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+        <Button
+          onClick={onBack}
+          icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>}
+        >
           Back
-        </button>
+        </Button>
         {isWinnerDeclared ? (
-          <button onClick={() => setApplyWinnerOpen(true)} style={{ ...primaryButtonStyle, display: "inline-flex", alignItems: "center", gap: 7 }}>
-            <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M2 7.5L5.5 11L12 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          <Button
+            type="primary"
+            onClick={() => setApplyWinnerOpen(true)}
+            icon={<svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M2 7.5L5.5 11L12 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+          >
             Apply Winner
-          </button>
+          </Button>
         ) : (
-          <button onClick={onBack} style={{ ...primaryButtonStyle }}>Done</button>
+          <Button type="primary" onClick={onBack}>Done</Button>
         )}
       </div>
     </div>
