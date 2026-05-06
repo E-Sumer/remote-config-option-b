@@ -237,6 +237,8 @@ const initialExperiments = [
     confidence: 94,
     users: 45232,
     archived: false,
+    createdAt: "2025-03-10",
+    updatedAt: "2025-04-28",
   },
   {
     id: 2,
@@ -249,6 +251,8 @@ const initialExperiments = [
     confidence: 76,
     users: 32100,
     archived: false,
+    createdAt: "2025-02-14",
+    updatedAt: "2025-04-20",
   },
   {
     id: 3,
@@ -268,6 +272,8 @@ const initialExperiments = [
     startDate: "2025-01-05",
     endDate: "2025-01-19",
     durationDays: 14,
+    createdAt: "2024-12-20",
+    updatedAt: "2025-01-19",
     createdBy: "Emre Sumer",
     lastModifiedBy: "Emre Sumer",
     lastModifiedAt: "2025-01-10",
@@ -292,6 +298,8 @@ const initialExperiments = [
     confidence: null,
     users: 0,
     archived: false,
+    createdAt: "2025-04-30",
+    updatedAt: "2025-05-01",
   },
   {
     id: 5,
@@ -304,6 +312,8 @@ const initialExperiments = [
     confidence: 72,
     users: 18900,
     archived: false,
+    createdAt: "2025-03-22",
+    updatedAt: "2025-04-15",
   },
   {
     id: 6,
@@ -316,6 +326,8 @@ const initialExperiments = [
     confidence: 96,
     users: 28440,
     archived: true,
+    createdAt: "2024-11-08",
+    updatedAt: "2025-01-02",
   },
 ];
 
@@ -2536,12 +2548,10 @@ function ExperimentList({
   actionLoading,
 }) {
   const [filter, setFilter] = useState("ALL");
-  const [sortBy, setSortBy] = useState("users");
+  const [sortBy, setSortBy] = useState("updatedAt");
   const [sortDir, setSortDir] = useState("desc");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
-  const [upliftTooltipOpen, setUpliftTooltipOpen] = useState(false);
-  const [upliftTooltipPos, setUpliftTooltipPos] = useState({ x: 0, y: 0 });
   const [colTooltip, setColTooltip] = useState(null);
   const [colTooltipPos, setColTooltipPos] = useState({ x: 0, y: 0 });
 
@@ -2569,7 +2579,8 @@ function ExperimentList({
       const resolveValue = (experiment) => {
         if (sortBy === "config") return experiment.linkedConfigKey || "";
         if (sortBy === "metric") return experiment.metric || "";
-        if (sortBy === "lift") return experiment.lift === "—" ? -999 : Number(String(experiment.lift).replace("%", ""));
+        if (sortBy === "createdAt") return experiment.createdAt || "";
+        if (sortBy === "updatedAt") return experiment.updatedAt || "";
         return experiment[sortBy];
       };
 
@@ -2607,7 +2618,7 @@ function ExperimentList({
       return;
     }
     setSortBy(column);
-    setSortDir(column === "users" ? "desc" : "asc");
+    setSortDir(column === "updatedAt" || column === "createdAt" ? "desc" : "asc");
   };
 
   const renderEmptyState = () => {
@@ -2693,21 +2704,12 @@ function ExperimentList({
                     { key: "name", label: "Experiment" },
                     { key: "config", label: "Linked Config", tooltip: "The Remote Config key this experiment is testing." },
                     { key: "metric", label: "Goal Metric" },
-                    { key: "lift", label: "Uplift" },
-                    { key: "users", label: "Users", tooltip: "Total number of unique users enrolled in this experiment." },
+                    { key: "createdAt", label: "Create Date" },
+                    { key: "updatedAt", label: "Last Updated" },
                     { key: "actions", label: "Actions", sortable: false },
                   ].map((column) => (
                     <th key={column.key} style={{ padding: "14px 16px", textAlign: column.key === "actions" ? "center" : "left", fontSize: 12, fontWeight: 600, color: TEXT_MUTED, borderBottom: `1px solid ${BORDER}` }}>
                       {column.label}
-                      {column.key === "lift" && (
-                        <span
-                          style={{ display: "inline-flex", cursor: "default", verticalAlign: "middle", marginLeft: 4 }}
-                          onMouseEnter={(e) => { const r = e.currentTarget.getBoundingClientRect(); setUpliftTooltipPos({ x: r.left + r.width / 2, y: r.top }); setUpliftTooltipOpen(true); }}
-                          onMouseLeave={() => setUpliftTooltipOpen(false)}
-                        >
-                          <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6.5" stroke="#D1D5DB"/><rect x="6.5" y="6" width="1" height="4.5" rx="0.5" fill="#9CA3AF"/><rect x="6.5" y="3.5" width="1" height="1.3" rx="0.5" fill="#9CA3AF"/></svg>
-                        </span>
-                      )}
                       {column.tooltip && (
                         <span
                           style={{ display: "inline-flex", cursor: "default", verticalAlign: "middle", marginLeft: 4 }}
@@ -2724,7 +2726,6 @@ function ExperimentList({
               <tbody>
                 {pagedExperiments.map((experiment) => {
                   const linkedConfig = configMap.get(experiment.linkedConfigKey);
-                  const liftColor = experiment.lift === "—" ? TEXT_MUTED : String(experiment.lift).startsWith("-") ? "#DC2626" : "#16A34A";
 
                   const actionsByStatus = {
                     RUNNING: [
@@ -2753,6 +2754,11 @@ function ExperimentList({
                       { key: "clone", label: "Clone", icon: <CopyIcon />, onClick: () => onClone(experiment) },
                       { key: "archive", label: "Archive", icon: <ArchiveIcon />, onClick: () => onArchive(experiment) },
                     ],
+                  };
+
+                  const fmtTableDate = (iso) => {
+                    if (!iso) return "—";
+                    return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
                   };
 
                   return (
@@ -2786,8 +2792,8 @@ function ExperimentList({
                       <td style={{ padding: "14px 16px", color: experiment.metric ? TEXT_MUTED : "#D97706", fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", fontSize: 12 }}>
                         {experiment.metric || "—"}
                       </td>
-                      <td style={{ padding: "14px 16px", color: liftColor, fontWeight: 700 }}>{experiment.lift}</td>
-                      <td style={{ padding: "14px 16px", color: TEXT }}>{Number(experiment.users || 0).toLocaleString()}</td>
+                      <td style={{ padding: "14px 16px", color: TEXT_MUTED, fontSize: 13 }}>{fmtTableDate(experiment.createdAt)}</td>
+                      <td style={{ padding: "14px 16px", color: TEXT_MUTED, fontSize: 13 }}>{fmtTableDate(experiment.updatedAt)}</td>
                       <td style={{ padding: "12px 16px", textAlign: "center" }} onClick={(event) => event.stopPropagation()}>
                         <ExperimentActionMenu
                           experiment={experiment}
@@ -2843,12 +2849,6 @@ function ExperimentList({
             </div>
           </div>
         </>
-      )}
-      {upliftTooltipOpen && (
-        <div style={{ position: "fixed", left: upliftTooltipPos.x, top: upliftTooltipPos.y - 8, transform: "translateX(-50%) translateY(-100%)", background: "#111827", color: "#fff", fontSize: 12, fontWeight: 400, padding: "7px 12px", borderRadius: 6, whiteSpace: "nowrap", boxShadow: "0 4px 12px rgba(0,0,0,0.15)", zIndex: 9999, pointerEvents: "none" }}>
-          Relative change in goal metric vs. control variant.
-          <span style={{ position: "absolute", top: "100%", left: "50%", transform: "translateX(-50%)", width: 0, height: 0, borderLeft: "5px solid transparent", borderRight: "5px solid transparent", borderTop: "5px solid #111827" }} />
-        </div>
       )}
       {colTooltip && (
         <div style={{ position: "fixed", left: colTooltipPos.x, top: colTooltipPos.y - 8, transform: "translateX(-50%) translateY(-100%)", background: "#111827", color: "#fff", fontSize: 12, fontWeight: 400, padding: "7px 12px", borderRadius: 6, whiteSpace: "nowrap", boxShadow: "0 4px 12px rgba(0,0,0,0.15)", zIndex: 9999, pointerEvents: "none" }}>
