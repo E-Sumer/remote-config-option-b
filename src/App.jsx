@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { App as AntApp, Button, Alert, Tag, message as antdMessage, DatePicker, Modal, Select, Segmented } from "antd";
 import dayjs from "dayjs";
@@ -4083,7 +4083,7 @@ function ExperimentDetail({ experiment, onBack, onOpenRemoteConfig, linkedConfig
                   const hasParams = schemaParams.length > 0;
                   const isLast = idx === variantRows.length - 1;
                   return (
-                    <React.Fragment key={row.id}>
+                    <Fragment key={row.id}>
                       <tr
                         onClick={() => hasParams && setExpandedVariants((prev) => ({ ...prev, [row.id]: !prev[row.id] }))}
                         style={{ borderBottom: isExpanded ? "none" : isLast ? "none" : `1px solid ${BORDER}`, cursor: hasParams ? "pointer" : "default", background: isExpanded ? "#F9FAFB" : "transparent", transition: "background 0.15s" }}
@@ -4143,7 +4143,7 @@ function ExperimentDetail({ experiment, onBack, onOpenRemoteConfig, linkedConfig
                           </td>
                         </tr>
                       )}
-                    </React.Fragment>
+                    </Fragment>
                   );
                 })}
               </tbody>
