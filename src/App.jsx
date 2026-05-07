@@ -240,6 +240,11 @@ const initialExperiments = [
     createdAt: "2025-03-10",
     updatedAt: "2025-04-28",
     createdBy: "Emre Sumer",
+    trafficSplit: { control: 50, variant_b: 50 },
+    variants: [
+      { id: "control", label: "Control", conversionRate: 0.032, users: 22616, conversions: 723, parameterOverrides: { hero_image_size: "large", show_reviews: "true", cta_label: "Add to Cart", related_limit: "4" } },
+      { id: "variant_b", label: "Variant B", conversionRate: 0.037, users: 22616, conversions: 837, uplift: 0.12, parameterOverrides: { hero_image_size: "small", show_reviews: "false", cta_label: "Buy Now", related_limit: "6" } },
+    ],
   },
   {
     id: 2,
@@ -285,8 +290,8 @@ const initialExperiments = [
     randomizationUnit: "User ID",
     linkedConfigMeta: { name: "Search Results Display", key: "search_results_display", controlValue: false, variantBValue: true },
     variants: [
-      { id: "control", label: "Control", conversionRate: 0.032, users: 31675, conversions: 1014, isWinner: false },
-      { id: "variant_b", label: "Variant B", conversionRate: 0.039, users: 31675, conversions: 1235, uplift: 0.23, upliftAbsolute: 0.007, isWinner: true },
+      { id: "control", label: "Control", conversionRate: 0.032, users: 31675, conversions: 1014, isWinner: false, parameterOverrides: { page_size: "20", show_filters: "true", layout: "grid" } },
+      { id: "variant_b", label: "Variant B", conversionRate: 0.039, users: 31675, conversions: 1235, uplift: 0.23, upliftAbsolute: 0.007, isWinner: true, parameterOverrides: { page_size: "20", show_filters: "false", layout: "list" } },
     ],
   },
   {
@@ -318,6 +323,11 @@ const initialExperiments = [
     createdAt: "2025-03-22",
     updatedAt: "2025-04-15",
     createdBy: "Burak Alparslan",
+    trafficSplit: { control: 50, variant_b: 50 },
+    variants: [
+      { id: "control", label: "Control", conversionRate: 0.028, users: 9450, conversions: 265, parameterOverrides: { hero_image_size: "large", show_reviews: "true", cta_label: "Add to Cart", related_limit: "4" } },
+      { id: "variant_b", label: "Variant B", conversionRate: 0.031, users: 9450, conversions: 293, uplift: 0.05, parameterOverrides: { hero_image_size: "medium", show_reviews: "true", cta_label: "Shop Now", related_limit: "8" } },
+    ],
   },
   {
     id: 6,
@@ -3760,6 +3770,7 @@ function ApplyWinnerModal({ open, experiment, onCancel, onConfirm }) {
 function ExperimentDetail({ experiment, onBack, onOpenRemoteConfig, linkedConfig }) {
   const [applyWinnerOpen, setApplyWinnerOpen] = useState(false);
   const [stopConfirmOpen, setStopConfirmOpen] = useState(false);
+  const [expandedVariants, setExpandedVariants] = useState({});
   const [activeDateFilter, setActiveDateFilter] = useState("30D");
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
@@ -4037,43 +4048,104 @@ function ExperimentDetail({ experiment, onBack, onOpenRemoteConfig, linkedConfig
             <h3 style={{ margin: "0 0 16px", fontSize: 15, fontWeight: 700, color: TEXT }}>Variant Breakdown</h3>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, tableLayout: "fixed" }}>
               <colgroup>
-                <col style={{ width: "34%" }} />
+                <col style={{ width: "32%" }} />
+                <col style={{ width: "14%" }} />
+                <col style={{ width: "14%" }} />
                 <col style={{ width: "16%" }} />
-                <col style={{ width: "16%" }} />
-                <col style={{ width: "18%" }} />
-                <col style={{ width: "16%" }} />
+                <col style={{ width: "14%" }} />
+                <col style={{ width: "10%" }} />
               </colgroup>
               <thead>
                 <tr>
-                  <th style={{ padding: "10px 14px", textAlign: "left", fontSize: 12, fontWeight: 600, color: TEXT_MUTED, borderBottom: `1px solid ${BORDER}` }}>Variations</th>
+                  <th style={{ padding: "10px 14px", textAlign: "left", fontSize: 11, fontWeight: 700, color: TEXT_MUTED, letterSpacing: "0.05em", textTransform: "uppercase", borderBottom: `1px solid ${BORDER}` }}>Variations</th>
                   {vtCols.map((col) => (
-                    <th key={col.key} style={{ padding: "10px 14px", textAlign: "left", fontSize: 12, fontWeight: 600, color: TEXT_MUTED, borderBottom: `1px solid ${BORDER}` }}>
-                      {col.label}
-                      <span style={{ display: "inline-flex", cursor: "default", verticalAlign: "middle", marginLeft: 4 }}
-                        onMouseEnter={(e) => { const r = e.currentTarget.getBoundingClientRect(); setVttPos({ x: r.left + r.width / 2, y: r.top }); setVttOpen(col.tooltip); }}
-                        onMouseLeave={() => setVttOpen(null)}
-                      >
-                        <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6.5" stroke="#D1D5DB"/><rect x="6.5" y="6" width="1" height="4.5" rx="0.5" fill="#9CA3AF"/><rect x="6.5" y="3.5" width="1" height="1.3" rx="0.5" fill="#9CA3AF"/></svg>
+                    <th key={col.key} style={{ padding: "10px 14px", textAlign: "left", fontSize: 11, fontWeight: 700, color: TEXT_MUTED, letterSpacing: "0.05em", textTransform: "uppercase", borderBottom: `1px solid ${BORDER}` }}>
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                        {col.label}
+                        <span style={{ display: "inline-flex", cursor: "default" }}
+                          onMouseEnter={(e) => { const r = e.currentTarget.getBoundingClientRect(); setVttPos({ x: r.left + r.width / 2, y: r.top }); setVttOpen(col.tooltip); }}
+                          onMouseLeave={() => setVttOpen(null)}
+                        >
+                          <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6.5" stroke="#D1D5DB"/><rect x="6.5" y="6" width="1" height="4.5" rx="0.5" fill="#9CA3AF"/><rect x="6.5" y="3.5" width="1" height="1.3" rx="0.5" fill="#9CA3AF"/></svg>
+                        </span>
                       </span>
                     </th>
                   ))}
+                  <th style={{ borderBottom: `1px solid ${BORDER}` }} />
                 </tr>
               </thead>
               <tbody>
-                {variantRows.map((row, idx) => (
-                  <tr key={row.id} style={{ borderBottom: idx < variantRows.length - 1 ? `1px solid ${BORDER}` : "none" }}>
-                    <td style={{ padding: "14px 14px" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <span style={{ display: "inline-flex", alignItems: "center", padding: "2px 8px", borderRadius: 5, fontSize: 11, fontWeight: 600, background: row.badgeBg, color: row.badgeColor, border: `1px solid ${row.badgeBorder}` }}>{row.badgeLabel}</span>
-                        <span style={{ fontWeight: 500, color: TEXT }}>{row.label}</span>
-                      </div>
-                    </td>
-                    <td style={{ padding: "14px 14px", color: TEXT }}>{row.users.toLocaleString()}</td>
-                    <td style={{ padding: "14px 14px", color: TEXT }}>{row.conversions.toLocaleString()}</td>
-                    <td style={{ padding: "14px 14px", color: TEXT }}>{row.rate.toFixed(2)}%</td>
-                    <td style={{ padding: "14px 14px", color: row.upliftColor, fontWeight: row.uplift !== "—" ? 700 : 400 }}>{row.uplift}</td>
-                  </tr>
-                ))}
+                {variantRows.map((row, idx) => {
+                  const isExpanded = Boolean(expandedVariants[row.id]);
+                  const variantData = expVariants.find((v) => v.id === row.id);
+                  const overrides = variantData?.parameterOverrides || {};
+                  const schemaParams = linkedConfig?.parameters || [];
+                  const hasParams = schemaParams.length > 0;
+                  const isLast = idx === variantRows.length - 1;
+                  return (
+                    <React.Fragment key={row.id}>
+                      <tr
+                        onClick={() => hasParams && setExpandedVariants((prev) => ({ ...prev, [row.id]: !prev[row.id] }))}
+                        style={{ borderBottom: isExpanded ? "none" : isLast ? "none" : `1px solid ${BORDER}`, cursor: hasParams ? "pointer" : "default", background: isExpanded ? "#F9FAFB" : "transparent", transition: "background 0.15s" }}
+                        onMouseEnter={(e) => { if (hasParams && !isExpanded) e.currentTarget.style.background = "#F9FAFB"; }}
+                        onMouseLeave={(e) => { if (!isExpanded) e.currentTarget.style.background = "transparent"; }}
+                      >
+                        <td style={{ padding: "14px 14px" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <span style={{ display: "inline-flex", alignItems: "center", padding: "2px 8px", borderRadius: 5, fontSize: 11, fontWeight: 600, background: row.badgeBg, color: row.badgeColor, border: `1px solid ${row.badgeBorder}`, flexShrink: 0 }}>{row.badgeLabel}</span>
+                            <span style={{ fontWeight: 500, color: TEXT }}>{row.label}</span>
+                          </div>
+                        </td>
+                        <td style={{ padding: "14px 14px", color: TEXT }}>{row.users.toLocaleString()}</td>
+                        <td style={{ padding: "14px 14px", color: TEXT }}>{row.conversions.toLocaleString()}</td>
+                        <td style={{ padding: "14px 14px", color: TEXT }}>{row.rate.toFixed(2)}%</td>
+                        <td style={{ padding: "14px 14px", color: row.upliftColor, fontWeight: row.uplift !== "—" ? 700 : 400 }}>{row.uplift}</td>
+                        <td style={{ padding: "14px 14px", textAlign: "right" }}>
+                          {hasParams && (
+                            <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", color: "#6B7280", transition: "transform 0.25s ease", transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)" }}>
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                      {isExpanded && hasParams && (
+                        <tr>
+                          <td colSpan={6} style={{ padding: 0, borderBottom: isLast ? "none" : `1px solid ${BORDER}` }}>
+                            <div style={{ background: "#F9FAFB", borderTop: `1px dashed ${BORDER}`, padding: "16px 20px 20px" }}>
+                              <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: 14 }}>
+                                Configuration Parameters
+                              </div>
+                              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12 }}>
+                                {schemaParams.map((param) => {
+                                  const displayValue = overrides[param.key] !== undefined ? String(overrides[param.key]) : String(param.defaultValue ?? "—");
+                                  const isBool = param.type === "Boolean";
+                                  return (
+                                    <div key={param.id || param.key} style={{ background: WHITE, border: `1px solid ${BORDER}`, borderRadius: 10, padding: "14px 16px" }}>
+                                      <div style={{ fontSize: 12, fontWeight: 600, color: "#6B7280", marginBottom: 2 }}>{param.key}</div>
+                                      <div style={{ fontSize: 11, color: "#9CA3AF", marginBottom: 10 }}>{param.type}</div>
+                                      {isBool ? (
+                                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#F3F4F6", border: `1px solid ${BORDER}`, borderRadius: 7, padding: "9px 12px", color: "#9CA3AF", fontSize: 13, cursor: "not-allowed" }}>
+                                          <span style={{ color: "#6B7280", fontWeight: 500 }}>
+                                            {displayValue.toLowerCase() === "true" ? "True" : "False"}
+                                          </span>
+                                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#C4CAD4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+                                        </div>
+                                      ) : (
+                                        <div style={{ background: "#F3F4F6", border: `1px solid ${BORDER}`, borderRadius: 7, padding: "9px 12px", color: "#6B7280", fontSize: 13, cursor: "not-allowed", minHeight: 38 }}>
+                                          {displayValue}
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
               </tbody>
             </table>
             {vttOpen && (
