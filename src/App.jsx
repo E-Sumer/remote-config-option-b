@@ -4173,6 +4173,28 @@ function ExperimentDetail({ experiment, onBack, onOpenRemoteConfig, linkedConfig
   );
 }
 
+// ─── SDK Key Tooltip ───────────────────────────────────────────────────────
+function SdkKeyTooltip() {
+  const [visible, setVisible] = useState(false);
+  return (
+    <span
+      style={{ position: "relative", display: "inline-flex", alignItems: "center", cursor: "help", color: "#9CA3AF" }}
+      onMouseEnter={() => setVisible(true)}
+      onMouseLeave={() => setVisible(false)}
+    >
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>
+      </svg>
+      {visible && (
+        <div style={{ position: "absolute", bottom: "calc(100% + 7px)", left: "50%", transform: "translateX(-50%)", background: "#1F2937", color: "#F9FAFB", fontSize: 12, fontWeight: 400, lineHeight: 1.5, padding: "8px 11px", borderRadius: 7, whiteSpace: "nowrap", boxShadow: "0 4px 14px rgba(0,0,0,0.18)", zIndex: 9999, pointerEvents: "none", maxWidth: 320, whiteSpace: "normal", width: 280 }}>
+          Developers reference this key in the SDK to pull this config — it can map to any part of your app.
+          <span style={{ position: "absolute", top: "100%", left: "50%", transform: "translateX(-50%)", width: 0, height: 0, borderLeft: "5px solid transparent", borderRight: "5px solid transparent", borderTop: "5px solid #1F2937" }} />
+        </div>
+      )}
+    </span>
+  );
+}
+
 // ─── SDK Pill ──────────────────────────────────────────────────────────────
 function SdkPill({ sdk }) {
   const colors = {
@@ -4550,7 +4572,10 @@ function DevRemoteConfigDetail({ schema, onBack, onDuplicate }) {
               <input value={schema.name} readOnly style={disabledInput} />
             </div>
             <div>
-              <label style={{ display: "block", marginBottom: 6, fontSize: 12, fontWeight: 700, color: TEXT_MUTED }}>KEY (SDK IDENTIFIER)</label>
+              <label style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 6, fontSize: 12, fontWeight: 700, color: TEXT_MUTED }}>
+                KEY (SDK IDENTIFIER)
+                <SdkKeyTooltip />
+              </label>
               <input value={schema.key} readOnly style={{ ...disabledInput, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", fontSize: 12 }} />
             </div>
             <div>
@@ -4784,7 +4809,10 @@ ${params.slice(0, 3).map((p) => `final ${p.key || "param"} = config.get('${p.key
               {errors.name && <div style={{ marginTop: 5, fontSize: 12, color: "#EF4444" }}>{errors.name}</div>}
             </div>
             <div>
-              <label style={{ display: "block", marginBottom: 6, fontSize: 12, fontWeight: 700, color: TEXT_MUTED }}>KEY (SDK IDENTIFIER)</label>
+              <label style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 6, fontSize: 12, fontWeight: 700, color: TEXT_MUTED }}>
+                KEY (SDK IDENTIFIER)
+                <SdkKeyTooltip />
+              </label>
               <div style={{ position: "relative" }}>
                 <input
                   value={key}
@@ -4957,7 +4985,7 @@ ${params.slice(0, 3).map((p) => `final ${p.key || "param"} = config.get('${p.key
         </Button>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <Button onClick={handleSaveAsDraft}>Save as Draft</Button>
-          <Button type="primary" onClick={handleSave}>Publish Config</Button>
+          <Button type="primary" onClick={handleSave}>Activate Config</Button>
         </div>
       </div>
     </div>
