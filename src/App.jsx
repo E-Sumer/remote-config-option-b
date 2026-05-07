@@ -4681,7 +4681,7 @@ ${params.slice(0, 3).map((p) => `final ${p.key || "param"} = config.get('${p.key
 
       <div style={{ display: "flex", flexDirection: "column", gap: 18, flex: 1, paddingBottom: 90 }}>
         {/* Experience usage warning */}
-        {isEdit && isUsedInExperience && (
+        {isEdit && isUsedInExperience && schema.status !== "Draft" && (
           <Alert
             type="info"
             showIcon
