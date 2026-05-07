@@ -4078,7 +4078,10 @@ function ExperimentDetail({ experiment, onBack, onOpenRemoteConfig, linkedConfig
                 {variantRows.map((row, idx) => {
                   const isExpanded = Boolean(expandedVariants[row.id]);
                   const variantData = expVariants.find((v) => v.id === row.id);
-                  const overrides = variantData?.parameterOverrides || {};
+                  // Support both structures: parameterOverrides {key:val} (mock data)
+                  // and parameters [{key, value}] (saved from CreateExperiment)
+                  const overrides = variantData?.parameterOverrides
+                    || Object.fromEntries((variantData?.parameters || []).map((p) => [p.key, p.value]));
                   const schemaParams = linkedConfig?.parameters || [];
                   const hasParams = schemaParams.length > 0;
                   const isLast = idx === variantRows.length - 1;
