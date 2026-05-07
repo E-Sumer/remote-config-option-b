@@ -3974,11 +3974,34 @@ function ExperimentDetail({ experiment, onBack, onOpenRemoteConfig, linkedConfig
     },
   ];
 
+  const isEventCount = experiment.metricMeasurement === "event_count";
   const vtCols = [
-    { key: "users", label: "Users", tooltip: "Number of unique users assigned to this variant." },
-    { key: "conversions", label: "Conversions", tooltip: "Total goal metric events recorded for users in this variant." },
-    { key: "rate", label: "Conversion Rate", tooltip: "Percentage of users who completed the goal metric in this variant." },
-    { key: "uplift", label: "Uplift", tooltip: "Relative change in conversion rate compared to the control group." },
+    {
+      key: "users",
+      label: "Users",
+      tooltip: "Total number of unique users who were exposed to this variant during the experiment period.",
+    },
+    {
+      key: "conversions",
+      label: "Conversions",
+      tooltip: isEventCount
+        ? "Total number of times the goal metric was triggered by users in this variant, including repeated occurrences from the same user."
+        : "Number of distinct users who triggered the goal metric at least once after being exposed to this variant.",
+    },
+    {
+      key: "rate",
+      label: isEventCount ? "Avg. Events / User" : "Conversion Rate",
+      tooltip: isEventCount
+        ? "Average number of goal metric occurrences per exposed user. Formula: Total events ÷ Users"
+        : "Percentage of exposed users who triggered the goal metric at least once. Formula: Conversions ÷ Users × 100",
+    },
+    {
+      key: "uplift",
+      label: "Uplift",
+      tooltip: isEventCount
+        ? "How much this variant's average events per user differs from the Control group, expressed as a relative percentage. Formula: (Variant avg − Control avg) ÷ Control avg × 100"
+        : "How much this variant's conversion rate differs from the Control group, expressed as a relative percentage. Negative means the variant underperformed. Formula: (Variant rate − Control rate) ÷ Control rate × 100",
+    },
   ];
 
   return (
@@ -4235,7 +4258,7 @@ function ExperimentDetail({ experiment, onBack, onOpenRemoteConfig, linkedConfig
               </tbody>
             </table>
             {vttOpen && (
-              <div style={{ position: "fixed", left: vttPos.x, top: vttPos.y - 8, transform: "translateX(-50%) translateY(-100%)", background: "#111827", color: WHITE, fontSize: 12, fontWeight: 400, padding: "7px 12px", borderRadius: 6, whiteSpace: "nowrap", boxShadow: "0 4px 12px rgba(0,0,0,0.15)", zIndex: 9999, pointerEvents: "none" }}>
+              <div style={{ position: "fixed", left: vttPos.x, top: vttPos.y - 8, transform: "translateX(-50%) translateY(-100%)", background: "#111827", color: WHITE, fontSize: 12, fontWeight: 400, padding: "8px 12px", borderRadius: 6, whiteSpace: "normal", maxWidth: 280, lineHeight: 1.5, boxShadow: "0 4px 12px rgba(0,0,0,0.15)", zIndex: 9999, pointerEvents: "none" }}>
                 {vttOpen}
                 <span style={{ position: "absolute", top: "100%", left: "50%", transform: "translateX(-50%)", width: 0, height: 0, borderLeft: "5px solid transparent", borderRight: "5px solid transparent", borderTop: "5px solid #111827" }} />
               </div>
