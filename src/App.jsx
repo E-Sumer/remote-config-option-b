@@ -757,7 +757,7 @@ function ConfirmModal({ open, title, message, summary, warning, confirmLabel, co
             {/* Variants section */}
             {summary.variants && summary.variants.length > 0 && (
               <div>
-                <div style={{ padding: "8px 14px 4px", fontSize: 11, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.06em" }}>Variants</div>
+                <div style={{ padding: "8px 14px 4px", fontSize: 11, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.06em" }}>Rollout Groups</div>
                 {summary.variants.map((v, i) => (
                   <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 14px", borderTop: "1px solid #F3F4F6" }}>
                     <span style={{ width: 6, height: 6, borderRadius: "50%", background: v.isDefault ? "#D1D5DB" : "#3B82F6", flexShrink: 0 }} />
@@ -1438,7 +1438,7 @@ function RemoteConfigurationForm({
 
     customVariants.forEach((variant, i) => {
       if (!variant.segments.length) {
-        nextErrors[`variant_${variant.id}_segments`] = `"${variant.name || `Variant ${i + 1}`}" needs at least one target segment.`;
+        nextErrors[`variant_${variant.id}_segments`] = `"${variant.name || `Rollout Group ${i + 1}`}" needs at least one target segment.`;
       }
     });
 
@@ -1516,7 +1516,7 @@ function RemoteConfigurationForm({
       const deflt = current.variants.find((v) => v.isDefault);
       const newVariant = {
         id: createRcVariantId(),
-        name: `Variant ${customs.length + 1}`,
+        name: `Rollout Group ${customs.length + 1}`,
         priority: customs.length + 1,
         isDefault: false,
         segments: [],
@@ -1695,11 +1695,11 @@ function RemoteConfigurationForm({
               { label: "Name", value: form.name || "—" },
               { label: "Key", value: form.key || "—" },
               { label: "Parameters", value: String(form.parameters.length) },
-              { label: "Variants", value: `${customs.length} custom + 1 default` },
+              { label: "Rollout Groups", value: `${customs.length} custom + 1 default` },
             ],
             variants: [
               ...customs.map((v, i) => ({
-                name: `Variant ${i + 1} — ${v.name}`,
+                name: `Rollout Group ${i + 1} — ${v.name}`,
                 segment: v.segments.length > 0 ? v.segments.join(", ") : "No segment",
                 rollout: v.rolloutPercentage,
                 isDefault: false,
@@ -1895,7 +1895,7 @@ function RemoteConfigurationForm({
                         placeholder="e.g. VIP Experience"
                         style={{ flex: 1, border: "none", borderBottom: "2px solid transparent", outline: "none", fontSize: 15, fontWeight: 600, color: "#111827", background: "transparent", padding: "2px 0", transition: "border-color 0.15s" }}
                         onFocus={(e) => { e.target.style.borderBottomColor = "#3B82F6"; }}
-                        onBlur={(e) => { e.target.style.borderBottomColor = "transparent"; if (!e.target.value.trim()) updateVariant(variant.id, (v) => ({ ...v, name: `Variant ${idx + 1}` })); }}
+                        onBlur={(e) => { e.target.style.borderBottomColor = "transparent"; if (!e.target.value.trim()) updateVariant(variant.id, (v) => ({ ...v, name: `Rollout Group ${idx + 1}` })); }}
                       />
                       <button
                         onClick={() => removeVariant(variant.id)}
@@ -2203,7 +2203,7 @@ function RemoteConfigurationForm({
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
                   <path d="M8 2a6 6 0 1 0 0 12A6 6 0 0 0 8 2ZM0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-3.5a.75.75 0 0 1 .75.75v2h2a.75.75 0 0 1 0 1.5h-2v2a.75.75 0 0 1-1.5 0v-2h-2a.75.75 0 0 1 0-1.5h2v-2A.75.75 0 0 1 8 4.5Z"/>
                 </svg>
-                Add Variant
+                Add Rollout Group
               </button>
               {/* UI-system tooltip for max-reached state */}
               <div
@@ -5340,7 +5340,8 @@ export default function App() {
       // Update the matching schema's status
       setSchemas((prev) => prev.map((s) => s.id === savedConfig.id ? { ...s, status: newSchemaStatus, updated: today } : s));
     } else {
-      // Add a new schema entry so the config appears in the list
+      // Add a new schema entry so the config appears in the rollout list.
+      // isRolloutOnly: true prevents it from appearing in the Config Library.
       const newSchema = {
         id: savedConfig.id,
         name: savedConfig.name,
@@ -5352,6 +5353,7 @@ export default function App() {
         updated: today,
         createdBy: "Emre Sumer",
         status: newSchemaStatus,
+        isRolloutOnly: true,
       };
       setSchemas((prev) => [...prev, newSchema]);
     }
@@ -5619,7 +5621,7 @@ export default function App() {
       }
       return (
         <DevRemoteConfigList
-          schemas={schemas}
+          schemas={schemas.filter((s) => !s.isRolloutOnly)}
           onCreateNew={() => goToDevSchemaNew(null)}
           onViewSchema={(schema) => schema.status === "Active" ? goToDevSchemaDetail(schema) : goToDevSchemaNew(schema)}
         />
