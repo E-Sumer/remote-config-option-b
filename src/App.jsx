@@ -2971,6 +2971,75 @@ function SearchableSelect({
   );
 }
 
+// ─── Goal Metric tooltip ───────────────────────────────────────────────────
+function GoalMetricInfoTooltip() {
+  const [visible, setVisible] = useState(false);
+  const tooltipContent = (
+    <div style={{ lineHeight: 1.6, whiteSpace: "normal", width: 300 }}>
+      The event you want to optimize for. Choose how it's measured:
+      <ul style={{ margin: "8px 0 0", paddingLeft: 16, display: "flex", flexDirection: "column", gap: 4 }}>
+        <li><strong>Unique Users:</strong> counts how many distinct users triggered this event at least once.</li>
+        <li><strong>Event Count:</strong> counts every time the event was triggered, including repeat occurrences by the same user.</li>
+      </ul>
+      <div style={{ marginTop: 8 }}>The variant with the highest result wins.</div>
+    </div>
+  );
+  return (
+    <span
+      style={{ position: "relative", display: "inline-flex", alignItems: "center", cursor: "help", color: "#9CA3AF" }}
+      onMouseEnter={() => setVisible(true)}
+      onMouseLeave={() => setVisible(false)}
+    >
+      <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6.5" stroke="#D1D5DB"/><rect x="6.5" y="6" width="1" height="4.5" rx="0.5" fill="#9CA3AF"/><rect x="6.5" y="3.5" width="1" height="1.3" rx="0.5" fill="#9CA3AF"/></svg>
+      {visible && (
+        <div style={{ position: "absolute", bottom: "calc(100% + 8px)", left: "50%", transform: "translateX(-50%)", background: "#1F2937", color: "#F9FAFB", fontSize: 12, fontWeight: 400, padding: "10px 13px", borderRadius: 8, boxShadow: "0 4px 16px rgba(0,0,0,0.2)", zIndex: 9999, pointerEvents: "none", minWidth: 300 }}>
+          {tooltipContent}
+          <span style={{ position: "absolute", top: "100%", left: "50%", transform: "translateX(-50%)", width: 0, height: 0, borderLeft: "5px solid transparent", borderRight: "5px solid transparent", borderTop: "5px solid #1F2937" }} />
+        </div>
+      )}
+    </span>
+  );
+}
+
+// ─── Metric Measurement dropdown ────────────────────────────────────────────
+function MetricMeasurementSelect({ value, onChange }) {
+  const [open, setOpen] = useState(false);
+  const options = [
+    { value: "unique_users", label: "Unique Users" },
+    { value: "event_count", label: "Event Count" },
+  ];
+  const selected = options.find((o) => o.value === value) || options[0];
+  return (
+    <div style={{ position: "relative", width: 160, flexShrink: 0 }}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        style={{ ...inputStyle, background: WHITE, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, textAlign: "left", cursor: "pointer", appearance: "none", fontFamily: "inherit", borderColor: BORDER_DARK, boxShadow: "none", width: "100%" }}
+      >
+        <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: TEXT, fontWeight: 600 }}>{selected.label}</span>
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0, color: TEXT_MUTED, transition: "transform 0.2s", transform: open ? "rotate(180deg)" : "rotate(0deg)" }}>
+          <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </button>
+      {open && (
+        <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, background: WHITE, border: "1px solid rgba(0,0,0,0.1)", borderRadius: 8, boxShadow: "0px 8px 24px rgba(0,0,0,0.12)", zIndex: 9999, overflow: "hidden" }}>
+          {options.map((opt) => (
+            <div
+              key={opt.value}
+              onClick={() => { onChange(opt.value); setOpen(false); }}
+              style={{ padding: "10px 14px", fontSize: 13, color: opt.value === value ? "#1D4ED8" : TEXT, fontWeight: opt.value === value ? 600 : 400, background: opt.value === value ? "#EFF6FF" : "transparent", cursor: "pointer" }}
+              onMouseEnter={(e) => { if (opt.value !== value) e.currentTarget.style.background = "#F9FAFB"; }}
+              onMouseLeave={(e) => { if (opt.value !== value) e.currentTarget.style.background = "transparent"; }}
+            >
+              {opt.label}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function CreateExperiment({
   configs,
   experiments,
@@ -2990,7 +3059,7 @@ function CreateExperiment({
 
   const buildInitialForm = () => {
     if (!initialExperiment) {
-      return { id: null, name: "", linkedConfigKey: "", hypothesis: "", primaryMetric: "", variants: [], startDate: null, endDate: null };
+      return { id: null, name: "", linkedConfigKey: "", hypothesis: "", primaryMetric: "", metricMeasurement: "unique_users", variants: [], startDate: null, endDate: null };
     }
     return {
       id: initialExperiment.id,
@@ -2998,6 +3067,7 @@ function CreateExperiment({
       linkedConfigKey: initialExperiment.linkedConfigKey || "",
       hypothesis: initialExperiment.hypothesis || "",
       primaryMetric: initialExperiment.metric || initialExperiment.primaryMetric || "",
+      metricMeasurement: initialExperiment.metricMeasurement || "unique_users",
       variants: initialExperiment.variants || [],
       startDate: initialExperiment.startDate ? dayjs(initialExperiment.startDate) : null,
       endDate: initialExperiment.endDate ? dayjs(initialExperiment.endDate) : null,
@@ -3342,19 +3412,32 @@ function CreateExperiment({
 
               {/* Goal Metric */}
               <div>
-                <SearchableSelect
-                  label="Goal Metric"
-                  required={true}
-                  placeholder="Select a tracked event"
-                  options={mockEvents.map((e) => ({ value: e.id, label: e.name }))}
-                  selectedValue={form.primaryMetric}
-                  onSelect={(v) => setField("primaryMetric", v)}
-                  error={errors.primaryMetric}
-                  emptyMessage="No events available."
-                  triggerBg={WHITE}
-                  labelStyle={{ fontSize: 13, fontWeight: 600, color: TEXT }}
-                  tooltip="The primary conversion event used to measure and compare variant performance."
-                />
+                {/* Label + tooltip */}
+                <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 8 }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: TEXT }}>Goal Metric <span style={{ color: "#EF4444" }}>*</span></span>
+                  <GoalMetricInfoTooltip />
+                </div>
+                {errors.primaryMetric && <div style={{ marginBottom: 6, fontSize: 12, color: "#EF4444" }}>{errors.primaryMetric}</div>}
+                {/* Two dropdowns inline */}
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  {/* Tracked event dropdown — reuse SearchableSelect without label */}
+                  <div style={{ flex: 1 }}>
+                    <SearchableSelect
+                      placeholder="Select a tracked event"
+                      options={mockEvents.map((e) => ({ value: e.id, label: e.name }))}
+                      selectedValue={form.primaryMetric}
+                      onSelect={(v) => setField("primaryMetric", v)}
+                      emptyMessage="No events available."
+                      triggerBg={WHITE}
+                    />
+                  </div>
+                  <span style={{ fontSize: 13, color: TEXT_MUTED, whiteSpace: "nowrap", flexShrink: 0 }}>measured as</span>
+                  {/* Measurement type dropdown */}
+                  <MetricMeasurementSelect
+                    value={form.metricMeasurement}
+                    onChange={(v) => setField("metricMeasurement", v)}
+                  />
+                </div>
               </div>
 
               {/* Experiment Duration */}
@@ -5574,6 +5657,7 @@ export default function App() {
         users: 0,
         archived: false,
         variants: form.variants,
+        metricMeasurement: form.metricMeasurement || "unique_users",
       };
       setExperiments((current) => [savedExperiment, ...current]);
     }
@@ -5601,6 +5685,7 @@ export default function App() {
         lift: "—",
         archived: false,
         variants: form.variants,
+        metricMeasurement: form.metricMeasurement || "unique_users",
       };
       setExperiments((current) => current.map((experiment) => (
         experiment.id === form.id ? launchedExperiment : experiment
@@ -5619,6 +5704,7 @@ export default function App() {
         users: 0,
         archived: false,
         variants: form.variants,
+        metricMeasurement: form.metricMeasurement || "unique_users",
       };
       setExperiments((current) => [launchedExperiment, ...current]);
     }
