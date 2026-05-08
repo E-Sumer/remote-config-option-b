@@ -563,6 +563,9 @@ const mockSchemas = [
       { id: "sp3", key: "cta_label", type: "String", description: "Label on the primary CTA button", defaultValue: "Add to Cart" },
       { id: "sp4", key: "related_limit", type: "Integer", description: "Number of related products shown", defaultValue: "4" },
     ],
+    variants: [
+      { id: "rcv_default", name: "Default Experience", isDefault: true, priority: 999, segments: [], rolloutPercentage: 100, parameterOverrides: { hero_image_size: "large", show_reviews: "true", cta_label: "Add to Cart", related_limit: "4" } },
+    ],
     created: formatDateOffset(18),
     updated: formatDateOffset(3),
     createdBy: "Emre Sumer",
@@ -1822,6 +1825,19 @@ function RemoteConfigurationForm({
             {errors.key && <div style={{ marginTop: 6, fontSize: 12, color: "#EF4444" }}>{errors.key}</div>}
           </div>
         </div>
+
+        {/* Description field */}
+        <div style={{ marginTop: 16 }}>
+          <label style={{ display: "block", marginBottom: 8, fontSize: 12, fontWeight: 700, color: TEXT_MUTED }}>DESCRIPTION</label>
+          <textarea
+            value={form.description}
+            onChange={(e) => setFieldValue("description", e.target.value)}
+            placeholder="Brief description of what this rollout does…"
+            rows={3}
+            style={{ ...fieldInputStyle("description"), resize: "vertical", fontFamily: "inherit", lineHeight: 1.5 }}
+          />
+          <div style={{ marginTop: 4, fontSize: 11, color: TEXT_MUTED, textAlign: "right" }}>{form.description.length} / 300</div>
+        </div>
       </div>
 
       {(() => {
@@ -2346,26 +2362,11 @@ function RemoteConfigurationDetail({ config, experiments, onBack, onEdit, onOpen
               <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 10 }}>Rollout Setup</div>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 14, marginBottom: 20 }}>
                 {[
-                  {
-                    label: "Rollout %",
-                    value: `${rolloutPct}%`,
-                    tooltip: "Percentage of users who will receive this configuration.",
-                  },
+                  { label: "ROLLOUT %", value: `${rolloutPct}%` },
                   { label: "TARGET SEGMENT", value: activeSegments.length ? `${activeSegments.length} rule${activeSegments.length > 1 ? "s" : ""}` : "All Users" },
                 ].map((item) => (
                   <div key={item.label}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 10, fontWeight: 700, color: "#6B7280", textTransform: item.tooltip ? "none" : "uppercase", letterSpacing: item.tooltip ? "normal" : "0.07em", marginBottom: 5 }}>
-                      {item.label}
-                      {item.tooltip && (
-                        <div style={{ position: "relative", display: "inline-flex", cursor: "default" }} onMouseEnter={(e) => { e.currentTarget.lastChild.style.visibility = "visible"; e.currentTarget.lastChild.style.opacity = "1"; }} onMouseLeave={(e) => { e.currentTarget.lastChild.style.visibility = "hidden"; e.currentTarget.lastChild.style.opacity = "0"; }}>
-                          <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6.5" stroke="#D1D5DB"/><rect x="6.5" y="6" width="1" height="4.5" rx="0.5" fill="#9CA3AF"/><rect x="6.5" y="3.5" width="1" height="1.3" rx="0.5" fill="#9CA3AF"/></svg>
-                          <div style={{ visibility: "hidden", opacity: 0, position: "absolute", bottom: "calc(100% + 8px)", left: "50%", transform: "translateX(-50%)", background: "#111827", color: WHITE, fontSize: 12, fontWeight: 400, padding: "7px 12px", borderRadius: 6, whiteSpace: "nowrap", boxShadow: "0 4px 12px rgba(0,0,0,0.15)", zIndex: 9999, transition: "opacity 0.15s, visibility 0.15s", pointerEvents: "none" }}>
-                            {item.tooltip}
-                            <span style={{ position: "absolute", top: "100%", left: "50%", transform: "translateX(-50%)", width: 0, height: 0, borderLeft: "5px solid transparent", borderRight: "5px solid transparent", borderTop: "5px solid #111827" }} />
-                          </div>
-                        </div>
-                      )}
-                    </div>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 5 }}>{item.label}</div>
                     <div style={{ fontSize: 13, color: TEXT, fontWeight: 500 }}>{item.value}</div>
                   </div>
                 ))}
@@ -2409,25 +2410,46 @@ function RemoteConfigurationDetail({ config, experiments, onBack, onEdit, onOpen
               </div>
             </div>
 
-            {/* Values card */}
+            {/* Rollout Groups card */}
             <div style={{ ...cardStyle, padding: 22 }}>
-              <h3 style={{ margin: "0 0 16px", fontSize: 15, fontWeight: 700, color: TEXT }}>Values</h3>
-              {config.parameters?.length ? (
+              <h3 style={{ margin: "0 0 16px", fontSize: 15, fontWeight: 700, color: TEXT }}>Rollout Groups</h3>
+              {config.variants?.length ? (
                 <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                  {config.parameters.map((param) => (
-                    <div key={param.key} style={{ borderRadius: 10, border: `1px solid ${BORDER}`, background: SOFT, padding: "14px 16px" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                        <code style={{ fontSize: 13, fontWeight: 700, color: TEXT, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace" }}>{param.key}</code>
-                        <span style={{ fontSize: 10, fontWeight: 600, color: "#6B7280", background: "#F3F4F6", borderRadius: 4, padding: "2px 6px", border: "1px solid #E5E7EB" }}>{param.type}</span>
+                  {config.variants.map((variant) => (
+                    <div key={variant.id} style={{ borderRadius: 10, border: `1px solid ${BORDER}`, background: SOFT, overflow: "hidden" }}>
+                      {/* Group header */}
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", borderBottom: `1px solid ${BORDER}`, background: WHITE }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <span style={{ width: 8, height: 8, borderRadius: "50%", background: variant.isDefault ? "#D1D5DB" : "#3B82F6", flexShrink: 0 }} />
+                          <span style={{ fontSize: 13, fontWeight: 700, color: TEXT }}>{variant.name}</span>
+                          {variant.isDefault && <span style={{ fontSize: 10, fontWeight: 600, color: "#6B7280", background: "#F3F4F6", borderRadius: 4, padding: "2px 6px", border: "1px solid #E5E7EB" }}>Default</span>}
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                          <span style={{ fontSize: 11, color: TEXT_MUTED }}>{variant.segments?.length ? `${variant.segments.length} segment rule${variant.segments.length > 1 ? "s" : ""}` : "All Unmatched Users"}</span>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: "#1D4ED8", background: "#EFF6FF", borderRadius: 6, padding: "3px 9px", border: "1px solid #BFDBFE" }}>{variant.rolloutPercentage ?? 100}%</span>
+                        </div>
                       </div>
-                      <div style={{ fontSize: 12, color: TEXT, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", padding: "10px 12px", background: WHITE, borderRadius: 8, border: `1px solid ${BORDER}`, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
-                        {param.type === "JSON" ? (() => { try { return JSON.stringify(JSON.parse(String(param.value)), null, 2); } catch (_) { return String(param.value); } })() : String(param.value)}
-                      </div>
+                      {/* Parameter overrides */}
+                      {config.parameters?.length > 0 && (
+                        <div style={{ padding: "12px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
+                          {config.parameters.map((param) => {
+                            const overrideVal = variant.parameterOverrides?.[param.key];
+                            const displayVal = overrideVal !== undefined ? overrideVal : param.value ?? param.defaultValue ?? "—";
+                            return (
+                              <div key={param.key} style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+                                <code style={{ fontSize: 12, fontWeight: 700, color: "#4F46E5", fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", minWidth: 120, flexShrink: 0 }}>{param.key}</code>
+                                <span style={{ fontSize: 10, fontWeight: 600, color: "#6B7280", background: "#F3F4F6", borderRadius: 4, padding: "1px 5px", border: "1px solid #E5E7EB", flexShrink: 0 }}>{param.type}</span>
+                                <span style={{ fontSize: 12, color: TEXT, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", background: WHITE, borderRadius: 6, border: `1px solid ${BORDER}`, padding: "3px 8px", flex: 1, wordBreak: "break-all" }}>{String(displayVal)}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
               ) : (
-                <div style={{ padding: "20px", textAlign: "center", color: TEXT_MUTED, fontSize: 13, border: `1px dashed ${BORDER}`, borderRadius: 8 }}>No parameters configured yet.</div>
+                <div style={{ padding: "20px", textAlign: "center", color: TEXT_MUTED, fontSize: 13, border: `1px dashed ${BORDER}`, borderRadius: 8 }}>No rollout groups configured yet.</div>
               )}
             </div>
           </div>
@@ -5200,6 +5222,7 @@ export default function App() {
       ...p,
       value: configParamValues[s.id]?.[p.id] !== undefined ? configParamValues[s.id][p.id] : p.defaultValue,
     })),
+    variants: s.variants || [],
     rollout: 100,
     version: 1.0,
     deploymentType: s.status === "Active" ? "Rolled Out" : "Draft",
@@ -5464,8 +5487,8 @@ export default function App() {
     const newSchemaStatus = form.status === "Live" ? "Active" : "Draft";
 
     if (remoteConfigView === "edit" && editingConfig) {
-      // Update the matching schema's status
-      setSchemas((prev) => prev.map((s) => s.id === savedConfig.id ? { ...s, status: newSchemaStatus, updated: today } : s));
+      // Update the matching schema's status and variants
+      setSchemas((prev) => prev.map((s) => s.id === savedConfig.id ? { ...s, status: newSchemaStatus, updated: today, variants: form.variants || [] } : s));
     } else {
       // Add a new schema entry so the config appears in the rollout list.
       // isRolloutOnly: true prevents it from appearing in the Config Library.
@@ -5476,6 +5499,7 @@ export default function App() {
         description: savedConfig.description || "",
         sdks: savedConfig.sdks || [],
         parameters: (form.parameters || []).map((p) => ({ ...p, defaultValue: p.value ?? p.defaultValue })),
+        variants: form.variants || [],
         created: today,
         updated: today,
         createdBy: "Emre Sumer",
@@ -5518,8 +5542,9 @@ export default function App() {
 
   const handleRemoveConfig = (config) => {
     setOpenActionId(null);
-    // If the config is Active/Live, check whether it's referenced by live rollouts or running experiments
-    if (config.status === "Live" || config.status === "Active") {
+    // Warning modal only applies to Config Library items, not Feature Rollouts
+    const isFeatureRollout = featureRolloutIds.has(config.id);
+    if (!isFeatureRollout && (config.status === "Live" || config.status === "Active")) {
       const linkedRollouts = configs.filter((c) => featureRolloutIds.has(c.id) && c.key === config.key && (c.status === "Live" || c.status === "Active"));
       const linkedAbTests = experiments.filter((e) => !e.archived && e.linkedConfigKey === config.key && e.status === "RUNNING");
       if (linkedRollouts.length > 0 || linkedAbTests.length > 0) {
