@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { App as AntApp, Button, Alert, Tag, message as antdMessage, DatePicker, Modal, Select, Segmented } from "antd";
+import { App as AntApp, Button, Alert, Tag, message as antdMessage, DatePicker, Modal, Select, Segmented, Typography } from "antd";
+const { Title: AntTitle, Text: AntText, Paragraph: AntParagraph } = Typography;
 import dayjs from "dayjs";
 
 const BLACK = "#111827";
@@ -734,65 +735,52 @@ function Toast({ toast }) {
 }
 
 function ConfirmModal({ open, title, message, summary, warning, confirmLabel, confirmTone = "danger", loading, onCancel, onConfirm }) {
-  if (!open) return null;
-
-  const confirmStyle = confirmTone === "danger"
-    ? { background: "#EF4444", color: WHITE, border: "none" }
-    : { background: "#3B82F6", color: WHITE, border: "none" };
-
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(17, 24, 39, 0.35)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 110 }}>
-      <div style={{ width: 480, background: WHITE, borderRadius: 12, border: `1px solid ${BORDER}`, boxShadow: SHADOW, padding: 24 }}>
-        <h3 style={{ margin: "0 0 4px", color: TEXT, fontSize: 18, fontWeight: 700 }}>{title}</h3>
-        {message && <p style={{ margin: "0 0 14px", color: TEXT_MUTED, fontSize: 13, lineHeight: 1.6 }}>{message}</p>}
-        {summary && (
-          <div style={{ marginTop: message ? 0 : 10, marginBottom: 4, borderRadius: 10, border: "1px solid #E5E7EB", background: "#F9FAFB", overflow: "hidden" }}>
-            {/* Header rows */}
-            {summary.meta && summary.meta.map((row, i) => (
-              <div key={i} style={{ display: "flex", alignItems: "baseline", gap: 8, padding: "9px 14px", borderBottom: "1px solid #F3F4F6" }}>
-                <span style={{ fontSize: 12, fontWeight: 600, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.05em", minWidth: 90, flexShrink: 0 }}>{row.label}</span>
-                <span style={{ fontSize: 13, color: TEXT, fontWeight: 500, wordBreak: "break-all" }}>{row.value}</span>
-              </div>
-            ))}
-            {/* Variants section */}
-            {summary.variants && summary.variants.length > 0 && (
-              <div>
-                <div style={{ padding: "8px 14px 4px", fontSize: 11, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.06em" }}>Rollout Groups</div>
-                {summary.variants.map((v, i) => (
-                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 14px", borderTop: "1px solid #F3F4F6" }}>
-                    <span style={{ width: 6, height: 6, borderRadius: "50%", background: v.isDefault ? "#D1D5DB" : "#3B82F6", flexShrink: 0 }} />
-                    <span style={{ fontSize: 13, color: v.isDefault ? TEXT_MUTED : TEXT, flex: 1 }}>{v.name}</span>
-                    <span style={{ fontSize: 12, color: TEXT_MUTED, flexShrink: 0 }}>{v.segment}</span>
-                    <span style={{ fontSize: 12, fontWeight: 600, color: "#374151", background: "#E5E7EB", borderRadius: 4, padding: "2px 7px", flexShrink: 0 }}>{v.rollout}%</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-        {warning && (
-          <div style={{ marginTop: 14, padding: "10px 12px", borderRadius: 10, border: "1px solid #FCD34D", background: "#FFFBEB", color: "#92400E", fontSize: 13 }}>
-            {warning}
-          </div>
-        )}
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 20 }}>
-          <button onClick={onCancel} disabled={loading} style={secondaryButtonStyle}>Cancel</button>
-          <button
-            onClick={onConfirm}
-            disabled={loading}
-            style={{
-              ...secondaryButtonStyle,
-              ...confirmStyle,
-              minWidth: 132,
-              justifyContent: "center",
-              opacity: loading ? 0.85 : 1,
-            }}
-          >
-            {loading ? <Spinner color="#FFFFFF" /> : confirmLabel}
-          </button>
+    <Modal
+      open={open}
+      onCancel={onCancel}
+      width={480}
+      title={<AntTitle level={4} style={{ margin: 0 }}>{title}</AntTitle>}
+      footer={[
+        <Button key="cancel" onClick={onCancel} disabled={loading}>Cancel</Button>,
+        <Button
+          key="confirm"
+          type="primary"
+          danger={confirmTone === "danger"}
+          loading={loading}
+          onClick={onConfirm}
+          style={confirmTone !== "danger" ? { background: "#3B82F6", borderColor: "#3B82F6" } : {}}
+        >
+          {confirmLabel}
+        </Button>,
+      ]}
+    >
+      {message && <AntParagraph type="secondary" style={{ marginBottom: summary || warning ? 12 : 0 }}>{message}</AntParagraph>}
+      {summary && (
+        <div style={{ marginBottom: warning ? 12 : 0, borderRadius: 8, border: "1px solid #E5E7EB", background: "#F9FAFB", overflow: "hidden" }}>
+          {summary.meta && summary.meta.map((row, i) => (
+            <div key={i} style={{ display: "flex", alignItems: "baseline", gap: 8, padding: "9px 14px", borderBottom: "1px solid #F3F4F6" }}>
+              <AntText style={{ fontSize: 11, fontWeight: 600, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.05em", minWidth: 90, flexShrink: 0 }}>{row.label}</AntText>
+              <AntText style={{ fontSize: 13, fontWeight: 500, wordBreak: "break-all" }}>{row.value}</AntText>
+            </div>
+          ))}
+          {summary.variants && summary.variants.length > 0 && (
+            <div>
+              <div style={{ padding: "8px 14px 4px", fontSize: 11, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.06em" }}>Rollout Groups</div>
+              {summary.variants.map((v, i) => (
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 14px", borderTop: "1px solid #F3F4F6" }}>
+                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: v.isDefault ? "#D1D5DB" : "#3B82F6", flexShrink: 0 }} />
+                  <AntText style={{ fontSize: 13, color: v.isDefault ? TEXT_MUTED : TEXT, flex: 1 }}>{v.name}</AntText>
+                  <AntText type="secondary" style={{ fontSize: 12, flexShrink: 0 }}>{v.segment}</AntText>
+                  <Tag style={{ margin: 0, fontSize: 12, fontWeight: 600 }}>{v.rollout}%</Tag>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
-      </div>
-    </div>
+      )}
+      {warning && <Alert type="warning" message={warning} showIcon style={{ marginTop: summary ? 0 : 4 }} />}
+    </Modal>
   );
 }
 
@@ -1720,28 +1708,29 @@ function RemoteConfigurationForm({
         onConfirm={publishConfiguration}
       />
 
-      {conflictConfig && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(15, 20, 35, 0.35)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 90 }}>
-          <div style={{ width: 620, background: WHITE, borderRadius: 16, boxShadow: SHADOW, border: `1px solid ${BORDER}`, padding: 22 }}>
-            <h3 style={{ margin: "0 0 8px", color: TEXT, fontSize: 18 }}>Parameter Key Conflict Detected</h3>
-            <p style={{ margin: 0, color: TEXT_MUTED, fontSize: 13, lineHeight: 1.7 }}>
-              The parameter key you've entered is already in use by the '{conflictConfig.name}' remote configuration, which is currently LIVE. Using duplicate parameter keys across active configurations may cause unexpected behavior and unpredictable value resolution on the client side. To proceed safely, either choose a unique parameter key or take the conflicting configuration offline before continuing.
-            </p>
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 18 }}>
-              <button style={secondaryButtonStyle} onClick={() => setConflictConfig(null)}>Continue Editing This Configuration</button>
-              <button
-                style={primaryButtonStyle}
-                onClick={() => {
-                  onPauseConflictingConfig(conflictConfig.id);
-                  proceedToStepTwo();
-                }}
-              >
-                Pause '{conflictConfig.name}' and Continue
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <Modal
+        open={!!conflictConfig}
+        onCancel={() => setConflictConfig(null)}
+        width={620}
+        title={<AntTitle level={4} style={{ margin: 0 }}>Parameter Key Conflict Detected</AntTitle>}
+        footer={[
+          <Button key="edit" onClick={() => setConflictConfig(null)}>Continue Editing This Configuration</Button>,
+          <Button
+            key="pause"
+            type="primary"
+            onClick={() => {
+              onPauseConflictingConfig(conflictConfig.id);
+              proceedToStepTwo();
+            }}
+          >
+            Pause '{conflictConfig?.name}' and Continue
+          </Button>,
+        ]}
+      >
+        <AntParagraph type="secondary" style={{ lineHeight: 1.7, marginBottom: 0 }}>
+          The parameter key you've entered is already in use by the '<AntText strong>{conflictConfig?.name}</AntText>' remote configuration, which is currently LIVE. Using duplicate parameter keys across active configurations may cause unexpected behavior and unpredictable value resolution on the client side. To proceed safely, either choose a unique parameter key or take the conflicting configuration offline before continuing.
+        </AntParagraph>
+      </Modal>
 
       {/* Page header */}
       <div style={{ marginBottom: 24, display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16 }}>
@@ -3780,73 +3769,69 @@ function CodePill({ children }) {
 
 // ─── Stop Experiment Confirmation Modal ──────────────────────────────────────
 function StopExperimentModal({ open, experimentName, onCancel, onConfirm }) {
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e) => { if (e.key === "Escape") onCancel(); };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, onCancel]);
-  if (!open) return null;
   return (
-    <div role="dialog" aria-modal="true" aria-labelledby="stop-exp-title" style={{ position: "fixed", inset: 0, background: "rgba(17,24,39,0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200 }}>
-      <div style={{ width: 460, background: WHITE, borderRadius: 14, border: `1px solid ${BORDER}`, boxShadow: "0 8px 32px rgba(0,0,0,0.18)", padding: 28 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-          <div style={{ width: 36, height: 36, borderRadius: "50%", background: "#FEE2E2", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 3v5M8 11v1" stroke="#EF4444" strokeWidth="2" strokeLinecap="round"/></svg>
-          </div>
-          <h3 id="stop-exp-title" style={{ margin: 0, fontSize: 17, fontWeight: 700, color: TEXT }}>Stop experiment?</h3>
-        </div>
-        <p style={{ margin: "0 0 10px", fontSize: 13, color: "#4B5563", lineHeight: 1.65 }}>
-          You are about to permanently stop <b>"{experimentName}"</b>. This will halt all data collection and cannot be undone. The experiment will be marked as stopped.
-        </p>
-        <div style={{ padding: "10px 14px", borderRadius: 10, border: "1px solid #FECACA", background: "#FEF2F2", color: "#B91C1C", fontSize: 13, marginBottom: 22 }}>
-          ⛔ This action is irreversible. Stopped experiments cannot be restarted.
-        </div>
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
-          <button onClick={onCancel} style={secondaryButtonStyle}>Cancel</button>
-          <button onClick={onConfirm} style={{ ...primaryButtonStyle, background: "#DC2626", display: "inline-flex", alignItems: "center", gap: 7 }}>
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><rect x="2" y="2" width="8" height="8" rx="1.5"/></svg>
-            Stop Experiment
-          </button>
-        </div>
-      </div>
-    </div>
+    <Modal
+      open={open}
+      onCancel={onCancel}
+      width={460}
+      title={<AntTitle level={4} style={{ margin: 0 }}>Stop experiment?</AntTitle>}
+      footer={[
+        <Button key="cancel" onClick={onCancel}>Cancel</Button>,
+        <Button
+          key="stop"
+          type="primary"
+          danger
+          icon={<svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><rect x="2" y="2" width="8" height="8" rx="1.5"/></svg>}
+          onClick={onConfirm}
+        >
+          Stop Experiment
+        </Button>,
+      ]}
+    >
+      <AntParagraph style={{ marginBottom: 12 }}>
+        You are about to permanently stop <AntText strong>"{experimentName}"</AntText>. This will halt all data collection and cannot be undone. The experiment will be marked as stopped.
+      </AntParagraph>
+      <Alert
+        type="error"
+        showIcon
+        message="This action is irreversible. Stopped experiments cannot be restarted."
+      />
+    </Modal>
   );
 }
 
 // ─── Apply Winner Modal ───────────────────────────────────────────────────────
 function ApplyWinnerModal({ open, experiment, onCancel, onConfirm }) {
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e) => { if (e.key === "Escape") onCancel(); };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, onCancel]);
-  if (!open) return null;
-  const configKey = experiment.linkedConfigMeta?.key || experiment.linkedConfigKey || "—";
-  const winnerValue = experiment.linkedConfigMeta?.variantBValue;
+  const configKey = experiment?.linkedConfigMeta?.key || experiment?.linkedConfigKey || "—";
+  const winnerValue = experiment?.linkedConfigMeta?.variantBValue;
   return (
-    <div role="dialog" aria-modal="true" aria-labelledby="apply-winner-title" style={{ position: "fixed", inset: 0, background: "rgba(17,24,39,0.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200 }}>
-      <div style={{ width: 480, background: WHITE, borderRadius: 14, border: `1px solid ${BORDER}`, boxShadow: "0 8px 32px rgba(0,0,0,0.15)", padding: 28 }}>
-        <h3 id="apply-winner-title" style={{ margin: "0 0 10px", fontSize: 18, fontWeight: 700, color: TEXT }}>Apply Variant B as the winner?</h3>
-        <p style={{ margin: "0 0 14px", fontSize: 13, color: "#4B5563", lineHeight: 1.65 }}>
-          This will update the Remote Config key <CodePill>{configKey}</CodePill> to the winning variant's value (<CodePill>{String(winnerValue)}</CodePill>) for 100% of users. This action can be reversed from the Remote Config settings.
-        </p>
-        <div style={{ padding: "10px 14px", borderRadius: 10, border: "1px solid #FCD34D", background: "#FEF3C7", color: "#92400E", fontSize: 13, marginBottom: 20 }}>
-          ⚠ This will override your current Remote Config live value.
-        </div>
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
-          <button onClick={onCancel} style={secondaryButtonStyle}>Cancel</button>
-          <button
-            onClick={onConfirm}
-            style={{ ...primaryButtonStyle, gap: 8 }}
-          >
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M2 7.5L5.5 11L12 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-            Apply &amp; Roll Out
-          </button>
-        </div>
-      </div>
-    </div>
+    <Modal
+      open={open}
+      onCancel={onCancel}
+      width={480}
+      title={<AntTitle level={4} style={{ margin: 0 }}>Apply Variant B as the winner?</AntTitle>}
+      footer={[
+        <Button key="cancel" onClick={onCancel}>Cancel</Button>,
+        <Button
+          key="apply"
+          type="primary"
+          icon={<svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M2 7.5L5.5 11L12 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+          style={{ background: "#3B82F6", borderColor: "#3B82F6" }}
+          onClick={onConfirm}
+        >
+          Apply &amp; Roll Out
+        </Button>,
+      ]}
+    >
+      <AntParagraph style={{ marginBottom: 12 }}>
+        This will update the Remote Config key <CodePill>{configKey}</CodePill> to the winning variant's value (<CodePill>{String(winnerValue)}</CodePill>) for 100% of users. This action can be reversed from the Remote Config settings.
+      </AntParagraph>
+      <Alert
+        type="warning"
+        showIcon
+        message="This will override your current Remote Config live value."
+      />
+    </Modal>
   );
 }
 
@@ -5112,63 +5097,66 @@ function BrowseSchemasModal({ schemas, onClose, onUseSchema }) {
   }, [schemas, searchQuery]);
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }} onClick={onClose}>
-      <div
-        style={{ background: WHITE, borderRadius: 16, width: "100%", maxWidth: 580, maxHeight: "82vh", display: "flex", flexDirection: "column", boxShadow: "0 8px 40px rgba(0,0,0,0.22)" }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Modal header */}
-        <div style={{ padding: "20px 24px 16px", borderBottom: `1px solid ${BORDER}` }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
-            <div style={{ fontSize: 16, fontWeight: 700, color: TEXT }}>Browse Schemas</div>
-            <button onClick={onClose} style={{ padding: 6, background: "transparent", border: "none", cursor: "pointer", color: TEXT_MUTED, borderRadius: 6, display: "flex" }}>
-              <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
-            </button>
-          </div>
-          <p style={{ fontSize: 13, color: TEXT_MUTED, margin: 0 }}>Pick a schema to pre-populate your configuration's parameters.</p>
-          {/* Search */}
-          <div style={{ position: "relative", marginTop: 14 }}>
-            <span style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", color: TEXT_MUTED, pointerEvents: "none" }}><SearchIcon /></span>
-            <input
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search schemas…"
-              style={{ ...inputStyle, paddingLeft: 36, background: WHITE }}
-            />
-          </div>
-        </div>
-
-        {/* Schema list */}
-        <div style={{ overflowY: "auto", flex: 1, padding: "12px 12px" }}>
-          {filtered.length === 0 ? (
-            <div style={{ textAlign: "center", padding: 32, color: TEXT_MUTED, fontSize: 13 }}>No schemas match your search.</div>
-          ) : filtered.map((schema) => (
-            <div
-              key={schema.id}
-              style={{ padding: "14px 16px", borderRadius: 10, border: `1px solid ${BORDER}`, marginBottom: 8, display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, background: WHITE }}
-            >
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: TEXT }}>{schema.name}</div>
-                <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 3 }}>
-                  <code style={{ fontSize: 11, color: "#4F46E5", background: "#EEF2FF", border: "1px solid #C7D2FB", borderRadius: 4, padding: "1px 6px", fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace" }}>{schema.key}</code>
-                  <span style={{ fontSize: 11, color: TEXT_MUTED }}>{schema.parameters.length} param{schema.parameters.length !== 1 ? "s" : ""}</span>
-                </div>
-                {schema.description && <div style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 4 }}>{schema.description}</div>}
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 8 }}>
-                  {schema.sdks.map((sdk) => <SdkPill key={sdk} sdk={sdk} />)}
-                </div>
-              </div>
-              <button
-                onClick={() => { onUseSchema(schema); onClose(); }}
-                style={{ ...primaryButtonStyle, padding: "8px 14px", fontSize: 12, flexShrink: 0 }}
-              >
-                Use Schema
-              </button>
-            </div>
-          ))}
+    <Modal
+      open={!!schemas}
+      onCancel={onClose}
+      width={580}
+      title={
+        <>
+          <AntTitle level={4} style={{ margin: 0 }}>Browse Schemas</AntTitle>
+          <AntText type="secondary" style={{ fontSize: 13, fontWeight: 400 }}>Pick a schema to pre-populate your configuration's parameters.</AntText>
+        </>
+      }
+      footer={null}
+      styles={{ body: { padding: 0 } }}
+    >
+      {/* Search */}
+      <div style={{ padding: "12px 24px 12px", borderBottom: `1px solid ${BORDER}` }}>
+        <div style={{ position: "relative" }}>
+          <span style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", color: TEXT_MUTED, pointerEvents: "none" }}><SearchIcon /></span>
+          <input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search schemas…"
+            style={{ ...inputStyle, paddingLeft: 36, background: WHITE }}
+          />
         </div>
       </div>
-    </div>
+
+      {/* Schema list */}
+      <div style={{ overflowY: "auto", maxHeight: 420, padding: "12px 24px" }}>
+        {filtered.length === 0 ? (
+          <div style={{ textAlign: "center", padding: 32 }}>
+            <AntText type="secondary">No schemas match your search.</AntText>
+          </div>
+        ) : filtered.map((schema) => (
+          <div
+            key={schema.id}
+            style={{ padding: "14px 16px", borderRadius: 10, border: `1px solid ${BORDER}`, marginBottom: 8, display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, background: WHITE }}
+          >
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <AntText strong style={{ fontSize: 14 }}>{schema.name}</AntText>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 3 }}>
+                <code style={{ fontSize: 11, color: "#4F46E5", background: "#EEF2FF", border: "1px solid #C7D2FB", borderRadius: 4, padding: "1px 6px", fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace" }}>{schema.key}</code>
+                <AntText type="secondary" style={{ fontSize: 11 }}>{schema.parameters.length} param{schema.parameters.length !== 1 ? "s" : ""}</AntText>
+              </div>
+              {schema.description && <AntText type="secondary" style={{ fontSize: 12, display: "block", marginTop: 4 }}>{schema.description}</AntText>}
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 8 }}>
+                {schema.sdks.map((sdk) => <SdkPill key={sdk} sdk={sdk} />)}
+              </div>
+            </div>
+            <Button
+              type="primary"
+              size="small"
+              onClick={() => { onUseSchema(schema); onClose(); }}
+              style={{ flexShrink: 0 }}
+            >
+              Use Schema
+            </Button>
+          </div>
+        ))}
+      </div>
+    </Modal>
   );
 }
 
@@ -5901,50 +5889,30 @@ export default function App() {
   return (
     <>
       {/* ── Active Config In-Use Warning Modal ── */}
-      {activeConfigWarningModal.open && (() => {
+      {(() => {
         const { config: wConfig, rolloutNames, abTestNames } = activeConfigWarningModal;
-        const allNames = [...rolloutNames, ...abTestNames];
+        const allNames = [...(rolloutNames || []), ...(abTestNames || [])];
         const closeWarning = () => setActiveConfigWarningModal({ open: false, config: null, rolloutNames: [], abTestNames: [] });
         return (
-          <div style={{ position: "fixed", inset: 0, background: "rgba(17,24,39,0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200 }}>
-            <div style={{ width: 520, background: WHITE, borderRadius: 12, boxShadow: "0 20px 60px rgba(0,0,0,0.18)", padding: "28px 28px 24px", position: "relative" }}>
-              {/* Close X */}
-              <button
-                onClick={closeWarning}
-                style={{ position: "absolute", top: 16, right: 16, background: "none", border: "none", cursor: "pointer", color: TEXT_MUTED, padding: 4, display: "flex", alignItems: "center", borderRadius: 6 }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = "#F3F4F6"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = "none"; }}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
-              </button>
-
-              {/* Warning icon + title */}
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-                <div style={{ width: 36, height: 36, borderRadius: "50%", background: "#FEF3C7", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                </div>
-                <h3 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: TEXT }}>Warning</h3>
-              </div>
-
-              {/* Body text */}
-              <p style={{ margin: "0 0 8px", fontSize: 14, color: "#374151", lineHeight: 1.65 }}>
-                Your <strong>{wConfig?.name}</strong> is currently being used in{" "}
-                {allNames.map((name, i) => (
-                  <span key={i}>
-                    <strong>{name}</strong>{i < allNames.length - 1 ? ", " : ""}
-                  </span>
-                ))}.
-              </p>
-              <p style={{ margin: "0 0 24px", fontSize: 14, color: "#374151", lineHeight: 1.65 }}>
-                Please stop or complete the mentioned experiments in order to delete this remote configuration.
-              </p>
-
-              {/* Actions */}
-              <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                <Button type="primary" onClick={closeWarning}>OK</Button>
-              </div>
-            </div>
-          </div>
+          <Modal
+            open={activeConfigWarningModal.open}
+            onCancel={closeWarning}
+            width={520}
+            title={<AntTitle level={4} style={{ margin: 0 }}>Warning</AntTitle>}
+            footer={[
+              <Button key="ok" type="primary" onClick={closeWarning}>OK</Button>,
+            ]}
+          >
+            <AntParagraph style={{ marginBottom: 8 }}>
+              Your <AntText strong>{wConfig?.name}</AntText> is currently being used in{" "}
+              {allNames.map((name, i) => (
+                <span key={i}><AntText strong>{name}</AntText>{i < allNames.length - 1 ? ", " : ""}</span>
+              ))}.
+            </AntParagraph>
+            <AntParagraph style={{ marginBottom: 0 }}>
+              Please stop or complete the mentioned experiments in order to delete this remote configuration.
+            </AntParagraph>
+          </Modal>
         );
       })()}
 
