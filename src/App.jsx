@@ -5940,15 +5940,7 @@ export default function App() {
               </p>
 
               {/* Actions */}
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
-                <button
-                  onClick={closeWarning}
-                  style={{ ...secondaryButtonStyle, background: "#111827", color: WHITE, border: "none", fontWeight: 600 }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = "#374151"; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = "#111827"; }}
-                >
-                  Cancel
-                </button>
+              <div style={{ display: "flex", justifyContent: "flex-end" }}>
                 <Button type="primary" onClick={closeWarning}>OK</Button>
               </div>
             </div>
