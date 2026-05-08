@@ -4422,7 +4422,7 @@ function SdkChips({ sdks }) {
   );
 }
 
-function DevRemoteConfigList({ schemas, onCreateNew, onViewSchema }) {
+function DevRemoteConfigList({ schemas, onCreateNew, onViewSchema, onRemove }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [copiedKey, setCopiedKey] = useState(null);
   const [openActionId, setOpenActionId] = useState(null);
@@ -4563,7 +4563,7 @@ function DevRemoteConfigList({ schemas, onCreateNew, onViewSchema }) {
                         {[
                           { icon: <EditIcon />, label: "Edit", disabled: schema.status === "Active", action: () => { setOpenActionId(null); onViewSchema(schema); } },
                           { icon: <CopyIcon />, label: "Clone", action: () => setOpenActionId(null) },
-                          { icon: <TrashIcon />, label: "Delete", danger: true, action: () => setOpenActionId(null) },
+                          { icon: <TrashIcon />, label: "Delete", danger: true, action: () => { setOpenActionId(null); onRemove && onRemove(schema); } },
                         ].map((item) => (
                           <DisabledMenuItemWithTooltip key={item.label} item={item} />
                         ))}
@@ -5529,9 +5529,9 @@ export default function App() {
 
   const handleRemoveConfig = (config) => {
     setOpenActionId(null);
-    // If the config is Active, check whether it's referenced by live rollouts or running experiments
-    if (config.status === "Live") {
-      const linkedRollouts = configs.filter((c) => featureRolloutIds.has(c.id) && c.key === config.key && c.status === "Live");
+    // If the config is Active/Live, check whether it's referenced by live rollouts or running experiments
+    if (config.status === "Live" || config.status === "Active") {
+      const linkedRollouts = configs.filter((c) => featureRolloutIds.has(c.id) && c.key === config.key && (c.status === "Live" || c.status === "Active"));
       const linkedAbTests = experiments.filter((e) => !e.archived && e.linkedConfigKey === config.key && e.status === "RUNNING");
       if (linkedRollouts.length > 0 || linkedAbTests.length > 0) {
         setActiveConfigWarningModal({
@@ -5779,6 +5779,7 @@ export default function App() {
           schemas={schemas.filter((s) => !s.isRolloutOnly)}
           onCreateNew={() => goToDevSchemaNew(null)}
           onViewSchema={(schema) => schema.status === "Active" ? goToDevSchemaDetail(schema) : goToDevSchemaNew(schema)}
+          onRemove={handleRemoveConfig}
         />
       );
     }
