@@ -2592,6 +2592,7 @@ function ExperimentList({
   const [pageSize, setPageSize] = useState(20);
   const [colTooltip, setColTooltip] = useState(null);
   const [colTooltipPos, setColTooltipPos] = useState({ x: 0, y: 0 });
+  const [stopModalExperiment, setStopModalExperiment] = useState(null);
 
   const configMap = useMemo(() => new Map(configs.map((config) => [config.key, config])), [configs]);
   const filters = ["ALL", "RUNNING", "STOPPED", "COMPLETED", "DRAFT"];
@@ -2686,6 +2687,12 @@ function ExperimentList({
 
   return (
     <div>
+      <StopExperimentModal
+        open={!!stopModalExperiment}
+        experimentName={stopModalExperiment?.name || ""}
+        onCancel={() => setStopModalExperiment(null)}
+        onConfirm={() => { onStop && onStop(stopModalExperiment); setStopModalExperiment(null); }}
+      />
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
         <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
           <div style={{ width: 5, height: 58, borderRadius: 999, background: "#3B82F6", marginTop: 2, flexShrink: 0 }} />
@@ -2774,7 +2781,7 @@ function ExperimentList({
                       { key: "pause", label: "Mark as Completed", icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>, onClick: () => onPause(experiment) },
                       { key: "view", label: "View Report", icon: <ReportIcon />, onClick: () => onOpenReport(experiment) },
                       { key: "clone", label: "Clone", icon: <CopyIcon />, onClick: () => onClone(experiment) },
-                      { key: "stop", label: "Stop", icon: <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><rect x="2" y="2" width="10" height="10" rx="2"/></svg>, onClick: () => onStop(experiment), destructive: true },
+                      { key: "stop", label: "Stop", icon: <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><rect x="2" y="2" width="10" height="10" rx="2"/></svg>, onClick: () => { setOpenActionId(null); setStopModalExperiment(experiment); }, destructive: true },
                       { key: "edit", label: "Edit", icon: <EditIcon />, disabled: true, tooltip: "Running experiments cannot be edited" },
                     ],
                     STOPPED: [
@@ -3821,14 +3828,9 @@ function StopExperimentModal({ open, experimentName, onCancel, onConfirm }) {
         </Button>,
       ]}
     >
-      <AntParagraph style={{ marginBottom: 12 }}>
-        You are about to permanently stop <AntText strong>"{experimentName}"</AntText>. This will halt all data collection and cannot be undone. The experiment will be marked as stopped.
+      <AntParagraph style={{ marginBottom: 0 }}>
+        You are about to stop <AntText strong>"{experimentName}"</AntText>. This will halt all data collection and cannot be undone. The experiment will be marked as stopped.
       </AntParagraph>
-      <Alert
-        type="error"
-        showIcon
-        message="This action is irreversible. Stopped experiments cannot be restarted."
-      />
     </Modal>
   );
 }
