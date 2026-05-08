@@ -2379,7 +2379,6 @@ function RemoteConfigurationDetail({ config, experiments, onBack, onEdit, onOpen
               <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 14, marginBottom: 20 }}>
                 {[
                   { label: "STATUS", badge: true },
-                  { label: "VERSION", value: `v${Number(config.version || 1).toFixed(1)}` },
                   { label: "ACTIVE SINCE", value: config.status === "Live" ? formatPrettyDate(config.updated || config.created) || "—" : "—" },
                 ].map((item) => (
                   <div key={item.label}>
@@ -2436,10 +2435,10 @@ function RemoteConfigurationDetail({ config, experiments, onBack, onEdit, onOpen
                             const overrideVal = variant.parameterOverrides?.[param.key];
                             const displayVal = overrideVal !== undefined ? overrideVal : param.value ?? param.defaultValue ?? "—";
                             return (
-                              <div key={param.key} style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-                                <code style={{ fontSize: 12, fontWeight: 700, color: "#4F46E5", fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", minWidth: 120, flexShrink: 0 }}>{param.key}</code>
-                                <span style={{ fontSize: 10, fontWeight: 600, color: "#6B7280", background: "#F3F4F6", borderRadius: 4, padding: "1px 5px", border: "1px solid #E5E7EB", flexShrink: 0 }}>{param.type}</span>
-                                <span style={{ fontSize: 12, color: TEXT, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", background: WHITE, borderRadius: 6, border: `1px solid ${BORDER}`, padding: "3px 8px", flex: 1, wordBreak: "break-all" }}>{String(displayVal)}</span>
+                              <div key={param.key} style={{ display: "grid", gridTemplateColumns: "160px 68px 1fr", alignItems: "center", gap: 8 }}>
+                                <code style={{ fontSize: 12, fontWeight: 700, color: "#4F46E5", fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{param.key}</code>
+                                <span style={{ fontSize: 10, fontWeight: 600, color: "#6B7280", background: "#F3F4F6", borderRadius: 4, padding: "1px 5px", border: "1px solid #E5E7EB", textAlign: "center", whiteSpace: "nowrap" }}>{param.type}</span>
+                                <span style={{ fontSize: 12, color: TEXT, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", background: WHITE, borderRadius: 6, border: `1px solid ${BORDER}`, padding: "3px 8px", wordBreak: "break-all" }}>{String(displayVal)}</span>
                               </div>
                             );
                           })}
@@ -5466,6 +5465,7 @@ export default function App() {
       savedConfig = {
         ...editingConfig,
         ...form,
+        id: editingConfig.id,   // always preserve the existing ID
         updated: today,
         params: form.parameters?.length || 0,
       };
@@ -5473,8 +5473,8 @@ export default function App() {
     } else {
       const nextId = configs.length + 1;
       savedConfig = {
-        id: nextId,
         ...form,
+        id: nextId,             // always wins over form.id which may be null
         created: today,
         updated: today,
         version: form.version || 1.0,
