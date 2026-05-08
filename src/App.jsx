@@ -4837,14 +4837,43 @@ function DevRemoteConfigNew({ schema, onBack, onSave, experiments = [], configs 
     setErrors(e);
     if (asDraft) { setParamErrors({}); return Object.keys(e).length === 0; }
     const pe = {};
+    // Collect all non-empty keys for duplicate detection
+    const seenKeys = {};
+    params.forEach((p) => { if (p.key.trim()) seenKeys[p.key.trim()] = (seenKeys[p.key.trim()] || 0) + 1; });
     params.forEach((p) => {
       const f = {};
-      if (!p.key.trim()) f.key = true;
+      if (!p.key.trim()) f.key = "required";
+      else if (seenKeys[p.key.trim()] > 1) f.key = "duplicate";
       if (p.type !== "Boolean" && !String(p.defaultValue).trim()) f.defaultValue = true;
       if (Object.keys(f).length > 0) pe[p.id] = f;
     });
     setParamErrors(pe);
     return Object.keys(e).length === 0 && Object.keys(pe).length === 0;
+  };
+
+  // Real-time duplicate key check when user types in a KEY field
+  const handleParamKeyChange = (id, value) => {
+    updateParam(id, "key", value);
+    setParamErrors((prev) => {
+      const trimmed = value.trim();
+      const updated = { ...prev };
+      // Re-evaluate all params for duplicates using the new value
+      const currentKeys = params.map((p) => p.id === id ? trimmed : p.key.trim()).filter(Boolean);
+      const counts = {};
+      currentKeys.forEach((k) => { counts[k] = (counts[k] || 0) + 1; });
+      params.forEach((p) => {
+        const k = p.id === id ? trimmed : p.key.trim();
+        if (!k) {
+          // only clear duplicate error, leave required untouched
+          if (updated[p.id]?.key === "duplicate") updated[p.id] = { ...updated[p.id], key: undefined };
+        } else if (counts[k] > 1) {
+          updated[p.id] = { ...updated[p.id], key: "duplicate" };
+        } else {
+          if (updated[p.id]?.key === "duplicate") updated[p.id] = { ...updated[p.id], key: undefined };
+        }
+      });
+      return updated;
+    });
   };
 
   const handleSave = () => {
@@ -5028,11 +5057,12 @@ ${params.slice(0, 3).map((p) => `final ${p.key || "param"} = config.get('${p.key
                           <label style={{ display: "block", marginBottom: 4, fontSize: 11, fontWeight: 700, color: TEXT_MUTED }}>KEY</label>
                           <input
                             value={p.key}
-                            onChange={(e) => { updateParam(p.id, "key", e.target.value); setParamErrors((prev) => ({ ...prev, [p.id]: { ...prev[p.id], key: false } })); }}
+                            onChange={(e) => handleParamKeyChange(p.id, e.target.value)}
                             placeholder="e.g. hero_title"
                             style={{ ...inputStyle, background: WHITE, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", fontSize: 12, borderColor: paramErrors[p.id]?.key ? "#EF4444" : BORDER }}
                           />
-                          {paramErrors[p.id]?.key && <div style={{ marginTop: 4, fontSize: 11, color: "#EF4444" }}>Key is required.</div>}
+                          {paramErrors[p.id]?.key === "required" && <div style={{ marginTop: 4, fontSize: 11, color: "#EF4444" }}>Key is required.</div>}
+                          {paramErrors[p.id]?.key === "duplicate" && <div style={{ marginTop: 4, fontSize: 11, color: "#EF4444" }}>Parameter key must be unique within this config.</div>}
                           <div style={{ marginTop: 10 }}>
                             <label style={{ display: "block", marginBottom: 4, fontSize: 11, fontWeight: 700, color: TEXT_MUTED }}>DEFAULT VALUE</label>
                             {p.type === "Boolean" ? (
