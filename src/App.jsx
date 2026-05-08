@@ -820,6 +820,8 @@ function StatusBadge({ status }) {
     running: { bg: "#EAFBF4", color: CTA_GREEN_DARK, dot: CTA_GREEN, label: "Running" },
     COMPLETED: { bg: "#EEF3FF", color: "#4E5FE2", dot: "#6E7AF0", label: "Completed" },
     completed: { bg: "#EEF3FF", color: "#4E5FE2", dot: "#6E7AF0", label: "Completed" },
+    STOPPED: { bg: "#FEE2E2", color: "#B91C1C", dot: "#EF4444", label: "Stopped" },
+    stopped: { bg: "#FEE2E2", color: "#B91C1C", dot: "#EF4444", label: "Stopped" },
     DRAFT: { bg: DRAFT_BG, color: DRAFT_TEXT, dot: "#C4CAD4", label: "Draft" },
   };
   const current = palette[status] || palette.DRAFT;
@@ -2576,6 +2578,7 @@ function ExperimentList({
   onOpenRemoteConfig,
   onPause,
   onResume,
+  onStop,
   onArchive,
   onClone,
   onLaunch,
@@ -2591,14 +2594,16 @@ function ExperimentList({
   const [colTooltipPos, setColTooltipPos] = useState({ x: 0, y: 0 });
 
   const configMap = useMemo(() => new Map(configs.map((config) => [config.key, config])), [configs]);
-  const filters = ["ALL", "RUNNING", "COMPLETED", "DRAFT"];
+  const filters = ["ALL", "RUNNING", "STOPPED", "COMPLETED", "DRAFT"];
 
   const isRunningStatus = (s) => s === "RUNNING" || s === "running";
   const isCompletedStatus = (s) => s === "COMPLETED" || s === "completed";
+  const isStoppedStatus = (s) => s === "STOPPED" || s === "stopped";
 
   const counts = useMemo(() => ({
     ALL: experiments.filter((experiment) => !experiment.archived).length,
     RUNNING: experiments.filter((experiment) => !experiment.archived && isRunningStatus(experiment.status)).length,
+    STOPPED: experiments.filter((experiment) => !experiment.archived && isStoppedStatus(experiment.status)).length,
     COMPLETED: experiments.filter((experiment) => !experiment.archived && isCompletedStatus(experiment.status)).length,
     DRAFT: experiments.filter((experiment) => !experiment.archived && experiment.status === "DRAFT").length,
   }), [experiments]);
@@ -2607,6 +2612,7 @@ function ExperimentList({
     const filtered = experiments.filter((experiment) => {
       if (filter === "ALL") return !experiment.archived;
       if (filter === "RUNNING") return !experiment.archived && isRunningStatus(experiment.status);
+      if (filter === "STOPPED") return !experiment.archived && isStoppedStatus(experiment.status);
       if (filter === "COMPLETED") return !experiment.archived && isCompletedStatus(experiment.status);
       return !experiment.archived && experiment.status === filter;
     });
@@ -2768,7 +2774,13 @@ function ExperimentList({
                       { key: "pause", label: "Mark as Completed", icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>, onClick: () => onPause(experiment) },
                       { key: "view", label: "View Report", icon: <ReportIcon />, onClick: () => onOpenReport(experiment) },
                       { key: "clone", label: "Clone", icon: <CopyIcon />, onClick: () => onClone(experiment) },
+                      { key: "stop", label: "Stop", icon: <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><rect x="2" y="2" width="10" height="10" rx="2"/></svg>, onClick: () => onStop(experiment), destructive: true },
                       { key: "edit", label: "Edit", icon: <EditIcon />, disabled: true, tooltip: "Running experiments cannot be edited" },
+                    ],
+                    STOPPED: [
+                      { key: "resume", label: "Resume", icon: <PlayIcon />, onClick: () => onResume(experiment) },
+                      { key: "view", label: "View Report", icon: <ReportIcon />, onClick: () => onOpenReport(experiment) },
+                      { key: "clone", label: "Clone", icon: <CopyIcon />, onClick: () => onClone(experiment) },
                     ],
                     COMPLETED: [
                       { key: "view", label: "View Report", icon: <ReportIcon />, onClick: () => onOpenReport(experiment) },
@@ -3856,7 +3868,7 @@ function ApplyWinnerModal({ open, experiment, onCancel, onConfirm }) {
   );
 }
 
-function ExperimentDetail({ experiment, onBack, onOpenRemoteConfig, linkedConfig }) {
+function ExperimentDetail({ experiment, onBack, onOpenRemoteConfig, linkedConfig, onStop, onResume }) {
   const [applyWinnerOpen, setApplyWinnerOpen] = useState(false);
   const [stopConfirmOpen, setStopConfirmOpen] = useState(false);
   const [expandedVariants, setExpandedVariants] = useState({});
@@ -4016,7 +4028,7 @@ function ExperimentDetail({ experiment, onBack, onOpenRemoteConfig, linkedConfig
         onConfirm={() => { console.log(`Winner applied`); setApplyWinnerOpen(false); }}
       />
       <StopExperimentModal open={stopConfirmOpen} experimentName={experiment.name} onCancel={() => setStopConfirmOpen(false)}
-        onConfirm={() => { console.log("Experiment stopped:", experiment.id); setStopConfirmOpen(false); }}
+        onConfirm={() => { setStopConfirmOpen(false); onStop && onStop(experiment); }}
       />
 
       {/* ── Header ── */}
@@ -4280,9 +4292,23 @@ function ExperimentDetail({ experiment, onBack, onOpenRemoteConfig, linkedConfig
         >
           Back
         </Button>
-        <Button type="primary" onClick={onBack}>
-          Done
-        </Button>
+        <div style={{ display: "flex", gap: 10 }}>
+          {experiment.status === "RUNNING" && (
+            <Button danger onClick={() => setStopConfirmOpen(true)}>
+              Stop
+            </Button>
+          )}
+          {experiment.status === "STOPPED" && (
+            <Button type="primary" onClick={() => onResume && onResume(experiment)}>
+              Resume
+            </Button>
+          )}
+          {(experiment.status === "RUNNING" || experiment.status === "COMPLETED") && (
+            <Button type="primary" onClick={onBack}>
+              Done
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -5612,6 +5638,15 @@ export default function App() {
     setToast({ type: "success", message: "Experiment marked as completed." });
   };
 
+  const handleStopExperiment = async (experiment) => {
+    setLoadingAction({ scope: "experiment", id: experiment.id, type: "stop" });
+    await sleep(450);
+    updateExperiment(experiment.id, (current) => ({ ...current, status: "STOPPED" }));
+    setLoadingAction(null);
+    setOpenActionId(null);
+    setToast({ type: "success", message: "Experiment stopped." });
+  };
+
   const handleResumeExperiment = async (experiment) => {
     setLoadingAction({ scope: "experiment", id: experiment.id, type: "resume" });
     await sleep(450);
@@ -5871,12 +5906,15 @@ export default function App() {
     }
 
     if (abView === "detail" && selectedExperimentReport) {
+      const liveExp = experiments.find((e) => e.id === selectedExperimentReport.id) || selectedExperimentReport;
       return (
         <ExperimentDetail
-          experiment={selectedExperimentReport}
-          linkedConfig={configs.find((config) => config.key === selectedExperimentReport.linkedConfigKey) || null}
+          experiment={liveExp}
+          linkedConfig={configs.find((config) => config.key === liveExp.linkedConfigKey) || null}
           onBack={goToAbList}
           onOpenRemoteConfig={openRemoteConfigFromExperiment}
+          onStop={handleStopExperiment}
+          onResume={handleResumeExperiment}
         />
       );
     }
@@ -5902,6 +5940,7 @@ export default function App() {
         onOpenRemoteConfig={openRemoteConfigFromExperiment}
         onPause={handlePauseExperiment}
         onResume={handleResumeExperiment}
+        onStop={handleStopExperiment}
         onArchive={handleArchiveExperiment}
         onClone={handleCloneExperiment}
         onLaunch={handleLaunchExperiment}
