@@ -2818,12 +2818,9 @@ function ExperimentList({
                       <td style={{ padding: "14px 16px" }}>
                         <div style={{ fontWeight: 600, color: TEXT }}>{experiment.name}</div>
                         {linkedConfig ? (
-                          <button
-                            onClick={(event) => { event.stopPropagation(); onOpenRemoteConfig(linkedConfig.key); }}
-                            style={{ border: "none", background: "transparent", padding: "2px 0 0", color: TEXT_MUTED, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", fontSize: 11, cursor: "pointer", display: "block" }}
-                          >
+                          <span style={{ marginTop: 2, display: "block", color: TEXT_MUTED, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", fontSize: 11 }}>
                             {linkedConfig.key}
-                          </button>
+                          </span>
                         ) : (
                           <span style={{ marginTop: 2, display: "block", color: "#DC2626", fontSize: 11 }}>Config removed</span>
                         )}
@@ -3829,7 +3826,7 @@ function StopExperimentModal({ open, experimentName, onCancel, onConfirm }) {
       ]}
     >
       <AntParagraph style={{ marginBottom: 0 }}>
-        You are about to stop <AntText strong>"{experimentName}"</AntText>. This will halt all data collection and cannot be undone. The experiment will be marked as stopped.
+        You are about to stop <AntText strong>"{experimentName}"</AntText>. This will halt all data collection. The experiment will be marked as stopped.
       </AntParagraph>
     </Modal>
   );
