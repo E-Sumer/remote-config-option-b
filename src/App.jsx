@@ -5899,7 +5899,14 @@ export default function App() {
             open={activeConfigWarningModal.open}
             onCancel={closeWarning}
             width={580}
-            title={<AntTitle level={4} style={{ margin: 0 }}>Warning</AntTitle>}
+            title={
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#FEF3C7", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                </div>
+                <AntTitle level={4} style={{ margin: 0 }}>Warning</AntTitle>
+              </div>
+            }
             footer={[
               <Button key="ok" type="primary" onClick={closeWarning}>OK</Button>,
             ]}
@@ -5912,8 +5919,8 @@ export default function App() {
             <div style={{ border: `1px solid ${BORDER}`, borderRadius: 8, overflow: "hidden", marginBottom: 16 }}>
               {/* Header */}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", background: "#F9FAFB", borderBottom: `1px solid ${BORDER}` }}>
-                <div style={{ padding: "10px 16px", fontSize: 12, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.04em" }}>Experiment Name</div>
-                <div style={{ padding: "10px 16px", fontSize: 12, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.04em", borderLeft: `1px solid ${BORDER}` }}>Experiment URL</div>
+                <div style={{ padding: "10px 16px", fontSize: 12, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.04em" }}>Experience Name</div>
+                <div style={{ padding: "10px 16px", fontSize: 12, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.04em", borderLeft: `1px solid ${BORDER}` }}>Experience URL</div>
               </div>
               {/* Rows */}
               {entries.map((entry, i) => {
