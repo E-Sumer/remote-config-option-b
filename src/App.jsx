@@ -5209,7 +5209,8 @@ export default function App() {
   const [loadingAction, setLoadingAction] = useState(null);
   const [removeModal, setRemoveModal] = useState({ open: false, config: null });
   const [deleteExperimentModal, setDeleteExperimentModal] = useState({ open: false, experiment: null });
-  const [activeConfigWarningModal, setActiveConfigWarningModal] = useState({ open: false, config: null, rolloutNames: [], abTestNames: [] });
+  // entries: [{ name, url }]
+  const [activeConfigWarningModal, setActiveConfigWarningModal] = useState({ open: false, config: null, entries: [] });
 
   useEffect(() => {
     const handleClick = () => setOpenActionId(null);
@@ -5522,12 +5523,11 @@ export default function App() {
       const linkedRollouts = configs.filter((c) => featureRolloutIds.has(c.id) && c.key === config.key && (c.status === "Live" || c.status === "Active"));
       const linkedAbTests = experiments.filter((e) => !e.archived && e.linkedConfigKey === config.key && e.status === "RUNNING");
       if (linkedRollouts.length > 0 || linkedAbTests.length > 0) {
-        setActiveConfigWarningModal({
-          open: true,
-          config,
-          rolloutNames: linkedRollouts.map((r) => r.name),
-          abTestNames: linkedAbTests.map((e) => e.name),
-        });
+        const entries = [
+          ...linkedRollouts.map((r) => ({ name: r.name, url: `/experiences/feature_rollouts/${r.id}` })),
+          ...linkedAbTests.map((e) => ({ name: e.name, url: `/experiences/ab_tests/${e.id}` })),
+        ];
+        setActiveConfigWarningModal({ open: true, config, entries });
         return;
       }
     }
@@ -5890,27 +5890,86 @@ export default function App() {
     <>
       {/* ── Active Config In-Use Warning Modal ── */}
       {(() => {
-        const { config: wConfig, rolloutNames, abTestNames } = activeConfigWarningModal;
-        const allNames = [...(rolloutNames || []), ...(abTestNames || [])];
-        const closeWarning = () => setActiveConfigWarningModal({ open: false, config: null, rolloutNames: [], abTestNames: [] });
+        const { config: wConfig, entries = [] } = activeConfigWarningModal;
+        const closeWarning = () => setActiveConfigWarningModal({ open: false, config: null, entries: [] });
+        const NAME_LIMIT = 28;
+        const URL_LIMIT = 36;
         return (
           <Modal
             open={activeConfigWarningModal.open}
             onCancel={closeWarning}
-            width={520}
+            width={580}
             title={<AntTitle level={4} style={{ margin: 0 }}>Warning</AntTitle>}
             footer={[
               <Button key="ok" type="primary" onClick={closeWarning}>OK</Button>,
             ]}
           >
-            <AntParagraph style={{ marginBottom: 8 }}>
-              Your <AntText strong>{wConfig?.name}</AntText> is currently being used in{" "}
-              {allNames.map((name, i) => (
-                <span key={i}><AntText strong>{name}</AntText>{i < allNames.length - 1 ? ", " : ""}</span>
-              ))}.
+            <AntParagraph style={{ marginBottom: 14 }}>
+              Your <AntText strong>{wConfig?.name}</AntText> configuration is currently being used in the mentioned experience(s):
             </AntParagraph>
+
+            {/* Table */}
+            <div style={{ border: `1px solid ${BORDER}`, borderRadius: 8, overflow: "hidden", marginBottom: 16 }}>
+              {/* Header */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", background: "#F9FAFB", borderBottom: `1px solid ${BORDER}` }}>
+                <div style={{ padding: "10px 16px", fontSize: 12, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.04em" }}>Experiment Name</div>
+                <div style={{ padding: "10px 16px", fontSize: 12, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: "0.04em", borderLeft: `1px solid ${BORDER}` }}>Experiment URL</div>
+              </div>
+              {/* Rows */}
+              {entries.map((entry, i) => {
+                const nameTruncated = entry.name.length > NAME_LIMIT;
+                const urlTruncated = entry.url.length > URL_LIMIT;
+                const displayName = nameTruncated ? entry.name.slice(0, NAME_LIMIT) + "…" : entry.name;
+                const displayUrl = urlTruncated ? entry.url.slice(0, URL_LIMIT) + "…" : entry.url;
+                return (
+                  <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 1fr", borderBottom: i < entries.length - 1 ? `1px solid ${BORDER}` : "none" }}>
+                    {/* Name cell */}
+                    <div style={{ padding: "11px 16px", fontSize: 13, color: TEXT, position: "relative" }}>
+                      {nameTruncated ? (
+                        <span
+                          style={{ cursor: "default" }}
+                          onMouseEnter={(e) => { e.currentTarget.lastChild.style.visibility = "visible"; e.currentTarget.lastChild.style.opacity = "1"; }}
+                          onMouseLeave={(e) => { e.currentTarget.lastChild.style.visibility = "hidden"; e.currentTarget.lastChild.style.opacity = "0"; }}
+                        >
+                          {displayName}
+                          <span style={{ visibility: "hidden", opacity: 0, position: "absolute", bottom: "calc(100% + 6px)", left: 16, background: "#1F2937", color: "#F9FAFB", fontSize: 12, fontWeight: 400, lineHeight: 1.5, padding: "6px 10px", borderRadius: 6, whiteSpace: "normal", maxWidth: 260, boxShadow: "0 4px 14px rgba(0,0,0,0.18)", zIndex: 9999, transition: "opacity 0.15s, visibility 0.15s", pointerEvents: "none" }}>
+                            {entry.name}
+                            <span style={{ position: "absolute", top: "100%", left: 18, width: 0, height: 0, borderLeft: "5px solid transparent", borderRight: "5px solid transparent", borderTop: "5px solid #1F2937" }} />
+                          </span>
+                        </span>
+                      ) : displayName}
+                    </div>
+                    {/* URL cell */}
+                    <div style={{ padding: "11px 16px", fontSize: 13, borderLeft: `1px solid ${BORDER}`, position: "relative" }}>
+                      {urlTruncated ? (
+                        <span
+                          style={{ cursor: "pointer" }}
+                          onMouseEnter={(e) => { e.currentTarget.lastChild.style.visibility = "visible"; e.currentTarget.lastChild.style.opacity = "1"; }}
+                          onMouseLeave={(e) => { e.currentTarget.lastChild.style.visibility = "hidden"; e.currentTarget.lastChild.style.opacity = "0"; }}
+                          onClick={() => { closeWarning(); navigate(entry.url); }}
+                        >
+                          <span style={{ color: "#3B82F6", textDecoration: "underline" }}>{displayUrl}</span>
+                          <span style={{ visibility: "hidden", opacity: 0, position: "absolute", bottom: "calc(100% + 6px)", left: 16, background: "#1F2937", color: "#F9FAFB", fontSize: 12, fontWeight: 400, lineHeight: 1.5, padding: "6px 10px", borderRadius: 6, whiteSpace: "normal", maxWidth: 300, boxShadow: "0 4px 14px rgba(0,0,0,0.18)", zIndex: 9999, transition: "opacity 0.15s, visibility 0.15s", pointerEvents: "none" }}>
+                            {entry.url}
+                            <span style={{ position: "absolute", top: "100%", left: 18, width: 0, height: 0, borderLeft: "5px solid transparent", borderRight: "5px solid transparent", borderTop: "5px solid #1F2937" }} />
+                          </span>
+                        </span>
+                      ) : (
+                        <span
+                          style={{ color: "#3B82F6", textDecoration: "underline", cursor: "pointer" }}
+                          onClick={() => { closeWarning(); navigate(entry.url); }}
+                        >
+                          {displayUrl}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
             <AntParagraph style={{ marginBottom: 0 }}>
-              Please stop or complete the mentioned experiments in order to delete this remote configuration.
+              Please stop or complete the mentioned experience(s) in order to delete this remote configuration.
             </AntParagraph>
           </Modal>
         );
