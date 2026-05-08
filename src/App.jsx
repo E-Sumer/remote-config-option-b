@@ -5221,6 +5221,7 @@ export default function App() {
   const [loadingAction, setLoadingAction] = useState(null);
   const [removeModal, setRemoveModal] = useState({ open: false, config: null });
   const [deleteExperimentModal, setDeleteExperimentModal] = useState({ open: false, experiment: null });
+  const [activeConfigWarningModal, setActiveConfigWarningModal] = useState({ open: false, config: null, rolloutNames: [], abTestNames: [] });
 
   useEffect(() => {
     const handleClick = () => setOpenActionId(null);
@@ -5527,8 +5528,22 @@ export default function App() {
   };
 
   const handleRemoveConfig = (config) => {
-    setRemoveModal({ open: true, config });
     setOpenActionId(null);
+    // If the config is Active, check whether it's referenced by live rollouts or running experiments
+    if (config.status === "Live") {
+      const linkedRollouts = configs.filter((c) => featureRolloutIds.has(c.id) && c.key === config.key && c.status === "Live");
+      const linkedAbTests = experiments.filter((e) => !e.archived && e.linkedConfigKey === config.key && e.status === "RUNNING");
+      if (linkedRollouts.length > 0 || linkedAbTests.length > 0) {
+        setActiveConfigWarningModal({
+          open: true,
+          config,
+          rolloutNames: linkedRollouts.map((r) => r.name),
+          abTestNames: linkedAbTests.map((e) => e.name),
+        });
+        return;
+      }
+    }
+    setRemoveModal({ open: true, config });
   };
 
   const confirmRemoveConfig = async () => {
@@ -5884,6 +5899,62 @@ export default function App() {
 
   return (
     <>
+      {/* ── Active Config In-Use Warning Modal ── */}
+      {activeConfigWarningModal.open && (() => {
+        const { config: wConfig, rolloutNames, abTestNames } = activeConfigWarningModal;
+        const allNames = [...rolloutNames, ...abTestNames];
+        const closeWarning = () => setActiveConfigWarningModal({ open: false, config: null, rolloutNames: [], abTestNames: [] });
+        return (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(17,24,39,0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200 }}>
+            <div style={{ width: 520, background: WHITE, borderRadius: 12, boxShadow: "0 20px 60px rgba(0,0,0,0.18)", padding: "28px 28px 24px", position: "relative" }}>
+              {/* Close X */}
+              <button
+                onClick={closeWarning}
+                style={{ position: "absolute", top: 16, right: 16, background: "none", border: "none", cursor: "pointer", color: TEXT_MUTED, padding: 4, display: "flex", alignItems: "center", borderRadius: 6 }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = "#F3F4F6"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = "none"; }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+              </button>
+
+              {/* Warning icon + title */}
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+                <div style={{ width: 36, height: 36, borderRadius: "50%", background: "#FEF3C7", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                </div>
+                <h3 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: TEXT }}>Warning</h3>
+              </div>
+
+              {/* Body text */}
+              <p style={{ margin: "0 0 8px", fontSize: 14, color: "#374151", lineHeight: 1.65 }}>
+                Your <strong>{wConfig?.name}</strong> is currently being used in{" "}
+                {allNames.map((name, i) => (
+                  <span key={i}>
+                    <strong>{name}</strong>{i < allNames.length - 1 ? ", " : ""}
+                  </span>
+                ))}.
+              </p>
+              <p style={{ margin: "0 0 24px", fontSize: 14, color: "#374151", lineHeight: 1.65 }}>
+                Please stop or complete the mentioned experiments in order to delete this remote configuration.
+              </p>
+
+              {/* Actions */}
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+                <button
+                  onClick={closeWarning}
+                  style={{ ...secondaryButtonStyle, background: "#111827", color: WHITE, border: "none", fontWeight: 600 }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = "#374151"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = "#111827"; }}
+                >
+                  Cancel
+                </button>
+                <Button type="primary" onClick={closeWarning}>OK</Button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       <ConfirmModal
         open={removeModal.open}
         title={`Are you sure you want to remove '${removeModal.config?.name || ""}'?`}
