@@ -4453,7 +4453,7 @@ function SdkChips({ sdks }) {
   );
 }
 
-function DevRemoteConfigList({ schemas, onCreateNew, onViewSchema, onRemove }) {
+function DevRemoteConfigList({ schemas, onCreateNew, onViewSchema, onEditSchema, onRemove }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [copiedKey, setCopiedKey] = useState(null);
   const [openActionId, setOpenActionId] = useState(null);
@@ -4592,7 +4592,7 @@ function DevRemoteConfigList({ schemas, onCreateNew, onViewSchema, onRemove }) {
                     {openActionId === schema.id && (
                       <div style={{ position: "absolute", right: 0, top: "calc(100% + 4px)", width: 180, background: WHITE, border: `1px solid ${BORDER}`, borderRadius: 10, boxShadow: "0 4px 16px rgba(0,0,0,0.13)", zIndex: 9999, overflow: "visible" }}>
                         {[
-                          { icon: <EditIcon />, label: "Edit", disabled: schema.status === "Active", action: () => { setOpenActionId(null); onViewSchema(schema); } },
+                          { icon: <EditIcon />, label: "Edit", action: () => { setOpenActionId(null); onEditSchema ? onEditSchema(schema) : onViewSchema(schema); } },
                           { icon: <CopyIcon />, label: "Clone", action: () => setOpenActionId(null) },
                           { icon: <TrashIcon />, label: "Delete", danger: true, action: () => { setOpenActionId(null); onRemove && onRemove(schema); } },
                         ].map((item) => (
@@ -4654,7 +4654,7 @@ function CustomSelect({ value, onChange, options }) {
 }
 
 // ─── DevRemoteConfigDetail (read-only, Active configs) ────────────────────
-function DevRemoteConfigDetail({ schema, onBack, onDuplicate }) {
+function DevRemoteConfigDetail({ schema, onBack, onEdit }) {
   const [activeTab, setActiveTab] = useState("iOS");
   const [snippetCopied, setSnippetCopied] = useState(false);
 
@@ -4675,7 +4675,6 @@ function DevRemoteConfigDetail({ schema, onBack, onDuplicate }) {
       const type = p.type === "Integer" ? "Int" : p.type === "Boolean" ? "Boolean" : "String";
       return `val ${p.key}: ${type} = config.get${type}("${p.key}")`;
     }).join("\n")}`,
-    Web: `import { Netmera } from '@netmera/web-sdk';\n\n// Fetch schema: ${schema.key}\nconst config = await Netmera.getRemoteConfig('${schema.key}');\n${schema.parameters.slice(0, 3).map((p) => `const ${p.key} = config.get('${p.key}');`).join("\n")}`,
     "React Native": `import { Netmera } from '@netmera/react-native-sdk';\n\n// Fetch schema: ${schema.key}\nconst config = await Netmera.getRemoteConfig('${schema.key}');\n${schema.parameters.slice(0, 3).map((p) => `const ${p.key} = config.get('${p.key}');`).join("\n")}`,
     Flutter: `import 'package:netmera_flutter_sdk/netmera.dart';\n\n// Fetch schema: ${schema.key}\nfinal config = await Netmera.getRemoteConfig('${schema.key}');\n${schema.parameters.slice(0, 3).map((p) => `final ${p.key} = config.get('${p.key}');`).join("\n")}`,
   };
@@ -4693,14 +4692,6 @@ function DevRemoteConfigDetail({ schema, onBack, onDuplicate }) {
           </div>
         </div>
       </div>
-
-      {/* Ant Design info alert */}
-      <Alert
-        type="info"
-        showIcon
-        message="This config is currently active and cannot be edited. To make changes, duplicate this config to create a new Draft."
-        style={{ marginBottom: 20 }}
-      />
 
       <div style={{ display: "flex", flexDirection: "column", gap: 18, flex: 1, paddingBottom: 90 }}>
         {/* Basic Info — read-only */}
@@ -4762,7 +4753,7 @@ function DevRemoteConfigDetail({ schema, onBack, onDuplicate }) {
           <div style={{ fontSize: 13, fontWeight: 700, color: TEXT, marginBottom: 4 }}>SDK Code Snippet</div>
           <div style={{ fontSize: 12, color: TEXT_MUTED, marginBottom: 16 }}>Copy this snippet into your app to fetch schema values at runtime.</div>
           <div style={{ display: "flex", gap: 4, marginBottom: 14, borderBottom: `1px solid ${BORDER}`, paddingBottom: 0 }}>
-            {["iOS", "Android", "Web", "React Native", "Flutter"].map((tab) => (
+            {["iOS", "Android", "React Native", "Flutter"].map((tab) => (
               <button key={tab} onClick={() => setActiveTab(tab)}
                 style={{ padding: "8px 14px", border: "none", borderRadius: "8px 8px 0 0", cursor: "pointer", fontSize: 12, fontWeight: activeTab === tab ? 700 : 400, background: activeTab === tab ? WHITE : "transparent", color: activeTab === tab ? TEXT : TEXT_MUTED, borderBottom: activeTab === tab ? "2px solid #4F46E5" : "2px solid transparent" }}>
                 {tab}
@@ -4787,8 +4778,8 @@ function DevRemoteConfigDetail({ schema, onBack, onDuplicate }) {
         <Button onClick={onBack} icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>}>
           Back
         </Button>
-        <Button type="primary" onClick={onDuplicate} icon={<CopyIcon />}>
-          Clone as Draft
+        <Button type="primary" onClick={onEdit} icon={<EditIcon />}>
+          Edit Config
         </Button>
       </div>
     </div>
@@ -4910,11 +4901,6 @@ ${params.slice(0, 3).map((p) => {
   const type = p.type === "Integer" ? "Int" : p.type === "Boolean" ? "Boolean" : "String";
   return `val ${p.key || "param"}: ${type} = config.get${type}("${p.key || "param"}")`;
 }).join("\n")}`,
-    Web: `import { Netmera } from '@netmera/web-sdk';
-
-// Fetch schema: ${displayKey || "your_schema_key"}
-const config = await Netmera.getRemoteConfig('${displayKey || "your_schema_key"}');
-${params.slice(0, 3).map((p) => `const ${p.key || "param"} = config.get('${p.key || "param"}');`).join("\n")}`,
     "React Native": `import { Netmera } from '@netmera/react-native-sdk';
 
 // Fetch schema: ${displayKey || "your_schema_key"}
@@ -5112,7 +5098,7 @@ ${params.slice(0, 3).map((p) => `final ${p.key || "param"} = config.get('${p.key
           <div style={{ fontSize: 13, fontWeight: 700, color: TEXT, marginBottom: 4 }}>SDK Code Snippet</div>
           <div style={{ fontSize: 12, color: TEXT_MUTED, marginBottom: 16 }}>Copy this snippet into your app to fetch schema values at runtime.</div>
           <div style={{ display: "flex", gap: 4, marginBottom: 14, borderBottom: `1px solid ${BORDER}`, paddingBottom: 0 }}>
-            {["iOS", "Android", "Web", "React Native", "Flutter"].map((tab) => (
+            {["iOS", "Android", "React Native", "Flutter"].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -5836,7 +5822,7 @@ export default function App() {
           <DevRemoteConfigDetail
             schema={selectedSchema}
             onBack={goToDevSchemaList}
-            onDuplicate={() => handleDuplicateAsDraft(selectedSchema)}
+            onEdit={() => goToDevSchemaNew(selectedSchema)}
           />
         );
       }
@@ -5844,7 +5830,7 @@ export default function App() {
         return (
           <DevRemoteConfigNew
             schema={selectedSchema}
-            onBack={goToDevSchemaList}
+            onBack={selectedSchema?.status === "Active" ? () => goToDevSchemaDetail(selectedSchema) : goToDevSchemaList}
             onSave={handleSaveSchema}
             experiments={experiments}
             configs={configs}
@@ -5856,6 +5842,7 @@ export default function App() {
           schemas={schemas.filter((s) => !s.isRolloutOnly)}
           onCreateNew={() => goToDevSchemaNew(null)}
           onViewSchema={(schema) => schema.status === "Active" ? goToDevSchemaDetail(schema) : goToDevSchemaNew(schema)}
+          onEditSchema={(schema) => goToDevSchemaNew(schema)}
           onRemove={handleRemoveConfig}
         />
       );
@@ -6150,8 +6137,8 @@ export default function App() {
               {experienceHovered && (
                 <div style={{ position: "absolute", left: "100%", top: 0, marginLeft: 8, width: 190, padding: 8, borderRadius: 12, background: WHITE, border: `1px solid ${BORDER}`, boxShadow: SHADOW, zIndex: 9999 }}>
                   {[
-                    { key: "remote_config", label: "Feature Rollouts", action: goToRemoteConfigList },
-                    { key: "ab_testing", label: "A/B Tests", action: goToAbList },
+                    { key: "remote_config", label: "Mobile Feature Rollouts", action: goToRemoteConfigList },
+                    { key: "ab_testing", label: "Mobile A/B Tests", action: goToAbList },
                   ].map((item) => (
                     <button
                       key={item.key}
@@ -6199,7 +6186,7 @@ export default function App() {
               {devHovered && (
                 <div style={{ position: "absolute", left: "100%", top: 0, marginLeft: 8, width: 190, padding: 8, borderRadius: 12, background: WHITE, border: `1px solid ${BORDER}`, boxShadow: SHADOW, zIndex: 9999 }}>
                   {[
-                    { key: "dev_remote_config", label: "Config Library", action: goToDevSchemaList },
+                    { key: "dev_remote_config", label: "Mobile Config Library", action: goToDevSchemaList },
                   ].map((item) => (
                     <button
                       key={item.key}
