@@ -4932,20 +4932,6 @@ ${params.slice(0, 3).map((p) => `final ${p.key || "param"} = config.get('${p.key
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 18, flex: 1, paddingBottom: 90 }}>
-        {/* Experience usage warning */}
-        {isEdit && isUsedInExperience && schema.status !== "Draft" && (
-          <Alert
-            type="info"
-            showIcon
-            message={
-              <span>
-                <strong>This config is in use.</strong>{" "}
-                It is currently linked to {linkedRollouts.length > 0 ? `${linkedRollouts.length} rollout${linkedRollouts.length > 1 ? "s" : ""}` : ""}{linkedRollouts.length > 0 && linkedExperiments.length > 0 ? " and " : ""}{linkedExperiments.length > 0 ? `${linkedExperiments.length} A/B test${linkedExperiments.length > 1 ? "s" : ""}` : ""}. Changes will affect live experiences. Only Draft configs can be freely edited.
-              </span>
-            }
-          />
-        )}
-
         {/* Basic Info */}
         <div style={{ ...cardStyle, padding: 24 }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: TEXT, marginBottom: 18 }}>Basic Information</div>
@@ -6135,7 +6121,7 @@ export default function App() {
               />
 
               {experienceHovered && (
-                <div style={{ position: "absolute", left: "100%", top: 0, marginLeft: 8, width: 190, padding: 8, borderRadius: 12, background: WHITE, border: `1px solid ${BORDER}`, boxShadow: SHADOW, zIndex: 9999 }}>
+                <div style={{ position: "absolute", left: "100%", top: 0, marginLeft: 8, width: 224, padding: 8, borderRadius: 12, background: WHITE, border: `1px solid ${BORDER}`, boxShadow: SHADOW, zIndex: 9999 }}>
                   {[
                     { key: "remote_config", label: "Mobile Feature Rollouts", action: goToRemoteConfigList },
                     { key: "ab_testing", label: "Mobile A/B Tests", action: goToAbList },
@@ -6184,7 +6170,7 @@ export default function App() {
                 }
               />
               {devHovered && (
-                <div style={{ position: "absolute", left: "100%", top: 0, marginLeft: 8, width: 190, padding: 8, borderRadius: 12, background: WHITE, border: `1px solid ${BORDER}`, boxShadow: SHADOW, zIndex: 9999 }}>
+                <div style={{ position: "absolute", left: "100%", top: 0, marginLeft: 8, width: 224, padding: 8, borderRadius: 12, background: WHITE, border: `1px solid ${BORDER}`, boxShadow: SHADOW, zIndex: 9999 }}>
                   {[
                     { key: "dev_remote_config", label: "Mobile Config Library", action: goToDevSchemaList },
                   ].map((item) => (
