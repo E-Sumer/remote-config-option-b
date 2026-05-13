@@ -5275,14 +5275,14 @@ export default function App() {
 
   const initStateFromPath = (path, currentConfigs, currentExperiments, currentSchemas) => {
     if (path === "/" || path === "") {
-      navigate("/experiences/feature_rollouts", { replace: true });
+      navigate("/experiences/mobile_feature_rollouts", { replace: true });
       return;
     }
-    if (path.startsWith("/experiences/feature_rollouts")) {
+    if (path.startsWith("/experiences/mobile_feature_rollouts")) {
       setActiveMenu("remote_config");
-      const newMatch = path === "/experiences/feature_rollouts/new";
-      const editMatch = path.match(/^\/experiences\/feature_rollouts\/(\d+)\/edit$/);
-      const detailMatch = path.match(/^\/experiences\/feature_rollouts\/(\d+)$/);
+      const newMatch = path === "/experiences/mobile_feature_rollouts/new";
+      const editMatch = path.match(/^\/experiences\/mobile_feature_rollouts\/(\d+)\/edit$/);
+      const detailMatch = path.match(/^\/experiences\/mobile_feature_rollouts\/(\d+)$/);
       if (newMatch) {
         setRemoteConfigView("create");
         setEditingConfig(null);
@@ -5301,11 +5301,11 @@ export default function App() {
         setEditingConfig(null);
         setSelectedConfigReport(null);
       }
-    } else if (path.startsWith("/experiences/ab_tests")) {
+    } else if (path.startsWith("/experiences/mobile_ab_tests")) {
       setActiveMenu("ab_testing");
-      const newMatch = path === "/experiences/ab_tests/new";
-      const editMatch = path.match(/^\/experiences\/ab_tests\/(\d+)\/edit$/);
-      const detailMatch = path.match(/^\/experiences\/ab_tests\/(\d+)$/);
+      const newMatch = path === "/experiences/mobile_ab_tests/new";
+      const editMatch = path.match(/^\/experiences\/mobile_ab_tests\/(\d+)\/edit$/);
+      const detailMatch = path.match(/^\/experiences\/mobile_ab_tests\/(\d+)$/);
       if (newMatch) {
         setAbView("create");
       } else if (editMatch) {
@@ -5322,11 +5322,11 @@ export default function App() {
         setAbView("list");
         setSelectedExperimentReport(null);
       }
-    } else if (path.startsWith("/config_library")) {
+    } else if (path.startsWith("/mobile_config_library")) {
       setActiveMenu("dev_remote_config");
-      const newMatch = path === "/config_library/new";
-      const editMatch = path.match(/^\/config_library\/([^/]+)\/edit$/);
-      const detailMatch = path.match(/^\/config_library\/([^/]+)$/);
+      const newMatch = path === "/mobile_config_library/new";
+      const editMatch = path.match(/^\/mobile_config_library\/([^/]+)\/edit$/);
+      const detailMatch = path.match(/^\/mobile_config_library\/([^/]+)$/);
       if (newMatch) {
         setDevSchemaView("new");
         setSelectedSchema(null);
@@ -5362,7 +5362,7 @@ export default function App() {
     setRemoteConfigView("list");
     setEditingConfig(null);
     setSelectedConfigReport(null);
-    navigate("/experiences/feature_rollouts");
+    navigate("/experiences/mobile_feature_rollouts");
   };
 
   const goToDevSchemaList = () => {
@@ -5370,7 +5370,7 @@ export default function App() {
     setActiveMenu("dev_remote_config");
     setDevSchemaView("list");
     setSelectedSchema(null);
-    navigate("/config_library");
+    navigate("/mobile_config_library");
   };
 
   const goToDevSchemaNew = (schema = null) => {
@@ -5378,7 +5378,7 @@ export default function App() {
     setActiveMenu("dev_remote_config");
     setDevSchemaView("new");
     setSelectedSchema(schema);
-    navigate(schema ? `/config_library/${schema.id}/edit` : "/config_library/new");
+    navigate(schema ? `/mobile_config_library/${schema.id}/edit` : "/mobile_config_library/new");
   };
 
   const goToDevSchemaDetail = (schema) => {
@@ -5386,7 +5386,7 @@ export default function App() {
     setActiveMenu("dev_remote_config");
     setDevSchemaView("detail");
     setSelectedSchema(schema);
-    navigate(`/config_library/${schema.id}`);
+    navigate(`/mobile_config_library/${schema.id}`);
   };
 
   const handleDuplicateAsDraft = (schema) => {
@@ -5433,7 +5433,7 @@ export default function App() {
     setActiveMenu("remote_config");
     setRemoteConfigView("create");
     setEditingConfig(null);
-    navigate("/experiences/feature_rollouts/new");
+    navigate("/experiences/mobile_feature_rollouts/new");
   };
 
   const goToRemoteConfigEdit = (config) => {
@@ -5443,7 +5443,7 @@ export default function App() {
     setEditingConfig(config);
     setSelectedConfigReport(null);
     setOpenActionId(null);
-    navigate(`/experiences/feature_rollouts/${config.id}/edit`);
+    navigate(`/experiences/mobile_feature_rollouts/${config.id}/edit`);
   };
 
   const goToRemoteConfigDetail = (config) => {
@@ -5452,7 +5452,7 @@ export default function App() {
     setRemoteConfigView("detail");
     setSelectedConfigReport(config);
     setOpenActionId(null);
-    navigate(`/experiences/feature_rollouts/${config.id}`);
+    navigate(`/experiences/mobile_feature_rollouts/${config.id}`);
   };
 
   const goToAbList = () => {
@@ -5461,14 +5461,14 @@ export default function App() {
     setAbView("list");
     setSelectedExperimentReport(null);
     setAbPlaceholderTitle("");
-    navigate("/experiences/ab_tests");
+    navigate("/experiences/mobile_ab_tests");
   };
 
   const goToAbCreate = () => {
     isNavigatingRef.current = true;
     setActiveMenu("ab_testing");
     setAbView("create");
-    navigate("/experiences/ab_tests/new");
+    navigate("/experiences/mobile_ab_tests/new");
   };
 
   const goToAbEdit = (experiment) => {
@@ -5477,7 +5477,7 @@ export default function App() {
     setEditingExperiment(experiment);
     setAbView("edit");
     setOpenActionId(null);
-    navigate(`/experiences/ab_tests/${experiment.id}/edit`);
+    navigate(`/experiences/mobile_ab_tests/${experiment.id}/edit`);
   };
 
   const pauseConflictingConfig = (_configId) => {
@@ -5576,8 +5576,8 @@ export default function App() {
       const linkedAbTests = experiments.filter((e) => !e.archived && e.linkedConfigKey === config.key && e.status === "RUNNING");
       if (linkedRollouts.length > 0 || linkedAbTests.length > 0) {
         const entries = [
-          ...linkedRollouts.map((r) => ({ name: r.name, url: `/experiences/feature_rollouts/${r.id}` })),
-          ...linkedAbTests.map((e) => ({ name: e.name, url: `/experiences/ab_tests/${e.id}` })),
+          ...linkedRollouts.map((r) => ({ name: r.name, url: `/experiences/mobile_feature_rollouts/${r.id}` })),
+          ...linkedAbTests.map((e) => ({ name: e.name, url: `/experiences/mobile_ab_tests/${e.id}` })),
         ];
         setActiveConfigWarningModal({ open: true, config, entries });
         return;
@@ -5612,7 +5612,7 @@ export default function App() {
     setAbPlaceholderTitle(title);
     setAbView("placeholder");
     setOpenActionId(null);
-    navigate("/experiences/ab_tests");
+    navigate("/experiences/mobile_ab_tests");
   };
 
   const openExperimentReport = (experiment) => {
@@ -5621,7 +5621,7 @@ export default function App() {
     setSelectedExperimentReport(experiment);
     setAbView("detail");
     setOpenActionId(null);
-    navigate(`/experiences/ab_tests/${experiment.id}`);
+    navigate(`/experiences/mobile_ab_tests/${experiment.id}`);
   };
 
   const updateExperiment = (experimentId, updater) => {
