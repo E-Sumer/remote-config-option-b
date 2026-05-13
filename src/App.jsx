@@ -1125,7 +1125,7 @@ function RemoteConfigurationList({
         <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
           <div style={{ width: 5, alignSelf: "stretch", borderRadius: 999, background: "#3B82F6", flexShrink: 0 }} />
           <div>
-            <h1 style={pageTitleStyle}>Feature Rollouts</h1>
+            <h1 style={pageTitleStyle}>Mobile Feature Rollouts</h1>
             <p style={pageDescriptionStyle}>Roll out configuration changes to specific segments or your entire user base.</p>
           </div>
         </div>
@@ -2697,7 +2697,7 @@ function ExperimentList({
         <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
           <div style={{ width: 5, height: 58, borderRadius: 999, background: "#3B82F6", marginTop: 2, flexShrink: 0 }} />
           <div>
-            <h1 style={pageTitleStyle}>A/B Tests</h1>
+            <h1 style={pageTitleStyle}>Mobile A/B Tests</h1>
             <p style={pageDescriptionStyle}>Create experiments, test hypotheses, and measure impact on your key metrics.</p>
           </div>
         </div>
@@ -4489,7 +4489,7 @@ function DevRemoteConfigList({ schemas, onCreateNew, onViewSchema, onEditSchema,
         <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
           <div style={{ width: 5, height: 52, borderRadius: 999, background: "#3B82F6", marginTop: 2, flexShrink: 0 }} />
           <div>
-            <h1 style={pageTitleStyle}>Config Library</h1>
+            <h1 style={pageTitleStyle}>Mobile Config Library</h1>
             <p style={pageDescriptionStyle}>Define reusable configurations your SDK can fetch. These are the building blocks used in rollouts and experiments.</p>
           </div>
         </div>
